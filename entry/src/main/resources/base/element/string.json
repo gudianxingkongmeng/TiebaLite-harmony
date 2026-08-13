@@ -1,0 +1,148 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "Tieba Lite"
+    },
+    {
+      "name": "module_desc",
+      "value": "贴吧第三方客户端"
+    },
+    {
+      "name": "home_title",
+      "value": "首页"
+    },
+    {
+      "name": "explore_title",
+      "value": "发现"
+    },
+    {
+      "name": "notification_title",
+      "value": "通知"
+    },
+    {
+      "name": "user_title",
+      "value": "我的"
+    },
+    {
+      "name": "login_title",
+      "value": "登录"
+    },
+    {
+      "name": "search_title",
+      "value": "搜索"
+    },
+    {
+      "name": "settings_title",
+      "value": "设置"
+    },
+    {
+      "name": "about_title",
+      "value": "关于"
+    },
+    {
+      "name": "theme_title",
+      "value": "主题"
+    },
+    {
+      "name": "history_title",
+      "value": "浏览历史"
+    },
+    {
+      "name": "favorite_title",
+      "value": "收藏"
+    },
+    {
+      "name": "reply_title",
+      "value": "回复"
+    },
+    {
+      "name": "post_title",
+      "value": "发帖"
+    },
+    {
+      "name": "loading_text",
+      "value": "加载中..."
+    },
+    {
+      "name": "error_text",
+      "value": "加载失败"
+    },
+    {
+      "name": "retry_text",
+      "value": "重试"
+    },
+    {
+      "name": "empty_text",
+      "value": "暂无内容"
+    },
+    {
+      "name": "login_required",
+      "value": "需要登录"
+    },
+    {
+      "name": "reason_read_media",
+      "value": "用于读取和显示图片"
+    },
+    {
+      "name": "reason_write_media",
+      "value": "用于保存图片到相册"
+    },
+    {
+      "name": "reason_read_storage",
+      "value": "用于读取本地文件"
+    },
+    {
+      "name": "reason_write_storage",
+      "value": "用于保存文件到本地"
+    },
+    {
+      "name": "reason_notification",
+      "value": "用于接收消息通知"
+    },
+    {
+      "name": "reason_place_call",
+      "value": "用于拨打电话"
+    },
+    {
+      "name": "reason_read_pasteboard",
+      "value": "用于检测剪贴板中的贴吧帖子链接"
+    },
+    {
+      "name": "main_title",
+      "value": "Tieba"
+    },
+    {
+      "name": "tab_home",
+      "value": "Home"
+    },
+    {
+      "name": "tab_explore",
+      "value": "Explore"
+    },
+    {
+      "name": "tab_notifications",
+      "value": "Notifications"
+    },
+    {
+      "name": "tab_user",
+      "value": "Me"
+    },
+    {
+      "name": "login",
+      "value": "Login"
+    },
+    {
+      "name": "logout",
+      "value": "Logout"
+    },
+    {
+      "name": "settings",
+      "value": "Settings"
+    },
+    {
+      "name": "search",
+      "value": "Search"
+    }
+  ]
+}

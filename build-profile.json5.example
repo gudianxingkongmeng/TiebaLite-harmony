@@ -1,0 +1,43 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "compileSdkVersion": "26.0.0",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "targetSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "signingConfig": "default"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "YOUR_PROJECT_PATH/your.p12",
+          "storePassword": "",
+          "keyAlias": "",
+          "keyPassword": "",
+          "signAlg": "SHA256withECDSA",
+          "profile": "YOUR_PROJECT_PATH/your.p7b",
+          "certpath": "YOUR_PROJECT_PATH/your.cer"
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

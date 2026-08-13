@@ -1,0 +1,32 @@
+# 签名与凭证(严禁上传)
+# DevEco 签名文件与配置文件,包含明文密钥库密码
+*.p12
+*.pem
+*.cer
+*.csr
+*.p7b
+*.jks
+build-profile.json5
+tiebalite-profile.json
+local.properties
+
+# 构建产物与依赖
+/build
+/entry/build
+/.hvigor
+oh_modules/
+node_modules/
+*.hap
+
+# IDE
+/.idea
+*.iml
+*.ipr
+*.iws
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log

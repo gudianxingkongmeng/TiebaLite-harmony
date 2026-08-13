@@ -1,0 +1,33 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/login/LoginPage",
+    "pages/forum/ForumPage",
+    "pages/thread/ThreadPage",
+    "pages/subposts/SubPostsPage",
+    "pages/user/UserProfilePage",
+    "pages/user/FollowsPage",
+    "pages/search/SearchPage",
+    "pages/webview/WebViewPage",
+    "pages/settings/SettingsPage",
+    "pages/settings/AppThemePage",
+    "pages/settings/AccountManagePage",
+    "pages/settings/SignInSettingsPage",
+    "pages/settings/UISettingsPage",
+    "pages/settings/FontSettingsPage",
+    "pages/settings/HabitsSettingsPage",
+    "pages/settings/PrivacySettingsPage",
+    "pages/settings/BlockSettingsPage",
+    "pages/photoview/PhotoViewPage",
+    "pages/history/HistoryPage",
+    "pages/threadstore/ThreadStorePage",
+    "pages/welcome/WelcomeScreen",
+    "pages/hottopic/HotTopicListPage",
+    "pages/hottopic/TopicDetailPage",
+    "pages/videoview/VideoViewPage",
+    "pages/settings/AboutPage",
+    "pages/forum/NewThreadPage",
+    "pages/search/ForumSearchPage",
+    "pages/ExplorePageWrapper"
+  ]
+}
