@@ -13,7 +13,7 @@
 
 ## 下载
 
-* 目前暂未发布安装包，构建完成后将提供 [GitHub Releases](https://github.com/) 下载
+* 目前暂未发布安装包，构建完成后将提供 [GitHub Releases](https://github.com/gudianxingkongmeng/TiebaLite-harmony/releases) 下载
 
 ## 功能
 
@@ -27,8 +27,8 @@
 
 1. 克隆仓库并使用 DevEco Studio(5.0+)打开
 ```shell
-git clone https://github.com/0ranko0P/TiebaLite.git
-cd TiebaLite
+git clone https://github.com/gudianxingkongmeng/TiebaLite-harmony.git
+cd TiebaLite-harmony
 ```
 
 2. 配置应用签名 (必需,否则无法安装到真机)

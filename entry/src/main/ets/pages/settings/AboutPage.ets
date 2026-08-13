@@ -7,7 +7,7 @@ import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 const APP_VERSION = '4.0.0 Beta 4.5.2';
 const APP_VERSION_CODE = '390986';
-const GITHUB_URL = 'https://github.com/0ranko0P/TiebaLite';
+const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 
 @Entry
 @Component
@@ -61,10 +61,10 @@ struct AboutPage {
           Divider().height(6).color(blendWithBg(this.primaryColor, 0.10, this.isDark)).width('100%')
 
           Column() {
-            this.menuItem($r('app.media.ic_info'), '开源许可', () => {
+            this.menuItem($r('app.media.ic_info'), '开源仓库', () => {
               AlertDialog.show({
-                title: '开源许可',
-                message: '尚未开源，后续会添加',
+                title: '开源仓库',
+                message: GITHUB_URL,
                 confirm: { value: '确定', action: () => {} }
               });
             })
