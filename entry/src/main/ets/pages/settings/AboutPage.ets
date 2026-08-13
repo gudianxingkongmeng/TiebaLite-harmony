@@ -1,6 +1,8 @@
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
+import pasteboard from '@ohos.pasteboard';
+import common from '@ohos.app.ability.common';
 import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
 import { Dict } from '../../core/types/Dict';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
@@ -65,7 +67,32 @@ struct AboutPage {
               AlertDialog.show({
                 title: '开源仓库',
                 message: GITHUB_URL,
-                confirm: { value: '确定', action: () => {} }
+                primaryButton: {
+                  value: '复制地址',
+                  action: () => {
+                    const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, GITHUB_URL);
+                    pasteboard.getSystemPasteboard().setData(data).then(() => {
+                      promptAction.showToast({ message: '已复制' });
+                    }).catch(() => {
+                      promptAction.showToast({ message: '复制失败' });
+                    });
+                  }
+                },
+                secondaryButton: {
+                  value: '打开',
+                  action: () => {
+                    const ctx = getContext(this) as common.UIAbilityContext;
+                    if (!ctx) return;
+                    try {
+                      ctx.openLink(GITHUB_URL).catch(() => {
+                        this.startAbilityExternal(GITHUB_URL, ctx);
+                      });
+                    } catch (e) {
+                      this.startAbilityExternal(GITHUB_URL, ctx);
+                    }
+                  }
+                },
+                cancel: () => {}
               });
             })
             Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 48 })
@@ -96,6 +123,19 @@ struct AboutPage {
     .width('100%').height('100%').justifyContent(FlexAlign.Start)
     }
     .width('100%').height('100%').backgroundColor(pageBg(this.isDark))
+  }
+
+  private startAbilityExternal(url: string, ctx: common.UIAbilityContext): void {
+    if (!ctx) return;
+    try {
+      ctx.startAbility({
+        action: 'ohos.want.action.viewData',
+        entities: ['entity.system.browsable'],
+        uri: url
+      }).catch((e: Error) => {
+        console.error('TiebaLite: openExternal failed err=' + JSON.stringify(e));
+      });
+    } catch (e) {}
   }
 
   @Builder
