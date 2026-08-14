@@ -787,7 +787,7 @@ onIsDarkChange(): void {
       .backdropBlur(60)
       .border({ width: { bottom: 1 }, color: this.isForumSearch ? blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') : dividerColor(this.isDark) })
 
-      if (!this.reduceEffects && this.searchLoadingMore) {
+      if (this.searchLoadingMore) {
         Column() {
           GearCycle({ gearSize: 40, color: darkenColor(this.primaryColor, 0.2), refreshing: true })
         }

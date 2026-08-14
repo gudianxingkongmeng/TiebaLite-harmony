@@ -1,4 +1,6 @@
-﻿const N_PTS: number = 24;
+﻿import HarmonyRing from './HarmonyRing';
+
+const N_PTS: number = 24;
 const TAU: number = Math.PI * 2;
 
 function sampleShape(rfn: (t: number) => number): number[] {
@@ -88,16 +90,7 @@ export default struct GearCycle {
 
   private tick(): void {
     if (this.refreshing) {
-      if (this.reduceEffects) {
-        this.spin = (this.spin + 360 * 120 / 4666) % 360;
-      } else {
-        this.morphT += 30 / 650;
-        if (this.morphT >= 1) {
-          this.morphT = 0;
-          this.morphIdx = (this.morphIdx + 1) % MORPH_ORDER.length;
-        }
-        this.spin = (this.spin + 360 * 30 / 4666) % 360;
-      }
+      this.spin = (this.spin + 360 * 30 / 4666) % 360;
     }
     this.draw();
   }
@@ -116,14 +109,8 @@ export default struct GearCycle {
     ctx.fillStyle = this.containerColor;
     ctx.fill();
     if (this.refreshing) {
-      if (this.reduceEffects) {
-        const idxA = MORPH_ORDER[this.morphIdx];
-        this.fillShape(SHAPES[idxA], SHAPES[idxA], 1, this.spin);
-      } else {
-        const idxA = MORPH_ORDER[this.morphIdx];
-        const idxB = MORPH_ORDER[(this.morphIdx + 1) % MORPH_ORDER.length];
-        this.fillShape(SHAPES[idxA], SHAPES[idxB], this.easeOut(this.morphT), this.spin);
-      }
+      const idxA = MORPH_ORDER[this.morphIdx];
+      this.fillShape(SHAPES[idxA], SHAPES[idxA], 1, this.spin);
     } else {
       const p = Math.max(0, this.progress);
       const t = Math.min(1, p);
@@ -175,12 +162,22 @@ export default struct GearCycle {
   }
 
   build() {
-    Canvas(this.ctx)
-      .width(this.gearSize)
-      .height(this.gearSize)
-      .onReady(() => {
-        this.canvasReady = true;
-        this.draw();
+    if (this.reduceEffects) {
+      HarmonyRing({
+        gearSize: this.gearSize,
+        color: this.color,
+        containerColor: this.containerColor,
+        progress: this.progress,
+        refreshing: this.refreshing
       })
+    } else {
+      Canvas(this.ctx)
+        .width(this.gearSize)
+        .height(this.gearSize)
+        .onReady(() => {
+          this.canvasReady = true;
+          this.draw();
+        })
+    }
   }
 }

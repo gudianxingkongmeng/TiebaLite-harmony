@@ -1,9 +1,16 @@
-﻿import GearCycle from './GearCycle';
+﻿import HarmonyRing from './HarmonyRing';
+import GearCycle from './GearCycle';
+import hilog from '@ohos.hilog';
+
+const LOG_DOMAIN: number = 0x0001;
+const LOG_TAG: string = 'TBL-PTR';
 
 @Component
 export default struct PullToRefresh {
+  @StorageLink('refreshStyle') refreshStyle: number = 0;
   @Prop reduceEffects: boolean = false;
   @Prop gearSize: number = 48;
+  @Prop iconTopOffset: number = 0;
   @Prop color: string = '#4477E0';
   @Prop containerColor: string = '#FFFFFF';
   @Watch('onIsRefreshingChange')
@@ -13,26 +20,26 @@ export default struct PullToRefresh {
   onTimeout: () => void = () => {};
   @BuilderParam content: () => void;
 
-  @State pullOffset: number = 0;
+  @State @Watch('onPullOffsetChange') pullOffset: number = 0;
   @State pullRefreshing: boolean = false;
   private lastY: number = 0;
   private touching: boolean = false;
   private refreshTimeoutId: number = -1;
+  private static readonly MAX_PULL: number = 200;
   private static readonly REFRESH_TIMEOUT_MS: number = 5000;
+
+  private onPullOffsetChange(): void {
+    hilog.info(LOG_DOMAIN, LOG_TAG, 'pullOffset=%{public}d refreshStyle=%{public}d pullRefreshing=%{public}s',
+      Math.round(this.pullOffset), this.refreshStyle, this.pullRefreshing);
+  }
 
   private onIsRefreshingChange(): void {
     this.clearRefreshTimeout();
     if (!this.isRefreshing && this.pullRefreshing) {
       this.pullRefreshing = false;
-      animateTo({ duration: 180, curve: Curve.EaseOut }, (): void => {
-        this.pullOffset = 70;
+      animateTo({ duration: 300, curve: Curve.EaseOut }, (): void => {
+        this.pullOffset = 0;
       });
-      this.refreshTimeoutId = setTimeout((): void => {
-        this.refreshTimeoutId = -1;
-        animateTo({ duration: 250, curve: Curve.EaseOut }, (): void => {
-          this.pullOffset = 0;
-        });
-      }, 220);
     }
   }
 
@@ -42,14 +49,9 @@ export default struct PullToRefresh {
       this.refreshTimeoutId = -1;
       if (this.pullRefreshing) {
         this.pullRefreshing = false;
-        animateTo({ duration: 180, curve: Curve.EaseOut }, (): void => {
-          this.pullOffset = 70;
+        animateTo({ duration: 300, curve: Curve.EaseOut }, (): void => {
+          this.pullOffset = 0;
         });
-        setTimeout((): void => {
-          animateTo({ duration: 250, curve: Curve.EaseOut }, (): void => {
-            this.pullOffset = 0;
-          });
-        }, 220);
         if (this.onTimeout) {
           this.onTimeout();
         }
@@ -62,6 +64,11 @@ export default struct PullToRefresh {
       clearTimeout(this.refreshTimeoutId);
       this.refreshTimeoutId = -1;
     }
+  }
+
+  aboutToAppear(): void {
+    hilog.info(LOG_DOMAIN, LOG_TAG, 'appear refreshStyle=%{public}d gearSize=%{public}d', this.refreshStyle, this.gearSize);
+    this.clearRefreshTimeout();
   }
 
   aboutToDisappear(): void {
@@ -86,13 +93,13 @@ export default struct PullToRefresh {
           const dy = y - this.lastY;
           this.lastY = y;
           if (this.pullOffset > 0) {
-            const damp = this.pullOffset >= 70 ? 0.35 : 1;
-            this.pullOffset = Math.min(150, Math.max(0, this.pullOffset + dy * damp));
+            const damp = this.pullOffset >= 70 ? 0.45 : 1;
+            this.pullOffset = Math.min(PullToRefresh.MAX_PULL, Math.max(0, this.pullOffset + dy * damp));
           } else if (dy > 0) {
             if (this.scroller && this.scroller.currentOffset().yOffset > 0.5) {
               break;
             }
-            this.pullOffset = Math.min(150, this.pullOffset + dy);
+            this.pullOffset = Math.min(PullToRefresh.MAX_PULL, this.pullOffset + dy);
           }
         }
         break;
@@ -106,26 +113,15 @@ export default struct PullToRefresh {
           break;
         }
         if (this.pullOffset >= 70) {
-          if (this.reduceEffects) {
-            animateTo({ duration: 200, curve: Curve.EaseOut }, (): void => {
-              this.pullOffset = 0;
-            });
-          } else {
-            this.pullRefreshing = true;
-            this.startRefreshTimeout();
-            if (this.onRefresh) {
-              this.onRefresh();
-            }
+          this.pullRefreshing = true;
+          this.startRefreshTimeout();
+          if (this.onRefresh) {
+            this.onRefresh();
           }
         } else if (this.pullOffset > 0) {
-          animateTo({ duration: 150, curve: Curve.EaseOut }, (): void => {
-            this.pullOffset = 70;
+          animateTo({ duration: 300, curve: Curve.EaseOut }, (): void => {
+            this.pullOffset = 0;
           });
-          setTimeout((): void => {
-            animateTo({ duration: 200, curve: Curve.EaseOut }, (): void => {
-              this.pullOffset = 0;
-            });
-          }, 170);
         }
         break;
     }
@@ -137,24 +133,35 @@ export default struct PullToRefresh {
         this.content()
       }
       .width('100%').height('100%')
+      .translate({ y: this.refreshStyle === 1 ? this.pullOffset : 0 })
 
-      if (!this.reduceEffects && (this.pullOffset > 0 || this.pullRefreshing)) {
+      if (this.pullOffset > 0 || this.pullRefreshing) {
         Column() {
-          GearCycle({
-            gearSize: this.gearSize,
-            color: this.color,
-            containerColor: this.containerColor,
-            progress: this.pullRefreshing ? 1 : this.pullOffset / 70,
-            refreshing: this.pullRefreshing
-          })
+          if (this.refreshStyle === 1) {
+            HarmonyRing({
+              gearSize: this.gearSize,
+              color: this.color,
+              containerColor: this.containerColor,
+              progress: this.pullRefreshing ? 1 : this.pullOffset / 70,
+              refreshing: this.pullRefreshing || this.pullOffset > 0
+            })
+          } else {
+            GearCycle({
+              gearSize: this.gearSize,
+              color: this.color,
+              containerColor: this.containerColor,
+              progress: this.pullRefreshing ? 1 : this.pullOffset / 70,
+              refreshing: this.pullRefreshing
+            })
+          }
         }
         .width('100%')
         .position({
           top: -20,
           left: 0, right: 0
         })
-        .translate({ y: Math.min(150, this.pullOffset * 1.4) })
-        .opacity(Math.min(1, this.pullOffset / 40))
+        .translate({ y: this.refreshStyle === 1 ? this.iconTopOffset + 30 : Math.min(PullToRefresh.MAX_PULL, this.pullOffset * 1.4) })
+        .opacity(this.refreshStyle === 1 ? Math.min(1, this.pullOffset / 30) : Math.min(1, this.pullOffset / 40))
         .zIndex(10)
       }
     }

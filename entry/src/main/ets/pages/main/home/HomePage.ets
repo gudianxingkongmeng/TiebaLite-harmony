@@ -373,6 +373,7 @@ export default struct HomePage {
           PullToRefresh({
             reduceEffects: true,
             scroller: this.recentScroller,
+            iconTopOffset: 100,
             isRefreshing: this.isRefreshing,
             onRefresh: (): void => { this.isRefreshing = true; },
             onTimeout: (): void => { this.isRefreshing = false; }
@@ -382,6 +383,7 @@ export default struct HomePage {
         } else {
           PullToRefresh({
             scroller: this.recentScroller,
+            iconTopOffset: 100,
             isRefreshing: this.isRefreshing,
             onRefresh: (): void => { this.isRefreshing = true; },
             onTimeout: (): void => { this.isRefreshing = false; }

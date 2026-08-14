@@ -24,7 +24,13 @@ export default class ThemeProvider {
     this.config.darkMode = await prefs.getInt('dark_mode', DarkMode.FOLLOW_SYSTEM) as DarkMode;
     this.config.isAmoled = await prefs.getBoolean('dark_amoled', false);
     this.config.useDynamicColor = await prefs.getBoolean('use_dynamic_color', false);
-    this.config.reduceEffects = await prefs.getBoolean('ui_reduce_effect', false);
+    let refreshStyle = await prefs.getInt('ui_refresh_style', -1);
+    if (refreshStyle < 0) {
+      refreshStyle = (await prefs.getBoolean('ui_reduce_effect', false)) ? 1 : 0;
+      await prefs.putInt('ui_refresh_style', refreshStyle);
+    }
+    this.config.refreshStyle = refreshStyle;
+    this.config.reduceEffects = refreshStyle === 1;
     this.config.hideOnScroll = await prefs.getBoolean('ui_hide_on_scroll', true);
     this.config.fontScale = await prefs.getFloat('fontScale', 1.06);
     if (this.config.fontScale === 1.0 || this.config.fontScale === 1.12) {
@@ -148,6 +154,7 @@ export default class ThemeProvider {
     AppStorage.SetOrCreate('isAmoled', isAmoled);
     AppStorage.SetOrCreate('darkMode', this.config.darkMode);
     AppStorage.SetOrCreate('reduceEffects', this.config.reduceEffects);
+    AppStorage.SetOrCreate('refreshStyle', this.config.refreshStyle);
     AppStorage.SetOrCreate('hideOnScroll', this.config.hideOnScroll);
     AppStorage.SetOrCreate('customColor', this.config.customColor);
     AppStorage.SetOrCreate('customVariant', this.config.customVariant);
@@ -164,6 +171,15 @@ export default class ThemeProvider {
     this.config.fontScale = scale;
     await PreferencesManager.getInstance().putFloat('fontScale', scale);
     AppStorage.SetOrCreate('fontScale', scale);
+    this.notify();
+  }
+
+  async setRefreshStyle(v: number): Promise<void> {
+    this.config.refreshStyle = v;
+    this.config.reduceEffects = v === 1;
+    await PreferencesManager.getInstance().putInt('ui_refresh_style', v);
+    AppStorage.SetOrCreate('refreshStyle', v);
+    AppStorage.SetOrCreate('reduceEffects', this.config.reduceEffects);
     this.notify();
   }
 

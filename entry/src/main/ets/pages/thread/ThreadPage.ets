@@ -1111,7 +1111,7 @@ console.info('TiebaLite: [D5] building userMap');
         .transition(TransitionEffect.translate({ y: 80 }).combine(TransitionEffect.opacity(0)))
       }
 
-      if (!this.reduceEffects && this.loadingMore) {
+      if (this.loadingMore) {
         Column() {
           GearCycle({ gearSize: 40, color: darkenColor(this.primaryColor, 0.2), refreshing: true })
         }

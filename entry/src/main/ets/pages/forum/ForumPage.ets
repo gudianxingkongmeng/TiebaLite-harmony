@@ -977,6 +977,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       PullToRefresh({
         reduceEffects: true,
         scroller: this.scroller,
+        iconTopOffset: 138,
         isRefreshing: this.isRefreshing0,
         onRefresh: (): void => { this.isRefreshing0 = true; },
         onTimeout: (): void => { this.isRefreshing0 = false; }
@@ -986,6 +987,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     } else {
       PullToRefresh({
         scroller: this.scroller,
+        iconTopOffset: 138,
         isRefreshing: this.isRefreshing0,
         onRefresh: (): void => { this.isRefreshing0 = true; },
         onTimeout: (): void => { this.isRefreshing0 = false; }
@@ -1060,6 +1062,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         PullToRefresh({
           reduceEffects: true,
           scroller: this.hotScroller,
+        iconTopOffset: 138,
           isRefreshing: this.isRefreshing1,
           onRefresh: (): void => { this.isRefreshing1 = true; },
           onTimeout: (): void => { this.isRefreshing1 = false; }
@@ -1069,6 +1072,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       } else {
         PullToRefresh({
           scroller: this.hotScroller,
+        iconTopOffset: 138,
           isRefreshing: this.isRefreshing1,
           onRefresh: (): void => { this.isRefreshing1 = true; },
           onTimeout: (): void => { this.isRefreshing1 = false; }
@@ -1125,6 +1129,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         PullToRefresh({
           reduceEffects: true,
           scroller: this.goodScroller,
+        iconTopOffset: 138,
           isRefreshing: this.isRefreshingGood,
           onRefresh: (): void => { this.isRefreshingGood = true; },
           onTimeout: (): void => { this.isRefreshingGood = false; }
@@ -1134,6 +1139,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       } else {
         PullToRefresh({
           scroller: this.goodScroller,
+        iconTopOffset: 138,
           isRefreshing: this.isRefreshingGood,
           onRefresh: (): void => { this.isRefreshingGood = true; },
           onTimeout: (): void => { this.isRefreshingGood = false; }
@@ -1190,6 +1196,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         PullToRefresh({
           reduceEffects: true,
           scroller: this.getCatScroller(ci),
+          iconTopOffset: 138,
           isRefreshing: this.catRefreshing[ci],
           onRefresh: (): void => { this.catRefreshing.splice(ci, 1, true); },
           onTimeout: (): void => { this.catRefreshing.splice(ci, 1, false); }
@@ -1199,6 +1206,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       } else {
         PullToRefresh({
           scroller: this.getCatScroller(ci),
+          iconTopOffset: 138,
           isRefreshing: this.catRefreshing[ci],
           onRefresh: (): void => { this.catRefreshing.splice(ci, 1, true); },
           onTimeout: (): void => { this.catRefreshing.splice(ci, 1, false); }

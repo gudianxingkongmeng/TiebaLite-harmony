@@ -11,6 +11,7 @@ export class ThemeConfig {
   isAmoled: boolean = false;
   useDynamicColor: boolean = false;
   transparentBackground: boolean = false;
+  refreshStyle: number = 0;
   reduceEffects: boolean = false;
   hideOnScroll: boolean = true;
   fontScale: number = 1.06;

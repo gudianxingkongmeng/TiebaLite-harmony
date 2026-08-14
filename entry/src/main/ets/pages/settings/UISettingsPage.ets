@@ -17,7 +17,7 @@ struct UISettingsPage {
   @State cardStyle: number = 0;
   @State showThreadPreview: boolean = true;
   @State showRecentForums: boolean = true;
-  @State reduceEffects: boolean = false;
+  @State refreshStyle: number = 0;
   @State hideOnScroll: boolean = true;
   @State pageTransitionStyle: number = 0;
   @State headerAlpha: number = 25;
@@ -26,10 +26,10 @@ struct UISettingsPage {
 
   private prefs: PreferencesManager = PreferencesManager.getInstance();
   private themeProvider: ThemeProvider = ThemeProvider.getInstance();
-  private reduceFxTimer: number = -1;
   private navStyles: string[] = ['悬浮导航'];
   private cardStyles: string[] = ['卡片显示', '分隔显示'];
   private pageTransitions: string[] = ['左右切换', '淡入淡出'];
+  private refreshStyles: string[] = ['齿轮', '圆环'];
 
   async aboutToAppear(): Promise<void> {
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
@@ -39,7 +39,11 @@ struct UISettingsPage {
     this.cardStyle = await this.prefs.getInt('card_style', 0);
     this.showThreadPreview = await this.prefs.getBoolean('show_thread_preview', true);
     this.showRecentForums = await this.prefs.getBoolean('show_recent_forums', true);
-    this.reduceEffects = this.themeProvider.getConfig().reduceEffects;
+    let refreshStyle = await this.prefs.getInt('ui_refresh_style', -1);
+    if (refreshStyle < 0) {
+      refreshStyle = (await this.prefs.getBoolean('ui_reduce_effect', false)) ? 1 : 0;
+    }
+    this.refreshStyle = Math.max(0, Math.min(refreshStyle, this.refreshStyles.length - 1));
     this.hideOnScroll = await this.prefs.getBoolean('ui_hide_on_scroll', true);
     this.pageTransitionStyle = Math.max(0, Math.min(await this.prefs.getInt('page_transition_style', 0), this.pageTransitions.length - 1));
     this.headerAlpha = Math.max(0, Math.min(await this.prefs.getInt('header_alpha', 25), 100));
@@ -170,19 +174,16 @@ struct UISettingsPage {
 
           Column() {
             Row() {
-              Text('减少动画').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
+              Text('刷新样式').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
               Blank()
-              Toggle({ type: ToggleType.Switch, isOn: this.reduceEffects })
-                .onChange((v) => {
-                  this.reduceEffects = v;
-                  void this.prefs.putBoolean('ui_reduce_effect', v);
-                  if (this.reduceFxTimer >= 0) {
-                    clearTimeout(this.reduceFxTimer);
-                  }
-                  this.reduceFxTimer = setTimeout(() => {
-                    this.reduceFxTimer = -1;
-                    AppStorage.SetOrCreate('reduceEffects', v);
-                  }, 300);
+              Select(this.refreshStyles.map((s: string): SelectOption => ({ value: s })))
+                .selected(this.refreshStyle)
+                .value(this.refreshStyles[this.refreshStyle])
+                .fontColor(textAccent(this.primaryColor, this.isDark))
+                .onSelect(async (idx: number) => {
+                  this.refreshStyle = idx;
+                  void this.themeProvider.setRefreshStyle(idx);
+                  await this.prefs.putInt('ui_refresh_style', idx);
                 })
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })

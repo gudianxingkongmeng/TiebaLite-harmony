@@ -977,6 +977,7 @@ export default struct ExplorePage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[0],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing0,
               onRefresh: (): void => { this.isRefreshing0 = true; },
               onTimeout: (): void => { this.isRefreshing0 = false; }
@@ -986,6 +987,7 @@ export default struct ExplorePage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[0],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing0,
               onRefresh: (): void => { this.isRefreshing0 = true; },
               onTimeout: (): void => { this.isRefreshing0 = false; }
@@ -998,6 +1000,7 @@ export default struct ExplorePage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[1],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing1,
               onRefresh: (): void => { this.isRefreshing1 = true; },
               onTimeout: (): void => { this.isRefreshing1 = false; }
@@ -1007,6 +1010,7 @@ export default struct ExplorePage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[1],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing1,
               onRefresh: (): void => { this.isRefreshing1 = true; },
               onTimeout: (): void => { this.isRefreshing1 = false; }
@@ -1019,6 +1023,7 @@ export default struct ExplorePage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[2],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing2,
               onRefresh: (): void => { this.isRefreshing2 = true; },
               onTimeout: (): void => { this.isRefreshing2 = false; }
@@ -1028,6 +1033,7 @@ export default struct ExplorePage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[2],
+              iconTopOffset: 100,
               isRefreshing: this.isRefreshing2,
               onRefresh: (): void => { this.isRefreshing2 = true; },
               onTimeout: (): void => { this.isRefreshing2 = false; }
@@ -1055,7 +1061,7 @@ export default struct ExplorePage {
       }
       .width('100%').height('100%').expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
-      if (!this.reduceEffects && this.loadingMoreGearVisible) {
+      if (this.loadingMoreGearVisible) {
         Column() {
           GearCycle({ gearSize: 40, color: darkenColor(this.primaryColor, 0.2), refreshing: true })
         }

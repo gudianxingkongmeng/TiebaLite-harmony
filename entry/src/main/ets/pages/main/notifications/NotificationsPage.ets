@@ -730,13 +730,7 @@ export default struct NotificationsPage {
           ForEach(this.agrees, (item: Dict, idx: number) => {
             ListItem() { this.NotificationItem(item) }
           }, (item: Dict): string => this.getItemId(item))
-          if (this.agreeLoadingMore && !this.reduceEffects) {
-          } else if (this.agreeLoadingMore) {
-            ListItem() {
-              Column() {
-                LoadingState({ message: '加载更多...' })
-              }
-            }
+          if (this.agreeLoadingMore) {
           } else if (this.hasMoreAgree) {
             ListItem() {
               Column() {
@@ -834,6 +828,7 @@ export default struct NotificationsPage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[0],
+              iconTopOffset: 40,
               isRefreshing: this.replyRefreshing,
               onRefresh: (): void => { this.replyRefreshing = true; },
               onTimeout: (): void => { this.replyRefreshing = false; }
@@ -843,6 +838,7 @@ export default struct NotificationsPage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[0],
+              iconTopOffset: 40,
               isRefreshing: this.replyRefreshing,
               onRefresh: (): void => { this.replyRefreshing = true; },
               onTimeout: (): void => { this.replyRefreshing = false; }
@@ -855,6 +851,7 @@ export default struct NotificationsPage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[1],
+              iconTopOffset: 40,
               isRefreshing: this.mentionRefreshing,
               onRefresh: (): void => { this.mentionRefreshing = true; },
               onTimeout: (): void => { this.mentionRefreshing = false; }
@@ -864,6 +861,7 @@ export default struct NotificationsPage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[1],
+              iconTopOffset: 40,
               isRefreshing: this.mentionRefreshing,
               onRefresh: (): void => { this.mentionRefreshing = true; },
               onTimeout: (): void => { this.mentionRefreshing = false; }
@@ -876,6 +874,7 @@ export default struct NotificationsPage {
             PullToRefresh({
               reduceEffects: true,
               scroller: this.scrollers[2],
+              iconTopOffset: 40,
               isRefreshing: this.agreeRefreshing,
               onRefresh: (): void => { this.agreeRefreshing = true; },
               onTimeout: (): void => { this.agreeRefreshing = false; }
@@ -885,6 +884,7 @@ export default struct NotificationsPage {
           } else {
             PullToRefresh({
               scroller: this.scrollers[2],
+              iconTopOffset: 40,
               isRefreshing: this.agreeRefreshing,
               onRefresh: (): void => { this.agreeRefreshing = true; },
               onTimeout: (): void => { this.agreeRefreshing = false; }
@@ -909,7 +909,7 @@ export default struct NotificationsPage {
     }
       .width('100%').height('100%').justifyContent(FlexAlign.Start).backgroundColor(this.bgColor).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
-      if (!this.reduceEffects && ((this.selectedTab !== 2 && this.loadingMore) || (this.selectedTab === 2 && this.agreeLoadingMore))) {
+      if (((this.selectedTab !== 2 && this.loadingMore) || (this.selectedTab === 2 && this.agreeLoadingMore))) {
         Column() {
           GearCycle({ gearSize: 32, color: this.primaryColor, refreshing: true })
         }

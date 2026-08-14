@@ -68,7 +68,7 @@ struct AboutPage {
                 title: '开源仓库',
                 message: GITHUB_URL,
                 primaryButton: {
-                  value: '复制地址',
+                  value: '复制',
                   action: () => {
                     const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, GITHUB_URL);
                     pasteboard.getSystemPasteboard().setData(data).then(() => {
