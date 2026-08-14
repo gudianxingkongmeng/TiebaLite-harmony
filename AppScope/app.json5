@@ -3,7 +3,7 @@
     "bundleName": "com.huanchengfly.tiebalite.hos",
     "vendor": "huanchengfly",
     "versionCode": 390987,
-    "versionName": "4.5.2",
+    "versionName": "4.5.3",
     "icon": "$media:app_icon",
     "label": "$string:app_name",
     "minAPIVersion": 12,
