@@ -948,7 +948,7 @@ console.info('TiebaLite: [D5] building userMap');
 
                 if (this.hasMore) {
                   Row() {
-                    if (this.loadingMore && this.reduceEffects) {
+                    if (this.loadingMore && AppStorage.get<number>('refreshStyle') === 1) {
                       GearLoading({ gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
                     } else if (this.loadingMore) {
                     } else {

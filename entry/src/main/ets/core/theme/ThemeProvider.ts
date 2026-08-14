@@ -30,7 +30,7 @@ export default class ThemeProvider {
       await prefs.putInt('ui_refresh_style', refreshStyle);
     }
     this.config.refreshStyle = refreshStyle;
-    this.config.reduceEffects = refreshStyle === 1;
+    this.config.reduceEffects = false;
     this.config.hideOnScroll = await prefs.getBoolean('ui_hide_on_scroll', true);
     this.config.fontScale = await prefs.getFloat('fontScale', 1.06);
     if (this.config.fontScale === 1.0 || this.config.fontScale === 1.12) {
@@ -176,7 +176,7 @@ export default class ThemeProvider {
 
   async setRefreshStyle(v: number): Promise<void> {
     this.config.refreshStyle = v;
-    this.config.reduceEffects = v === 1;
+    this.config.reduceEffects = false;
     await PreferencesManager.getInstance().putInt('ui_refresh_style', v);
     AppStorage.SetOrCreate('refreshStyle', v);
     AppStorage.SetOrCreate('reduceEffects', this.config.reduceEffects);

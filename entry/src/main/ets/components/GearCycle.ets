@@ -37,7 +37,7 @@ const MORPH_ORDER: number[] = [1, 2, 3, 4, 5];
 
 @Component
 export default struct GearCycle {
-  @StorageLink('reduceEffects') @Watch('onReduceChange') reduceEffects: boolean = false;
+  @StorageLink('refreshStyle') @Watch('onRefreshStyleChange') refreshStyle: number = 0;
   gearSize: number = 56;
   color: string = '#4477E0';
   containerColor: string = '#FFFFFF';
@@ -59,7 +59,7 @@ export default struct GearCycle {
     this.clearTimer();
   }
 
-  private onReduceChange(): void {
+  private onRefreshStyleChange(): void {
     this.startTimerIfNeeded();
     this.draw();
   }
@@ -75,7 +75,7 @@ export default struct GearCycle {
 
   private startTimerIfNeeded(): void {
     if (this.refreshing && this.timer === -1) {
-      this.timer = setInterval(() => { this.tick(); }, this.reduceEffects ? 120 : 30);
+      this.timer = setInterval(() => { this.tick(); }, 30);
     } else if (!this.refreshing) {
       this.clearTimer();
     }
@@ -162,7 +162,7 @@ export default struct GearCycle {
   }
 
   build() {
-    if (this.reduceEffects) {
+    if (this.refreshStyle === 1) {
       HarmonyRing({
         gearSize: this.gearSize,
         color: this.color,
