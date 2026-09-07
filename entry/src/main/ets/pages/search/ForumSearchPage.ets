@@ -174,12 +174,11 @@ struct ForumSearchPage {
 
                     }
                   }
-                }).margin({ left: 16, right: 16 })
+                }).margin({ left: 16, right: 16, top: 6, bottom: 8 })
               }
             })
           }
           .width('100%').layoutWeight(1)
-          .divider({ strokeWidth: 1, color: dividerColor(this.isDark) })
           .edgeEffect(EdgeEffect.Spring)
           .onDidScroll(() => { this.onSearchScroll(); })
           .key('result-' + this.showResults + '-' + this.searching + '-' + this.refreshKey)

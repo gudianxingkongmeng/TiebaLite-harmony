@@ -328,7 +328,7 @@ export default struct ThreadCard {
     .padding(this.cardStyle === 1 ? { left: 16, right: 16, top: 14, bottom: 14 } : 16)
     .backgroundColor(this.cardStyle === 1 ? Color.Transparent : cardBg(this.isDark))
     .borderRadius(this.cardStyle === 1 ? 0 : cardRadius(8))
-    .border(this.cardStyle === 1 ? { width: { bottom: 0.5 }, color: dividerColor(this.isDark) } : { width: 0, color: Color.Transparent })
+    .border(this.cardStyle === 1 ? { width: { bottom: 1.25 }, color: dividerColor(this.isDark) } : { width: 0, color: Color.Transparent })
     .onClick(() => { if (this.onCardClick) this.onCardClick(); }, 12)
     .animation({ duration: 250, curve: Curve.FastOutSlowIn })
   }

@@ -196,7 +196,7 @@ struct NewThreadPage {
             }
             .width('100%').padding({ top: 2, bottom: 2 })
 
-            Divider().height(0.5).color(dividerColor(this.isDark)).width('100%')
+            Divider().height(0.75).color(dividerColor(this.isDark)).width('100%')
 
             Row() {
               TextArea({ text: this.content, placeholder: '写点什么吧' })
@@ -212,7 +212,7 @@ struct NewThreadPage {
             }
             .width('100%').alignItems(VerticalAlign.Top)
 
-            Divider().height(0.5).color(dividerColor(this.isDark)).width('100%')
+            Divider().height(0.75).color(dividerColor(this.isDark)).width('100%')
 
             if (this.tabs.length > 0) {
               Row() {
@@ -243,7 +243,7 @@ struct NewThreadPage {
               .width('100%')
             }
 
-            Divider().height(0.5).color(dividerColor(this.isDark)).width('100%')
+            Divider().height(0.75).color(dividerColor(this.isDark)).width('100%')
 
             Row() {
               Text('话题').fontFamily(this.appFontFamily).fontSize(14).fontColor(textSecondary(this.isDark))
@@ -271,7 +271,7 @@ struct NewThreadPage {
                   .width('100%').height(40).padding({ left: 12, right: 12 })
                   .onClick(() => { this.pickTopic(t); })
                   if (i < this.suggestTopics().length - 1) {
-                    Divider().height(0.5).color(dividerColor(this.isDark)).margin({ left: 12, right: 12 })
+                    Divider().height(0.75).color(dividerColor(this.isDark)).margin({ left: 12, right: 12 })
                   }
                 }, (t: string) => t)
               }
@@ -279,7 +279,7 @@ struct NewThreadPage {
               .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 4 })
             }
 
-            Divider().height(0.5).color(dividerColor(this.isDark)).width('100%')
+            Divider().height(0.75).color(dividerColor(this.isDark)).width('100%')
 
             if (this.selectedMedia.length > 0) {
               Scroll() {

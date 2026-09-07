@@ -94,7 +94,7 @@ struct SettingsPage {
             }
           })
           if (idx < items.length - 1) {
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 48 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 48 })
           }
         })
       }

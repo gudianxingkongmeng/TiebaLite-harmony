@@ -1,5 +1,10 @@
 import { Dict } from '../core/types/Dict';
 
+export class EmoticonInfo {
+  id: string = '';
+  name: string = '';
+}
+
 let emojiNameMap: Record<string, string> = {
   '呵呵': 'image_emoticon1', '哈哈': 'image_emoticon2', '吐舌': 'image_emoticon3',
   '啊': 'image_emoticon4', '酷': 'image_emoticon5', '怒': 'image_emoticon6',
@@ -22,6 +27,18 @@ let emojiNameMap: Record<string, string> = {
   '药丸': 'image_emoticon81', '红领巾': 'image_emoticon82', '蜡烛': 'image_emoticon83',
   '三道杠': 'image_emoticon84'
 };
+
+export function getAllEmoticons(): EmoticonInfo[] {
+  const result: EmoticonInfo[] = [];
+  const entries = Object.entries(emojiNameMap);
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const name = entry[0] as string;
+    const id = entry[1] as string;
+    result.push({ id, name });
+  }
+  return result;
+}
 
 export function registerEmoji(name: string, id: string): void {
   if (name && id && name !== id) {
@@ -47,22 +64,32 @@ function getSpacedEmojiId(text: string): string {
   return m ? 'image_emoticon' + m[1] : '';
 }
 
+function stripHash(raw: string): string {
+  const id = raw.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
+  const hashStripped = id.replace(/^#+/, '');
+  if (/^\d+$/.test(hashStripped)) return hashStripped;
+  return '';
+}
+
 export function resolveEmojiId(rawId: string): string {
-  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  const id = rawId.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
   if (!id) return '';
-  if (/^\d+$/.test(id)) return 'https://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
+  const hashNum = stripHash(id);
+  if (hashNum) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + hashNum + '.png';
+  if (/^\d+$/.test(id)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
   const spaced = getSpacedEmojiId(id);
-  if (spaced) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
-  if (knownPrefixes.some(p => id.startsWith(p))) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
+  if (spaced) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
+  if (knownPrefixes.some(p => id.startsWith(p))) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
   const mapped = getEmojiIdFromMap(id);
-  if (mapped) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
+  if (mapped) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
   const encoded = encodeURIComponent(id);
-  return 'https://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
+  return 'http://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
 }
 
 export function isEmojiText(text: string): boolean {
-  const id = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  const id = text.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
   if (!id) return false;
+  if (stripHash(id)) return true;
   if (knownPrefixes.some(p => id.startsWith(p))) return true;
   if (/^\d+$/.test(id)) return true;
   if (getEmojiIdFromMap(id)) return true;
@@ -71,8 +98,9 @@ export function isEmojiText(text: string): boolean {
 }
 
 export function isValidEmojiId(rawId: string): boolean {
-  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  const id = rawId.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
   if (!id) return false;
+  if (stripHash(id)) return true;
   if (knownPrefixes.some(p => id.startsWith(p))) return true;
   if (/^\d+$/.test(id)) return true;
   if (getEmojiIdFromMap(id)) return true;
@@ -92,7 +120,11 @@ export function richEditorToText(controller: RichEditorController): string {
       }
       const img = s as RichEditorImageSpanResult;
       const url = String(img.valueResourceStr || '');
-      const file = url.substring(url.lastIndexOf('/') + 1).replace(/\.(png|gif|jpg|jpeg|webp)$/i, '');
+      const queryIdx = url.indexOf('?');
+      const filename = queryIdx >= 0 ? url.substring(0, queryIdx) : url;
+      let file = filename.substring(filename.lastIndexOf('/') + 1).replace(/\.(png|gif|jpg|jpeg|webp)$/i, '');
+      const emoticonMatch = file.match(/^image_emoticon(\d+)$/);
+      if (emoticonMatch) file = emoticonMatch[1];
       if (file) out += '#' + file;
     }
   } catch (_e) { }

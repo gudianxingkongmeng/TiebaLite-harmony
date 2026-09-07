@@ -92,7 +92,7 @@ struct PrivacySettingsPage {
               });
             })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('清除浏览历史').fontFamily(this.appFontFamily).fontSize(16).fontColor('#FF4444')

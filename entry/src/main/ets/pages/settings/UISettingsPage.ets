@@ -92,7 +92,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('显示导航标签').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -106,7 +106,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('显示分栏圆点').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -140,7 +140,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('显示帖子预览').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -154,7 +154,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('显示最近访问').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -188,7 +188,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('界面切换').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -205,7 +205,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('滚动时收起顶部栏').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -219,7 +219,7 @@ struct UISettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('顶栏透明度').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -240,7 +240,7 @@ struct UISettingsPage {
             }
             .width('100%').height(56).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('顶栏背景加深').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -261,7 +261,7 @@ struct UISettingsPage {
             }
             .width('100%').height(56).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('搜索框圆角').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))

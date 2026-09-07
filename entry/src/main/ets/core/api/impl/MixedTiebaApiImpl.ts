@@ -234,7 +234,8 @@ export default class MixedTiebaApiImpl implements ITiebaApi {
       pid: postId,
       forum_id: forumId > 0 ? forumId : 0,
       pn: page,
-      spid: 0
+      spid: 0,
+      [PARAM.CLIENT_VERSION]: ClientVersion.TIEBA_V22
     }, callback);
   }
 

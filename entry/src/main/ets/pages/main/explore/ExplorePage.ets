@@ -821,7 +821,7 @@ export default struct ExplorePage {
               }
               .width('100%').margin({ bottom: 4 })
 
-              Divider().height(6).color(blendWithBg(this.primaryColor, 0.10, this.isDark, '#1E1E1E')).width('100%')
+              Divider().height(9).color(blendWithBg(this.primaryColor, 0.06, this.isDark, '#1E1E1E')).width('100%')
             }
 
             if (this.hotTabs.length > 0) {

@@ -342,7 +342,7 @@ onIsDarkChange(): void {
       Column() {
         Blank().height(this.searchBarVisible ? 106 : 46)
         ForEach(this.threadResults, (item: Dict, idx: number) => {
-          Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 12 })
+          Divider().height(2).color(dividerColor(this.isDark)).margin({ left: 12 }).visibility(this.cardStyle === 1 ? Visibility.Visible : Visibility.None)
           ThreadCard({
             thread: this.normalizeSearchThread(item),
             onCardClick: (): void => {
@@ -363,7 +363,7 @@ onIsDarkChange(): void {
 
               }
             }
-          }).margin({ left: 16, right: 16 })
+          }).margin({ left: 16, right: 16, top: 6, bottom: 8 })
           .transition(TransitionEffect.opacity(0).combine(TransitionEffect.translate({ x: 0, y: 20 })))
         })
         Row() {
@@ -383,7 +383,7 @@ onIsDarkChange(): void {
       .width('100%').padding({ bottom: 8 }).justifyContent(FlexAlign.Start)
     }
       .scrollBar(BarState.Off)
-    .width('100%').height('100%')
+.width('100%').height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
     .edgeEffect(EdgeEffect.None)
     .onDidScroll(() => { this.onSearchScroll(0); })
@@ -401,25 +401,27 @@ onIsDarkChange(): void {
       }
       ForEach(this.forumResults, (item: Dict) => {
         ListItem() {
-          Row() {
-            Avatar({ portrait: this.resolveSearchAvatar(getStr(item, 'avatar', 'forum_avatar', 'portrait', 'forumAvatar', 'forum_avatar_url')), avatarSize: 44, defaultName: getStr(item, 'name', 'forum_name', 'forumName', 'fname') })
-            Column() {
-              Text(getStr(item, 'name', 'forum_name', 'forumName', 'fname')).fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontWeight(FontWeight.Medium)
-              Text(getStr(item, 'desc', 'slogan', 'introduce', 'description', 'abstract')).fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale)).fontColor(textTertiary(this.isDark)).margin({ top: 2 })
+          Column() {
+            Row() {
+              Avatar({ portrait: this.resolveSearchAvatar(getStr(item, 'avatar', 'forum_avatar', 'portrait', 'forumAvatar', 'forum_avatar_url')), avatarSize: 44, defaultName: getStr(item, 'name', 'forum_name', 'forumName', 'fname') })
+              Column() {
+                Text(getStr(item, 'name', 'forum_name', 'forumName', 'fname')).fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontWeight(FontWeight.Medium)
+                Text(getStr(item, 'desc', 'slogan', 'introduce', 'description', 'abstract')).fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale)).fontColor(textTertiary(this.isDark)).margin({ top: 2 })
+              }
+              .margin({ left: 12 }).layoutWeight(1)
+              Image($r('app.media.ic_arrow_back')).width(18).height(18).fillColor(textTertiary(this.isDark)).rotate({ angle: 180 })
             }
-            .margin({ left: 12 }).layoutWeight(1)
-            Image($r('app.media.ic_arrow_back')).width(18).height(18).fillColor(textTertiary(this.isDark)).rotate({ angle: 180 })
-          }
-          .width('100%').padding(12)
-          .onClick(() => {
-            NavigationHelper.navigate('pages/forum/ForumPage', { forumName: getStr(item, 'name', 'forum_name', 'forumName', 'fname'), forumId: getStr(item, 'id', 'forum_id', 'forumId') });
-          })
+            .width('100%').padding(12)
+            .onClick(() => {
+              NavigationHelper.navigate('pages/forum/ForumPage', { forumName: getStr(item, 'name', 'forum_name', 'forumName', 'fname'), forumId: getStr(item, 'id', 'forum_id', 'forumId') });
+            })
+            Divider().height(2).color(dividerColor(this.isDark)).margin({ left: 16, right: 16 }).visibility(this.cardStyle === 1 ? Visibility.Visible : Visibility.None)
+          }.width('100%')
         }
       })
     }
     .width('100%').height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-    .divider({ strokeWidth: 1, color: dividerColor(this.isDark) })
     .edgeEffect(EdgeEffect.None)
     .onDidScroll(() => { this.onSearchScroll(1); })
   }
@@ -476,7 +478,6 @@ onIsDarkChange(): void {
     }
     .width('100%').height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-    .divider({ strokeWidth: 1, color: dividerColor(this.isDark) })
     .edgeEffect(EdgeEffect.None)
     .onDidScroll(() => { this.onSearchScroll(2); })
     .onReachEnd(() => { void this.loadMoreThreads(); })
@@ -511,7 +512,6 @@ onIsDarkChange(): void {
     }
     .width('100%').height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-    .divider({ strokeWidth: 1, color: dividerColor(this.isDark) })
     .edgeEffect(EdgeEffect.None)
     .onDidScroll(() => { this.onSearchScroll(3); })
   }

@@ -346,7 +346,7 @@ export default struct UserTabPage {
             .width('100%').height(56).padding({ left: 16, right: 16 })
             .onClick(() => { this.switchToAccount(account); })
             if (idx < this.allAccounts.length - 1) {
-              Divider().height(0.5).color(dividerColor(this.isDark)).margin({ left: 66 })
+              Divider().height(0.75).color(dividerColor(this.isDark)).margin({ left: 66 })
             }
           })
         }

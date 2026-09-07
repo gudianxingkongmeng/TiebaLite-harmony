@@ -6,6 +6,7 @@ import display from '@ohos.display';
 import window from '@ohos.window';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import inputMethod from '@ohos.inputMethod';
+import common from '@ohos.app.ability.common';
 import PbPageRepository from '../../core/repository/PbPageRepository';
 import AddPostRepository from '../../core/repository/AddPostRepository';
 import BlockRepository from '../../core/repository/BlockRepository';
@@ -23,6 +24,19 @@ import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import EmojiImage from '../../components/EmojiImage';
 import { registerEmoji, getEmojiIdFromMap, richEditorToText } from '../../components/EmojiManager';
+import { EmoticonInfo, getAllEmoticons } from '../../components/EmojiManager';
+import picker from '@ohos.file.picker';
+import fs from '@ohos.file.fs';
+import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
+import { uploadChunked } from '../../core/utils/UploadService';
+import MD5 from '../../core/encryption/MD5';
+import { textAccent } from '../../core/utils/DataHelper';
+
+class ImageUploadResult {
+  picId: string = '';
+  width: string = '';
+  height: string = '';
+}
 
 function buildPortraitUrl(portrait: string): string {
   if (!portrait) return '';
@@ -84,71 +98,60 @@ class EmojiItem {
   constructor(id: string, name: string) { this.id = id; this.name = name; }
 }
 
-const EMOTICONS: EmojiItem[] = [
-  new EmojiItem('image_emoticon1', 'Smile'), new EmojiItem('image_emoticon2', 'LOL'),
-  new EmojiItem('image_emoticon3', 'Tongue'), new EmojiItem('image_emoticon4', 'Kiss'),
-  new EmojiItem('image_emoticon5', 'Cool'), new EmojiItem('image_emoticon6', 'Puzzled'),
-  new EmojiItem('image_emoticon7', 'Happy'), new EmojiItem('image_emoticon8', 'Sweat'),
-  new EmojiItem('image_emoticon9', 'Tears'), new EmojiItem('image_emoticon10', 'Blackline'),
-  new EmojiItem('image_emoticon11', 'Despise'), new EmojiItem('image_emoticon12', 'Unhappy'),
-  new EmojiItem('image_emoticon13', 'Shy'), new EmojiItem('image_emoticon14', 'Angry'),
-  new EmojiItem('image_emoticon15', 'Question'), new EmojiItem('image_emoticon16', 'Sly'),
-  new EmojiItem('image_emoticon17', 'Bite'), new EmojiItem('image_emoticon18', 'Cat'),
-  new EmojiItem('image_emoticon19', 'Wronged'), new EmojiItem('image_emoticon20', 'Playboy'),
-  new EmojiItem('image_emoticon21', 'Phew'), new EmojiItem('image_emoticon22', 'Laughing Eyes'),
-  new EmojiItem('image_emoticon23', 'Cold'), new EmojiItem('image_emoticon24', 'Overjoyed'),
-  new EmojiItem('image_emoticon25', 'Slick'), new EmojiItem('image_emoticon26', 'Reluctant'),
-  new EmojiItem('image_emoticon27', 'Crazy Sweat'), new EmojiItem('image_emoticon28', 'Dizzy'),
-  new EmojiItem('image_emoticon29', 'Sleepy'), new EmojiItem('image_emoticon30', 'Cry'),
-  new EmojiItem('image_emoticon31', 'Angry'), new EmojiItem('image_emoticon32', 'Shocked'),
-  new EmojiItem('image_emoticon33', 'Drink'), new EmojiItem('image_emoticon34', 'Heart'),
-  new EmojiItem('image_emoticon35', 'Broken Heart'), new EmojiItem('image_emoticon36', 'Rose'),
-  new EmojiItem('image_emoticon37', 'Gift'), new EmojiItem('image_emoticon38', 'Rainbow'),
-  new EmojiItem('image_emoticon39', 'Star Moon'), new EmojiItem('image_emoticon40', 'Sun'),
-  new EmojiItem('image_emoticon41', 'Money'), new EmojiItem('image_emoticon42', 'Bubble'),
-  new EmojiItem('image_emoticon43', 'Tea'), new EmojiItem('image_emoticon44', 'Cake'),
-  new EmojiItem('image_emoticon45', 'Music'), new EmojiItem('image_emoticon46', 'haha'),
-  new EmojiItem('image_emoticon47', 'Victory'), new EmojiItem('image_emoticon48', 'Thumb Up'),
-  new EmojiItem('image_emoticon49', 'Open'), new EmojiItem('image_emoticon50', 'OK'),
-  new EmojiItem('image_emoticon77', 'Sofa'), new EmojiItem('image_emoticon78', 'Tissue'),
-  new EmojiItem('image_emoticon79', 'Banana'), new EmojiItem('image_emoticon80', 'Poop'),
-  new EmojiItem('image_emoticon81', 'Pill'), new EmojiItem('image_emoticon82', 'Bow Tie'),
-  new EmojiItem('image_emoticon83', 'Candle'), new EmojiItem('image_emoticon84', 'Three Lines'),
-  new EmojiItem('shoubai_emoji1', 'Bye'), new EmojiItem('shoubai_emoji2', 'Hug'),
-  new EmojiItem('shoubai_emoji3', 'Speechless'), new EmojiItem('shoubai_emoji4', 'Sour'),
-  new EmojiItem('shoubai_emoji5', 'Impressive'), new EmojiItem('shoubai_emoji6', 'Eating Melon'),
-  new EmojiItem('shoubai_emoji7', 'Dog Head'), new EmojiItem('shoubai_emoji8', 'Like'),
-  new EmojiItem('shoubai_emoji9', 'Heart Hands'), new EmojiItem('shoubai_emoji10', 'Call'),
-  new EmojiItem('shoubai_emoji11', 'Hit'), new EmojiItem('shoubai_emoji12', 'Look Around'),
-  new EmojiItem('shoubai_emoji13', 'Peek'), new EmojiItem('shoubai_emoji14', 'doge'),
-  new EmojiItem('shoubai_emoji15', 'Smirk'), new EmojiItem('shoubai_emoji16', 'Sigh'),
-  new EmojiItem('shoubai_emoji17', 'Scared'), new EmojiItem('shoubai_emoji18', 'Tired'),
-  new EmojiItem('shoubai_emoji19', 'Pick Nose'), new EmojiItem('shoubai_emoji20', 'Black Face'),
-  new EmojiItem('image_emoticon61', 'Confused'), new EmojiItem('image_emoticon62', 'Grin'),
-  new EmojiItem('image_emoticon63', 'Cute'), new EmojiItem('image_emoticon64', 'Shy'),
-  new EmojiItem('image_emoticon65', 'Color'), new EmojiItem('image_emoticon66', 'Shy'),
-  new EmojiItem('image_emoticon67', 'Tear Stream'), new EmojiItem('image_emoticon68', 'Awkward'),
-  new EmojiItem('image_emoticon69', 'Sunny'), new EmojiItem('image_emoticon70', 'Crazy'),
-  new EmojiItem('image_emoticon71', 'Pick Nose'), new EmojiItem('image_emoticon72', 'Clap'),
-  new EmojiItem('image_emoticon73', 'Right Pout'), new EmojiItem('image_emoticon74', 'Left Pout'),
-  new EmojiItem('image_emoticon75', 'Kiss'), new EmojiItem('image_emoticon76', 'Wronged'),
-  new EmojiItem('image_emoticon85', 'Pick Nose'), new EmojiItem('image_emoticon86', 'Clap'),
-  new EmojiItem('image_emoticon87', 'Rich Man'), new EmojiItem('image_emoticon88', 'Grin'),
-  new EmojiItem('image_emoticon89', 'Sigh'), new EmojiItem('image_emoticon90', 'Kiss'),
-  new EmojiItem('image_emoticon91', 'Pitiful'), new EmojiItem('image_emoticon92', 'Knife'),
-  new EmojiItem('image_emoticon93', 'Melon'), new EmojiItem('image_emoticon94', 'Beer'),
-  new EmojiItem('image_emoticon95', 'Basketball'), new EmojiItem('image_emoticon96', 'Table Tennis'),
-  new EmojiItem('image_emoticon97', 'Coffee'), new EmojiItem('image_emoticon98', 'Rice'),
-  new EmojiItem('image_emoticon99', 'Pig Head'), new EmojiItem('image_emoticon100', 'Fresh Flower'),
-  new EmojiItem('image_emoticon101', 'Gift'),
-  new EmojiItem('image_emoticon125', 'Struggle'), new EmojiItem('image_emoticon126', 'Fight On'),
-  new EmojiItem('image_emoticon127', 'Hug'), new EmojiItem('image_emoticon128', 'Kneel'),
-  new EmojiItem('image_emoticon129', 'Cheers'), new EmojiItem('image_emoticon130', 'Excellent'),
-  new EmojiItem('image_emoticon131', 'Eye'), new EmojiItem('image_emoticon132', 'Kiss'),
-  new EmojiItem('image_emoticon133', '666'), new EmojiItem('image_emoticon134', 'Flash'),
-  new EmojiItem('image_emoticon135', 'Think'), new EmojiItem('image_emoticon136', 'Agree'),
-  new EmojiItem('image_emoticon137', 'Oppose')
-];
+function buildEmoticons(): EmojiItem[] {
+  const list: EmojiItem[] = [];
+  const all = getAllEmoticons();
+  for (let i = 0; i < all.length; i++) {
+    list.push(new EmojiItem(all[i].id, all[i].name));
+  }
+  const extraExtended: [string, string][] = [
+    ['Confused', 'image_emoticon61'], ['Grin', 'image_emoticon62'], ['Cute', 'image_emoticon63'],
+    ['Shy', 'image_emoticon64'], ['Color', 'image_emoticon65'], ['Shy2', 'image_emoticon66'],
+    ['Tear Stream', 'image_emoticon67'], ['Awkward', 'image_emoticon68'], ['Sunny', 'image_emoticon69'],
+    ['Crazy', 'image_emoticon70'], ['Shocked2', 'image_emoticon71'], ['Clap', 'image_emoticon72'],
+    ['Right Pout', 'image_emoticon73'], ['Left Pout', 'image_emoticon74'], ['Kiss2', 'image_emoticon75'],
+    ['Wronged2', 'image_emoticon76']
+  ];
+  for (let i = 0; i < extraExtended.length; i++) {
+    list.push(new EmojiItem(extraExtended[i][1], extraExtended[i][0]));
+  }
+  const extraMore: [string, string][] = [
+    ['Pick Nose', 'image_emoticon85'], ['Clap2', 'image_emoticon86'], ['Rich Man', 'image_emoticon87'],
+    ['Grin2', 'image_emoticon88'], ['Sigh2', 'image_emoticon89'], ['Kiss3', 'image_emoticon90'],
+    ['Pitiful', 'image_emoticon91'], ['Knife', 'image_emoticon92'], ['Melon', 'image_emoticon93'],
+    ['Beer', 'image_emoticon94'], ['Basketball', 'image_emoticon95'], ['Table Tennis', 'image_emoticon96'],
+    ['Coffee', 'image_emoticon97'], ['Rice', 'image_emoticon98'], ['Pig Head', 'image_emoticon99'],
+    ['Fresh Flower', 'image_emoticon100'], ['Gift2', 'image_emoticon101']
+  ];
+  for (let i = 0; i < extraMore.length; i++) {
+    list.push(new EmojiItem(extraMore[i][1], extraMore[i][0]));
+  }
+  const extraSpecial: [string, string][] = [
+    ['Struggle', 'image_emoticon125'], ['Fight On', 'image_emoticon126'], ['Hug2', 'image_emoticon127'],
+    ['Kneel', 'image_emoticon128'], ['Cheers', 'image_emoticon129'], ['Excellent', 'image_emoticon130'],
+    ['Eye', 'image_emoticon131'], ['Kiss4', 'image_emoticon132'], ['666', 'image_emoticon133'],
+    ['Flash', 'image_emoticon134'], ['Think', 'image_emoticon135'], ['Agree', 'image_emoticon136'],
+    ['Oppose', 'image_emoticon137']
+  ];
+  for (let i = 0; i < extraSpecial.length; i++) {
+    list.push(new EmojiItem(extraSpecial[i][1], extraSpecial[i][0]));
+  }
+  const shoubaiList: [string, string][] = [
+    ['Bye', 'shoubai_emoji1'], ['Hug', 'shoubai_emoji2'], ['Speechless', 'shoubai_emoji3'],
+    ['Sour', 'shoubai_emoji4'], ['Impressive', 'shoubai_emoji5'], ['Eating Melon', 'shoubai_emoji6'],
+    ['Dog Head', 'shoubai_emoji7'], ['Like', 'shoubai_emoji8'], ['Heart Hands', 'shoubai_emoji9'],
+    ['Call', 'shoubai_emoji10'], ['Hit', 'shoubai_emoji11'], ['Look Around', 'shoubai_emoji12'],
+    ['Peek', 'shoubai_emoji13'], ['doge', 'shoubai_emoji14'], ['Smirk', 'shoubai_emoji15'],
+    ['Sigh', 'shoubai_emoji16'], ['Scared', 'shoubai_emoji17'], ['Tired', 'shoubai_emoji18'],
+    ['Pick Nose', 'shoubai_emoji19'], ['Black Face', 'shoubai_emoji20']
+  ];
+  for (let i = 0; i < shoubaiList.length; i++) {
+    list.push(new EmojiItem(shoubaiList[i][1], shoubaiList[i][0]));
+  }
+  return list;
+}
+
+const EMOTICONS: EmojiItem[] = buildEmoticons();
 
 function emojiUrl(id: string): string {
   return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
@@ -203,6 +206,9 @@ struct SubPostsPage {
   @State keyboardHeight: number = 0;
   @State kbExtra: number = AppStorage.Get<number>('replyKbExtraV2') ?? KEYBOARD_IME_EXTRA_VP;
   @State replyEditorH: number = 46;
+  @State selectedImageUris: string[] = [];
+  @State imageUploadResults: ImageUploadResult[] = [];
+  @State uploadingImages: boolean = false;
 
   private repo: PbPageRepository = PbPageRepository.getInstance();
   private addRepo: AddPostRepository = AddPostRepository.getInstance();
@@ -438,27 +444,58 @@ struct SubPostsPage {
     this.subPostId = 0;
     this.replyUserId = 0;
     this.replyPortrait = '';
+    this.selectedImageUris = [];
+    this.imageUploadResults = [];
     try { inputMethod.getController().stopInputSession(); } catch (_e) {}
   }
 
   private async sendReply(): Promise<void> {
-    if (this.replyContent.length === 0) return;
+    if (this.uploadingImages) return;
+    if (this.replyContent.length === 0 && this.selectedImageUris.length === 0) return;
+    this.uploadingImages = true;
     try {
-      let contentToSend: string = this.replyContent;
+      let content = this.replyContent;
+      if (this.selectedImageUris.length > 0) {
+        this.imageUploadResults = [];
+        for (const uri of this.selectedImageUris) {
+          const picId = await this.uploadImageAndGetId(uri);
+          if (picId) {
+            let w = '0';
+            let h = '0';
+            const result = this.imageUploadResults.find(r => r.picId === picId);
+            if (result) {
+              w = result.width;
+              h = result.height;
+            }
+            content += '\n#(pic,' + picId + ',' + w + ',' + h + ')';
+          } else {
+            promptAction.showToast({ message: '图片上传失败，已取消发送', duration: 2000 });
+            this.uploadingImages = false;
+            return;
+          }
+        }
+      }
+      let contentToSend: string = content;
       if (this.subPostId > 0 && this.replyPortrait.length > 0) {
         const replyName = this.replyHint.replace('回复 ', '');
-        contentToSend = '回复 #(reply, ' + this.replyPortrait + ', ' + replyName + ') :' + this.replyContent;
+        contentToSend = '回复 #(reply, ' + this.replyPortrait + ', ' + replyName + ') :' + content;
       }
       await this.addRepo.replyToThread(this.forumId, this.forumName, this.threadId, contentToSend, this.postId > 0 ? this.postId : undefined, this.subPostId > 0 ? this.subPostId : undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
       const account = AccountManager.getInstance().getCurrentAccountSync();
       const myName = account?.nickname || '';
       const author: Dict = { id: account?.uid || 0, name: myName, nameShow: myName, portrait: account?.portrait || '' };
-      const contentItem: Dict = { type: 0, text: this.replyContent };
+      const contentItems: Dict[] = [];
+      if (this.replyContent.length > 0) {
+        contentItems.push({ type: 0, text: this.replyContent });
+      }
+      for (const img of this.imageUploadResults) {
+        contentItems.push({ type: 1, originSrc: 'https://tieba.baidu.com/tb/editor/images/client/image_placeholder.png', cdn_src: img.picId, width: img.width, height: img.height });
+      }
       const agree: Dict = { agreeNum: 0, hasAgree: 0 };
       const newSub: Dict = {
         id: 0,
         author: author,
-        content: [contentItem],
+        content: contentItems,
         time: Math.floor(Date.now() / 1000),
         agree: agree
       };
@@ -466,13 +503,18 @@ struct SubPostsPage {
         const quote: Dict = { authorName: this.replyHint.replace('回复 ', '') };
         newSub['quote'] = quote;
       }
-      this.subPosts = [...this.subPosts, newSub];
-      this._pendingSub = newSub;
+      if (this.selectedImageUris.length === 0) {
+        this.subPosts = [...this.subPosts, newSub];
+        this._pendingSub = newSub;
+      }
       this.closeReplyWindow();
+      this.uploadingImages = false;
       void this.loadSubPosts();
       promptAction.showToast({ message: '回复已发送', duration: 1500 });
     } catch (e) {
-      promptAction.showToast({ message: '回复失败', duration: 2000 });
+      this.uploadingImages = false;
+      const errMsg = (e as Error)?.message || String(e);
+      promptAction.showToast({ message: '回复失败: ' + errMsg, duration: 2000 });
     }
   }
 
@@ -564,7 +606,7 @@ struct SubPostsPage {
                 }
               }
               Column() {
-                Divider().height(32).color(this.isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)').width('100%').margin({ top: 6, bottom: 6 }).strokeWidth(2)
+                Divider().height(96).color(this.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)').width('100%').margin({ top: 6, bottom: 6 }).strokeWidth(4)
               }
               .width('100%').backgroundColor(pageBg(this.isDark)).padding({ left: 12, right: 12 })
 
@@ -693,6 +735,29 @@ struct SubPostsPage {
             .onIMEInputComplete(() => { this.replyContent = richEditorToText(this.richController); this.updateReplyEditorH(); })
             .onDeleteComplete(() => { this.replyContent = richEditorToText(this.richController); this.updateReplyEditorH(); })
             .onPaste(() => { this.replyContent = richEditorToText(this.richController); this.updateReplyEditorH(); })
+
+          if (this.selectedImageUris.length > 0) {
+            Scroll() {
+              Row() {
+                ForEach(this.selectedImageUris, (uri: string, idx: number) => {
+                  Stack() {
+                    Image(uri)
+                      .width(64).height(64).borderRadius(8).objectFit(ImageFit.Cover)
+                    Image($r('app.media.ic_close')).width(14).height(14).fillColor('#FFFFFF')
+                      .width(20).height(20)
+                      .backgroundColor('rgba(0,0,0,0.5)').borderRadius(10)
+                      .align(Alignment.TopEnd)
+                      .onClick(() => {
+                        this.selectedImageUris = this.selectedImageUris.filter((_, i) => i !== idx);
+                        this.imageUploadResults = this.imageUploadResults.filter((_, i) => i !== idx);
+                      })
+                  }.width(64).height(64).margin({ right: 8 })
+                })
+              }.padding({ left: 4, right: 4 })
+            }
+              .scrollBar(BarState.Off).height(76).width('100%')
+          }
+
           Row() {
             Button() {
               Image($r('app.media.ic_emoji')).width(24).height(24)
@@ -709,16 +774,22 @@ struct SubPostsPage {
               LongPressGesture({ repeat: false, duration: 500 })
                 .onAction(() => { this._kbAdjustAt = Date.now(); this.adjustKbExtra(10); })
             )
+            Image($r('app.media.ic_image_add')).width(24).height(24).margin({ left: 16 }).onClick(() => { this.pickImages(); })
+            if (this.selectedImageUris.length > 0) {
+              Text(String(this.selectedImageUris.length)).fontFamily(this.appFontFamily).fontSize(12).fontColor(textAccent(this.primaryColor, this.isDark))
+                .width(18).height(18).textAlign(TextAlign.Center).backgroundColor(blendWithBg(this.primaryColor, 0.12, this.isDark)).borderRadius(9)
+                .margin({ left: 2 })
+            }
             Blank()
             Text(String(this.replyContent.length) + '/10000').fontFamily(this.appFontFamily).fontSize(12).fontColor(textSecondary(this.isDark)).margin({ right: 8 })
-Text('发送')
+            Text(this.uploadingImages ? '上传中...' : '发送')
               .width(64).height(26).textAlign(TextAlign.Center)
-              .backgroundColor(this.replyContent.length > 0 ? blendWithWhite(this.primaryColor, 0.35) : blendWithWhite(this.primaryColor, 0.25))
-              .fontColor(this.replyContent.length > 0 ? '#0B2E6C' : '#8B96B4')
+              .backgroundColor((this.replyContent.length > 0 || this.selectedImageUris.length > 0) && !this.uploadingImages ? blendWithWhite(this.primaryColor, 0.35) : blendWithWhite(this.primaryColor, 0.25))
+              .fontColor((this.replyContent.length > 0 || this.selectedImageUris.length > 0) && !this.uploadingImages ? '#0B2E6C' : '#8B96B4')
               .fontSize(15).fontWeight(FontWeight.Bold).borderRadius(12)
               .onClick(() => {
                 if (Date.now() - this._kbAdjustAt < 600) return;
-                if (this.replyContent.length > 0) {
+                if (!this.uploadingImages && (this.replyContent.length > 0 || this.selectedImageUris.length > 0)) {
                   this.sendReply();
                 }
               })
@@ -746,13 +817,13 @@ Text('发送')
         Column() {
           Column() {
             this.MenuItem('复制', () => { this.copyToClipboard(this.menuText); this.menuShow = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark))
+            Divider().height(0.75).color(dividerColor(this.isDark))
             if (AccountManager.getInstance().getCurrentAccountSync()?.uid === this.menuPostAuthorId && this.menuPostAuthorId > 0) {
               this.MenuItem('删除', () => { void this.deletePost(this.menuPostId); this.menuShow = false; })
-              Divider().height(0.5).color(dividerColor(this.isDark))
+              Divider().height(0.75).color(dividerColor(this.isDark))
             }
             this.MenuItem('举报', () => { this.reportPost(this.menuPostId); this.menuShow = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark))
+            Divider().height(0.75).color(dividerColor(this.isDark))
             this.MenuItem('收藏到此楼', () => { this.bookmarkPost(this.menuPostId); this.menuShow = false; })
           }
           .width(140)
@@ -954,49 +1025,8 @@ Text('发送')
 
       if (sub.content) {
         Column() {
-          Text() {
-            ForEach(sub.content as Dict[], (item: Dict) => {
-                if (Number(item.type) === 0) {
-                  if (String(item.text || item.c || '') && isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
-                    ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
-                      .width(20).height(20).objectFit(ImageFit.Contain)
-                      .verticalAlign(ImageSpanAlignment.CENTER)
-                  } else if (String(item.text || item.c || '')) {
-                    Span(String(item.text || item.c || ''))
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                  }
-                } else if (Number(item.type) === 2 || Number(item.type) === 6 || Number(item.type) === 7 || Number(item.type) === 9 || Number(item.type) === 10 || Number(item.type) === 11 || Number(item.type) === 12 || Number(item.type) === 13) {
-                  if (getEmojiUrl(item)) {
-                    ImageSpan(getEmojiUrl(item).replace('https://', 'http://'))
-                      .width(20).height(20).objectFit(ImageFit.Contain)
-                      .verticalAlign(ImageSpanAlignment.CENTER)
-                  } else if (item.text || item.c) {
-                    Span(String(item.text || item.c || ''))
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                  }
-                } else if (Number(item.type) === 1 && PbContentRender.resolveImageSrc(item)) {
-                  ImageSpan(PbContentRender.resolveImageSrc(item))
-                    .width(120).height(120).objectFit(ImageFit.Contain)
-                    .verticalAlign(ImageSpanAlignment.CENTER)
-                } else if (Number(item.type) === 1 || Number(item.type) === 3 || Number(item.type) === 20) {
-                  Span('[图片]')
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                } else if (Number(item.type) === 5) {
-                  Span('[视频]')
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                } else if (item.text || item.c) {
-                  if (isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
-                    ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
-                      .width(20).height(20).objectFit(ImageFit.Contain)
-                      .verticalAlign(ImageSpanAlignment.CENTER)
-                  } else {
-                    Span(String(item.text || item.c || ''))
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                  }
-                }
-              })
-            }
-            .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).lineHeight(Math.round(24 * this.fontScale)).letterSpacing(0.4).textAlign(TextAlign.Start).width('100%')
+          PbContentRender({ contents: sub.content as Dict[], threadId: this.threadId, forumId: this.forumId, forumName: this.forumName })
+            .width('100%')
           if (this.getQuoteName(sub)) {
             Text('回复 @' + this.getQuoteName(sub))
               .fontFamily(this.appFontFamily).fontSize(Math.round(12 * this.fontScale)).fontColor('#4477E0').lineHeight(Math.round(18 * this.fontScale))
@@ -1051,7 +1081,7 @@ Text('发送')
         )
       }
 
-      Divider().height(4).color(this.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)').width('100%').margin({ left: 60, right: 12, top: 11, bottom: 11 })
+      Divider().height(9).color(this.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)').width('100%').margin({ left: 60, right: 12, top: 11, bottom: 11 })
     }
     .width('100%')
     .backgroundColor(pageBg(this.isDark))
@@ -1388,7 +1418,9 @@ Text('发送')
         ForEach(EMOTICONS, (emoji: EmojiItem) => {
           GridItem() {
             Image(emojiUrl(emoji.id))
-              .width(28).height(28).objectFit(ImageFit.Contain)
+              .width(32).height(32).objectFit(ImageFit.Contain)
+              .interpolation(ImageInterpolation.High)
+              .syncLoad(false)
               .onClick(() => {
                 this.richController.addImageSpan(emojiUrl(emoji.id), {
                   offset: this.richController.getCaretOffset(),
@@ -1396,7 +1428,6 @@ Text('发送')
                 });
                 this.replyContent = richEditorToText(this.richController);
                 this.updateReplyEditorH();
-                this.showEmojiPanel = false;
               })
           }
         })
@@ -1410,6 +1441,106 @@ Text('发送')
     .backgroundColor(blendWithBg(this.primaryColor, 0.20, this.isDark, '#1E1E1E'))
     .borderRadius(12)
     .edgeEffect(EdgeEffect.Spring)
+  }
+
+  private async pickImages(): Promise<void> {
+    try {
+      const photoPicker = new picker.PhotoViewPicker();
+      const result = await photoPicker.select({
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 9
+      });
+      if (result.photoUris && result.photoUris.length > 0) {
+        const copied: string[] = [];
+        for (const uri of result.photoUris) {
+          const p = await this.copyToSandbox(uri, 'image');
+          if (p) copied.push(p);
+        }
+        if (copied.length > 0) {
+          this.selectedImageUris = copied;
+        } else {
+          promptAction.showToast({ message: '图片读取失败', duration: 1500 });
+        }
+      }
+    } catch (e) {
+      console.error('TiebaLite: pickImages error=' + String(e));
+    }
+  }
+
+  private async copyToSandbox(uri: string, kind: 'image' | 'video'): Promise<string> {
+    try {
+      const file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
+      const stat = fs.statSync(uri);
+      if (stat.size <= 0) {
+        try { fs.closeSync(file); } catch (e) {}
+        return '';
+      }
+      const ctx = getContext(this) as common.UIAbilityContext;
+      const dest = ctx.cacheDir + '/reply_' + Date.now() + '_' + Math.floor(Math.random() * 100000) + (kind === 'video' ? '.mp4' : '.jpg');
+      const out = fs.openSync(dest, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      const chunk = new ArrayBuffer(256 * 1024);
+      let total = 0;
+      while (total < stat.size) {
+        const n = fs.readSync(file.fd, chunk, { offset: total, length: Math.min(chunk.byteLength, stat.size - total) });
+        if (n <= 0) break;
+        fs.writeSync(out.fd, chunk.slice(0, n));
+        total += n;
+      }
+      fs.closeSync(out);
+      fs.closeSync(file);
+      return 'file://' + dest;
+    } catch (e) {
+      console.error('TiebaLite: copyToSandbox error=' + String(e));
+      return '';
+    }
+  }
+
+  private async uploadImageAndGetId(uri: string): Promise<string> {
+    try {
+      const filePath = uri.startsWith('file://') ? uri.substring(7) : uri;
+      const compressed = await compressImageToBuffer(filePath);
+      const buf = compressed.buffer;
+      if (buf.byteLength <= 0) return '';
+
+      const md5 = await MD5.hashBytes(new Uint8Array(buf));
+      const fileName = uri.substring(uri.lastIndexOf('/') + 1) || 'image.jpg';
+      const raw = await uploadChunked('https://c.tieba.baidu.com/c/s/uploadPicture', buf, {
+        fileName: fileName,
+        mime: 'image/jpeg',
+        groupId: '1',
+        picWaterType: '0',
+        forumName: this.forumName,
+        resourceId: md5,
+        width: String(compressed.width),
+        height: String(compressed.height)
+      });
+      if (!raw) {
+        console.error('TiebaLite: uploadImage no response');
+        return '';
+      }
+      const errCode = raw.error_code || raw.errorCode || raw.no || '0';
+      if (String(errCode) !== '0' && String(errCode) !== '300000') {
+        console.error('TiebaLite: uploadImage failed code=' + errCode + ' result=' + JSON.stringify(raw).substring(0, 200));
+        return '';
+      }
+      const picId = String(raw.pic_id || raw.picId || raw.resource_id || raw.resourceId || '');
+      if (picId) {
+        const info = (raw.info || raw.pic_info || raw.picInfo || raw.data) as Record<string, Object> || ({} as Record<string, Object>);
+        const bigPic = (info.big_pic || info.bigPic || info.origin_pic || info.originPic) as Record<string, Object> || ({} as Record<string, Object>);
+        const w = String(bigPic.width || info.fullpic_width || info.width || compressed.width);
+        const h = String(bigPic.height || info.fullpic_height || info.height || compressed.height);
+        this.imageUploadResults.push({
+          picId: picId,
+          width: w,
+          height: h
+        });
+        return picId;
+      }
+      return '';
+    } catch (e) {
+      console.error('TiebaLite: uploadImageAndGetId error=' + String(e));
+      return '';
+    }
   }
 
   pageTransition() {

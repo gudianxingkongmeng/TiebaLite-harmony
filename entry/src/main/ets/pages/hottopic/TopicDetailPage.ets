@@ -101,7 +101,7 @@ struct TopicDetailPage {
           Column() {
             if (this.topicDetail) {
               this.topicHeader(this.topicDetail)
-              Divider().height(8).color(dividerColor(this.isDark)).width('100%')
+              Divider().height(12).color(dividerColor(this.isDark)).width('100%')
             }
 
             if (this.threads.length === 0) {

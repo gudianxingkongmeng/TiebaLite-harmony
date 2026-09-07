@@ -83,7 +83,7 @@ struct FontSettingsPage {
           Column() {
             Text('汉字预览效果示例。TiebaLite~')
               .fontFamily(this.appFontFamily).fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark)).width('100%').padding(16)
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
             Text('汉字预览效果示例。')
               .fontFamily(this.appFontFamily).fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textSecondary(this.isDark)).width('100%').padding(16)
           }
@@ -106,7 +106,7 @@ struct FontSettingsPage {
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
             if (!this.useSystemFont) {
-              Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+              Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
               ForEach(this.fontOptions, (font: string, idx: number) => {
                 Row() {
                   Text(font).fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -123,7 +123,7 @@ struct FontSettingsPage {
                   this.appFontFamily = AppStorage.Get<string>('appFontFamily') || '';
                 })
                 if (idx < this.fontOptions.length - 1) {
-                  Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+                  Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
                 }
               })
             }

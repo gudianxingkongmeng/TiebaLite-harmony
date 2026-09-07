@@ -31,7 +31,7 @@ export default class HistoryRepository {
   }
 
   async getThreadHistories(): Promise<ThreadHistoryEntity[]> {
-    return DatabaseManager.getInstance().getThreadHistories(50);
+    return DatabaseManager.getInstance().getThreadHistories(500);
   }
 
   async deleteThreadHistory(id: number): Promise<void> {

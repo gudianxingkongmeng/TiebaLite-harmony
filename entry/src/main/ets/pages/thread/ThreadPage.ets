@@ -40,7 +40,7 @@ import { uploadChunked } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
 import MD5 from '../../core/encryption/MD5';
 import { GripDetector } from '../../core/utils/GripDetector';
-import { richEditorToText } from '../../components/EmojiManager';
+import { richEditorToText, getAllEmoticons, EmoticonInfo } from '../../components/EmojiManager';
 
 class ImageUploadResult {
   picId: string = '';
@@ -62,71 +62,51 @@ class EmojiItem {
   }
 }
 
-const EMOTICONS: EmojiItem[] = [
-  new EmojiItem('image_emoticon1', 'Smile'), new EmojiItem('image_emoticon2', 'LOL'),
-  new EmojiItem('image_emoticon3', 'Tongue'), new EmojiItem('image_emoticon4', 'Kiss'),
-  new EmojiItem('image_emoticon5', 'Cool'), new EmojiItem('image_emoticon6', 'Puzzled'),
-  new EmojiItem('image_emoticon7', 'Happy'), new EmojiItem('image_emoticon8', 'Sweat'),
-  new EmojiItem('image_emoticon9', 'Tears'), new EmojiItem('image_emoticon10', 'Blackline'),
-  new EmojiItem('image_emoticon11', 'Despise'), new EmojiItem('image_emoticon12', 'Unhappy'),
-  new EmojiItem('image_emoticon13', 'Shy'), new EmojiItem('image_emoticon14', 'Angry'),
-  new EmojiItem('image_emoticon15', 'Question'), new EmojiItem('image_emoticon16', 'Sly'),
-  new EmojiItem('image_emoticon17', 'Bite'), new EmojiItem('image_emoticon18', 'Cat'),
-  new EmojiItem('image_emoticon19', 'Wronged'), new EmojiItem('image_emoticon20', 'Playboy'),
-  new EmojiItem('image_emoticon21', 'Phew'), new EmojiItem('image_emoticon22', 'Laughing Eyes'),
-  new EmojiItem('image_emoticon23', 'Cold'), new EmojiItem('image_emoticon24', 'Overjoyed'),
-  new EmojiItem('image_emoticon25', 'Slick'), new EmojiItem('image_emoticon26', 'Reluctant'),
-  new EmojiItem('image_emoticon27', 'Crazy Sweat'), new EmojiItem('image_emoticon28', 'Dizzy'),
-  new EmojiItem('image_emoticon29', 'Sleepy'), new EmojiItem('image_emoticon30', 'Cry'),
-  new EmojiItem('image_emoticon31', 'Angry'), new EmojiItem('image_emoticon32', 'Shocked'),
-  new EmojiItem('image_emoticon33', 'Drink'), new EmojiItem('image_emoticon34', 'Heart'),
-  new EmojiItem('image_emoticon35', 'Broken Heart'), new EmojiItem('image_emoticon36', 'Rose'),
-  new EmojiItem('image_emoticon37', 'Gift'), new EmojiItem('image_emoticon38', 'Rainbow'),
-  new EmojiItem('image_emoticon39', 'Star Moon'), new EmojiItem('image_emoticon40', 'Sun'),
-  new EmojiItem('image_emoticon41', 'Money'), new EmojiItem('image_emoticon42', 'Bubble'),
-  new EmojiItem('image_emoticon43', 'Tea'), new EmojiItem('image_emoticon44', 'Cake'),
-  new EmojiItem('image_emoticon45', 'Music'), new EmojiItem('image_emoticon46', 'haha'),
-  new EmojiItem('image_emoticon47', 'Victory'), new EmojiItem('image_emoticon48', 'Thumb Up'),
-  new EmojiItem('image_emoticon49', 'Open'), new EmojiItem('image_emoticon50', 'OK'),
-  new EmojiItem('image_emoticon77', 'Sofa'), new EmojiItem('image_emoticon78', 'Tissue'),
-  new EmojiItem('image_emoticon79', 'Banana'), new EmojiItem('image_emoticon80', 'Poop'),
-  new EmojiItem('image_emoticon81', 'Pill'), new EmojiItem('image_emoticon82', 'Bow Tie'),
-  new EmojiItem('image_emoticon83', 'Candle'), new EmojiItem('image_emoticon84', 'Three Lines'),
-  new EmojiItem('shoubai_emoji1', 'Bye'), new EmojiItem('shoubai_emoji2', 'Hug'),
-  new EmojiItem('shoubai_emoji3', 'Speechless'), new EmojiItem('shoubai_emoji4', 'Sour'),
-  new EmojiItem('shoubai_emoji5', 'Impressive'), new EmojiItem('shoubai_emoji6', 'Eating Melon'),
-  new EmojiItem('shoubai_emoji7', 'Dog Head'), new EmojiItem('shoubai_emoji8', 'Like'),
-  new EmojiItem('shoubai_emoji9', 'Heart Hands'), new EmojiItem('shoubai_emoji10', 'Call'),
-  new EmojiItem('shoubai_emoji11', 'Hit'), new EmojiItem('shoubai_emoji12', 'Look Around'),
-  new EmojiItem('shoubai_emoji13', 'Peek'), new EmojiItem('shoubai_emoji14', 'doge'),
-  new EmojiItem('shoubai_emoji15', 'Smirk'), new EmojiItem('shoubai_emoji16', 'Sigh'),
-  new EmojiItem('shoubai_emoji17', 'Scared'), new EmojiItem('shoubai_emoji18', 'Tired'),
-  new EmojiItem('shoubai_emoji19', 'Pick Nose'), new EmojiItem('shoubai_emoji20', 'Black Face'),
-  new EmojiItem('image_emoticon61', 'Confused'), new EmojiItem('image_emoticon62', 'Grin'),
-  new EmojiItem('image_emoticon63', 'Cute'), new EmojiItem('image_emoticon64', 'Shy'),
-  new EmojiItem('image_emoticon65', 'Color'), new EmojiItem('image_emoticon66', 'Shy'),
-  new EmojiItem('image_emoticon67', 'Tear Stream'), new EmojiItem('image_emoticon68', 'Awkward'),
-  new EmojiItem('image_emoticon69', 'Sunny'), new EmojiItem('image_emoticon70', 'Crazy'),
-  new EmojiItem('image_emoticon71', 'Pick Nose'), new EmojiItem('image_emoticon72', 'Clap'),
-  new EmojiItem('image_emoticon73', 'Right Pout'), new EmojiItem('image_emoticon74', 'Left Pout'),
-  new EmojiItem('image_emoticon75', 'Kiss'), new EmojiItem('image_emoticon76', 'Wronged'),
-  new EmojiItem('image_emoticon85', 'Pick Nose'), new EmojiItem('image_emoticon86', 'Clap'),
-  new EmojiItem('image_emoticon87', 'Rich Man'), new EmojiItem('image_emoticon88', 'Grin'),
-  new EmojiItem('image_emoticon89', 'Sigh'), new EmojiItem('image_emoticon90', 'Kiss'),
-  new EmojiItem('image_emoticon91', 'Pitiful'), new EmojiItem('image_emoticon92', 'Knife'),
-  new EmojiItem('image_emoticon93', 'Melon'), new EmojiItem('image_emoticon94', 'Beer'),
-  new EmojiItem('image_emoticon95', 'Basketball'), new EmojiItem('image_emoticon96', 'Table Tennis'),
-  new EmojiItem('image_emoticon97', 'Coffee'), new EmojiItem('image_emoticon98', 'Rice'),
-  new EmojiItem('image_emoticon99', 'Pig Head'), new EmojiItem('image_emoticon100', 'Fresh Flower'),
-  new EmojiItem('image_emoticon101', 'Gift'),
-  new EmojiItem('image_emoticon125', 'Struggle'), new EmojiItem('image_emoticon126', 'Fight On'),
-  new EmojiItem('image_emoticon127', 'Hug'), new EmojiItem('image_emoticon128', 'Kneel'),
-  new EmojiItem('image_emoticon129', 'Cheers'), new EmojiItem('image_emoticon130', 'Excellent'),
-  new EmojiItem('image_emoticon131', 'Eye'), new EmojiItem('image_emoticon132', 'Kiss'),
-  new EmojiItem('image_emoticon133', '666'), new EmojiItem('image_emoticon134', 'Flash'),
-  new EmojiItem('image_emoticon135', 'Think'), new EmojiItem('image_emoticon136', 'Agree'),
-  new EmojiItem('image_emoticon137', 'Oppose')
-];
+function buildEmoticons(): EmojiItem[] {
+  const list: EmojiItem[] = [];
+  const all = getAllEmoticons();
+  for (let i = 0; i < all.length; i++) {
+    list.push(new EmojiItem(all[i].id, all[i].name));
+  }
+  // 安卓标准扩展（与参考 EmoticonManager.kt 对齐，含 61-101 / 125-137 扩展范围）
+  const extraExtended: [string, string][] = [
+    ['Confused', 'image_emoticon61'], ['Grin', 'image_emoticon62'], ['Cute', 'image_emoticon63'],
+    ['Shy', 'image_emoticon64'], ['Color', 'image_emoticon65'], ['Shy2', 'image_emoticon66'],
+    ['Tear Stream', 'image_emoticon67'], ['Awkward', 'image_emoticon68'], ['Sunny', 'image_emoticon69'],
+    ['Crazy', 'image_emoticon70'], ['Shocked2', 'image_emoticon71'], ['Clap', 'image_emoticon72'],
+    ['Right Pout', 'image_emoticon73'], ['Left Pout', 'image_emoticon74'], ['Kiss2', 'image_emoticon75'],
+    ['Wronged2', 'image_emoticon76'],
+    ['Pick Nose', 'image_emoticon85'], ['Clap2', 'image_emoticon86'], ['Rich Man', 'image_emoticon87'],
+    ['Grin2', 'image_emoticon88'], ['Sigh2', 'image_emoticon89'], ['Kiss3', 'image_emoticon90'],
+    ['Pitiful', 'image_emoticon91'], ['Knife', 'image_emoticon92'], ['Melon', 'image_emoticon93'],
+    ['Beer', 'image_emoticon94'], ['Basketball', 'image_emoticon95'], ['Table Tennis', 'image_emoticon96'],
+    ['Coffee', 'image_emoticon97'], ['Rice', 'image_emoticon98'], ['Pig Head', 'image_emoticon99'],
+    ['Fresh Flower', 'image_emoticon100'], ['Gift2', 'image_emoticon101'],
+    ['Struggle', 'image_emoticon125'], ['Fight On', 'image_emoticon126'], ['Hug2', 'image_emoticon127'],
+    ['Kneel', 'image_emoticon128'], ['Cheers', 'image_emoticon129'], ['Excellent', 'image_emoticon130'],
+    ['Eye', 'image_emoticon131'], ['Kiss4', 'image_emoticon132'], ['666', 'image_emoticon133'],
+    ['Flash', 'image_emoticon134'], ['Think', 'image_emoticon135'], ['Agree', 'image_emoticon136'],
+    ['Oppose', 'image_emoticon137']
+  ];
+  for (let i = 0; i < extraExtended.length; i++) {
+    list.push(new EmojiItem(extraExtended[i][1], extraExtended[i][0]));
+  }
+  const shoubaiList: [string, string][] = [
+    ['Bye', 'shoubai_emoji1'], ['Hug', 'shoubai_emoji2'], ['Speechless', 'shoubai_emoji3'],
+    ['Sour', 'shoubai_emoji4'], ['Impressive', 'shoubai_emoji5'], ['Eating Melon', 'shoubai_emoji6'],
+    ['Dog Head', 'shoubai_emoji7'], ['Like', 'shoubai_emoji8'], ['Heart Hands', 'shoubai_emoji9'],
+    ['Call', 'shoubai_emoji10'], ['Hit', 'shoubai_emoji11'], ['Look Around', 'shoubai_emoji12'],
+    ['Peek', 'shoubai_emoji13'], ['doge', 'shoubai_emoji14'], ['Smirk', 'shoubai_emoji15'],
+    ['Sigh', 'shoubai_emoji16'], ['Scared', 'shoubai_emoji17'], ['Tired', 'shoubai_emoji18'],
+    ['Pick Nose', 'shoubai_emoji19'], ['Black Face', 'shoubai_emoji20']
+  ];
+  for (let i = 0; i < shoubaiList.length; i++) {
+    list.push(new EmojiItem(shoubaiList[i][1], shoubaiList[i][0]));
+  }
+  return list;
+}
+
+const EMOTICONS: EmojiItem[] = buildEmoticons();
 
 function emojiUrl(id: string): string {
   return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
@@ -906,7 +886,7 @@ console.info('TiebaLite: [D5] building userMap');
                   }
                   .width('100%')
                   .padding(0)
-                  Divider().height(1).color(dividerColor(this.isDark)).width('100%')
+                  Divider().height(1.5).color(dividerColor(this.isDark)).width('100%')
                 }
 
                 if (this.threadData?.pollInfo) {
@@ -1131,20 +1111,20 @@ console.info('TiebaLite: [D5] building userMap');
             }
             .height(44).padding({ left: 16, right: 16 })
             .onClick(() => { this.shareThread(); this.showMenu = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark))
+            Divider().height(0.75).color(dividerColor(this.isDark))
             Row() {
               Text('复制链接').fontFamily(this.appFontFamily).fontSize(15).fontColor(textPrimary(this.isDark))
             }
             .height(44).padding({ left: 16, right: 16 })
             .onClick(() => { this.copyLink(); this.showMenu = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark))
+            Divider().height(0.75).color(dividerColor(this.isDark))
             Row() {
               Text('举报').fontFamily(this.appFontFamily).fontSize(15).fontColor(textPrimary(this.isDark))
             }
             .height(44).padding({ left: 16, right: 16 })
             .onClick(() => { this.reportThread(); this.showMenu = false; })
             if (this.isThreadAuthor) {
-              Divider().height(0.5).color(dividerColor(this.isDark))
+              Divider().height(0.75).color(dividerColor(this.isDark))
               Row() {
                 Text('删除').fontFamily(this.appFontFamily).fontSize(15).fontColor('#FF4444')
               }
@@ -1348,7 +1328,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
             }
             .width('100%').height(52).padding({ left: 20, right: 20 })
             .onClick(() => { this.copyToClipboard(this.menuText); this.menuShow = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark)).margin({ left: 52 })
+            Divider().height(0.75).color(dividerColor(this.isDark)).margin({ left: 52 })
             if (AccountManager.getInstance().getCurrentAccountSync()?.uid === this.menuPostAuthorId && this.menuPostAuthorId > 0) {
               Row() {
                 Image($r('app.media.ic_favorite')).width(20).height(20).fillColor('#FF4444')
@@ -1357,7 +1337,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               }
               .width('100%').height(52).padding({ left: 20, right: 20 })
               .onClick(() => { void this.deletePost(this.menuPostId); this.menuShow = false; })
-              Divider().height(0.5).color(dividerColor(this.isDark)).margin({ left: 52 })
+              Divider().height(0.75).color(dividerColor(this.isDark)).margin({ left: 52 })
             }
             Row() {
               Image($r('app.media.ic_block')).width(20).height(20).fillColor(this.primaryColor)
@@ -1366,7 +1346,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
             }
             .width('100%').height(52).padding({ left: 20, right: 20 })
             .onClick(() => { this.reportPost(this.menuPostId); this.menuShow = false; })
-            Divider().height(0.5).color(dividerColor(this.isDark)).margin({ left: 52 })
+            Divider().height(0.75).color(dividerColor(this.isDark)).margin({ left: 52 })
             Row() {
               Image($r('app.media.ic_star')).width(20).height(20).fillColor(this.primaryColor)
               Text('收藏到此楼').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark)).margin({ left: 12 })
@@ -2150,7 +2130,9 @@ Text(this.uploadingImages ? '上传中...' : '发送')
         ForEach(EMOTICONS, (emoji: EmojiItem) => {
           GridItem() {
             Image(emojiUrl(emoji.id))
-              .width(28).height(28).objectFit(ImageFit.Contain)
+              .width(32).height(32).objectFit(ImageFit.Contain)
+              .interpolation(ImageInterpolation.High)
+              .syncLoad(false)
               .onClick(() => {
                 this.richController.addImageSpan(emojiUrl(emoji.id), {
                   offset: this.richController.getCaretOffset(),
@@ -2158,7 +2140,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
                 });
                 this.replyContent = richEditorToText(this.richController);
                 this.updateReplyEditorH();
-                this.showEmojiPanel = false;
+                // Keep emoji panel open for continuous selection
               })
           }
         })

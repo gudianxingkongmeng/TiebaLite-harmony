@@ -7,7 +7,7 @@ import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, te
 import { Dict } from '../../core/types/Dict';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
-const APP_VERSION = '4.0.0 Beta 4.5.3';
+const APP_VERSION = '4.0.0 Beta 4.5.4';
 const APP_VERSION_CODE = '390986';
 const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 
@@ -60,7 +60,7 @@ struct AboutPage {
           }
           .width('100%').padding({ top: 32, bottom: 24 }).alignItems(HorizontalAlign.Center)
 
-          Divider().height(6).color(blendWithBg(this.primaryColor, 0.10, this.isDark)).width('100%')
+          Divider().height(9).color(blendWithBg(this.primaryColor, 0.06, this.isDark)).width('100%')
 
           Column() {
             this.menuItem($r('app.media.ic_info'), '开源仓库', () => {
@@ -95,7 +95,7 @@ struct AboutPage {
                 cancel: () => {}
               });
             })
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 48 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 48 })
             this.menuItem($r('app.media.ic_drafts'), '许可证', () => {
               AlertDialog.show({
                 title: '许可证',
@@ -103,7 +103,7 @@ struct AboutPage {
                 confirm: { value: '确定', action: () => {} }
               });
             })
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 48 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 48 })
             this.menuItem($r('app.media.ic_info'), '免责声明', () => {
               AlertDialog.show({
                 title: '免责声明',

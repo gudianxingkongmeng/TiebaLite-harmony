@@ -68,7 +68,7 @@ struct SignInSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('签到通知').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -81,7 +81,7 @@ struct SignInSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('签到时间').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -97,7 +97,7 @@ struct SignInSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('仅WiFi').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -110,7 +110,7 @@ struct SignInSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('显示角标').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))

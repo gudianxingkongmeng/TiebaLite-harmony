@@ -113,7 +113,7 @@ struct AppThemePage {
                 await ThemeProvider.getInstance().setCustomColor('');
               }
             })
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 56 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 56 })
           })
 
           Row() {
@@ -137,7 +137,7 @@ struct AppThemePage {
             this.rgbFromHex(this.previewColor);
             this.showColorSheet = true;
           })
-          Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 56 })
+          Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 56 })
 
           Text('变体预览').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark)).width('100%').padding(16)
           Row() {

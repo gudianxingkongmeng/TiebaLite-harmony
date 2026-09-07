@@ -570,7 +570,7 @@ export default struct HomePage {
                           }
                           .width('100%').height(56)
                           if (rowIdx < this.chunkForums(this.getPinnedForums()).length - 1) {
-                            Divider().height(0.5).color(blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E')).margin({ left: 16, right: 16 })
+                            Divider().height(0.75).color(blendWithBg(this.primaryColor, 0.1, this.isDark, '#1E1E1E')).margin({ left: 16, right: 16 })
                           }
                         })
                       } else {
@@ -603,7 +603,7 @@ export default struct HomePage {
                               })
                           ))
                           if (idx < this.getPinnedForums().length - 1) {
-                            Divider().height(0.5).color(blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E')).margin({ left: 62 })
+                            Divider().height(0.75).color(blendWithBg(this.primaryColor, 0.1, this.isDark, '#1E1E1E')).margin({ left: 62 })
                           }
                         })
                       }
@@ -661,7 +661,7 @@ export default struct HomePage {
                         }
                         .width('100%').height(56)
                         if (rowIdx < this.chunkForums(this.getUnpinnedForums()).length - 1) {
-                          Divider().height(0.5).color(blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E')).margin({ left: 16, right: 16 })
+                          Divider().height(0.75).color(blendWithBg(this.primaryColor, 0.1, this.isDark, '#1E1E1E')).margin({ left: 16, right: 16 })
                         }
                       })
                     } else {
@@ -694,7 +694,7 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
                             })
                         ))
                         if (idx < this.getUnpinnedForums().length - 1) {
-                          Divider().height(0.5).color(blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E')).margin({ left: 62 })
+                          Divider().height(0.75).color(blendWithBg(this.primaryColor, 0.1, this.isDark, '#1E1E1E')).margin({ left: 62 })
                         }
                       })
                     }

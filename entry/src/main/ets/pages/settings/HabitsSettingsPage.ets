@@ -129,7 +129,7 @@ struct HabitsSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('视频自动播放').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -145,7 +145,7 @@ struct HabitsSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('视频播放静音').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -159,7 +159,7 @@ struct HabitsSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('视频预览静音').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -173,7 +173,7 @@ struct HabitsSettingsPage {
             }
             .width('100%').height(48).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('主贴画中画').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
@@ -188,7 +188,7 @@ struct HabitsSettingsPage {
             }
             .width('100%').height(56).padding({ left: 16, right: 16 })
 
-            Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
               Text('列表画中画').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))

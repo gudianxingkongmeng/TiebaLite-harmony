@@ -1,7 +1,7 @@
 import { Dict } from '../core/types/Dict';
 import { textPrimary, textSecondary, pageBg, cardBg, blendWithBg } from '../core/utils/DataHelper';
 import EmojiImage from './EmojiImage';
-import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType } from './EmojiManager';
+import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText } from './EmojiManager';
 import { PhotoUrlCache } from '../core/utils/ThreadImageFetcher';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import NetworkUtil from '../core/utils/NetworkUtil';
@@ -75,25 +75,26 @@ export default struct PbContentRender {
   }
 
   private isInlineType(t: number): boolean {
-    return t === 0 || t === 2 || t === 6 || t === 7 || t === 9 || t === 10 || t === 11 || t === 12 || t === 13 || t === 40;
+    return t === 0 || t === 2 || t === 4 || t === 6 || t === 7 || t === 9 || t === 10 || t === 11 || t === 12 || t === 13 || t === 18 || t === 40;
   }
 
   private splitUrlText(text: string): UrlSeg[] {
     const out: UrlSeg[] = [];
     if (!text) return out;
+    const cleaned = text.replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
     const re = /(https?:\/\/[^\s\u4e00-\u9fff]+)/g;
     const trail: string = '。，、；：！？…()（）[]【】{}"\'';
     let last = 0;
     let m: RegExpExecArray | null = null;
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last) out.push({ text: text.substring(last, m.index), isUrl: false });
+    while ((m = re.exec(cleaned)) !== null) {
+      if (m.index > last) out.push({ text: cleaned.substring(last, m.index), isUrl: false });
       let u = m[0];
       while (u.length > 1 && trail.indexOf(u[u.length - 1]) >= 0) u = u.substring(0, u.length - 1);
       if (u.length > 0) out.push({ text: u, isUrl: true });
       last = m.index + m[0].length;
     }
-    if (last < text.length) out.push({ text: text.substring(last), isUrl: false });
-    if (out.length === 0) out.push({ text: text, isUrl: false });
+    if (last < cleaned.length) out.push({ text: cleaned.substring(last), isUrl: false });
+    if (out.length === 0) out.push({ text: cleaned, isUrl: false });
     return out;
   }
 
@@ -142,7 +143,9 @@ export default struct PbContentRender {
     let cur: Dict[] | null = null;
     let curIdx: number[] | null = null;
     for (let i = 0; i < this.contents.length; i++) {
-      const item = this.contents[i];
+      const raw = this.contents[i];
+      const item: Dict = typeof raw === 'string' ? { type: 0, text: raw } : (raw.type !== undefined ? raw as Dict : { type: 0, text: String(raw.text || raw.c || '') });
+      if (i < 5) console.info('TiebaLite: buildGroups item[' + i + '] type=' + item.type + ' text=' + String(item.text || item.c || '').substring(0, 30));
       if (this.isInlineType(Number(item.type))) {
         if (!cur) { cur = []; curIdx = []; }
         cur.push(item);
@@ -153,6 +156,7 @@ export default struct PbContentRender {
       }
     }
     if (cur) groups.push({ isInline: true, items: cur, origIndices: curIdx! });
+    console.info('TiebaLite: buildGroups groups=' + groups.length + ' firstGroup items=' + (groups[0]?.items.length || 0));
     return groups;
   }
 
@@ -196,10 +200,22 @@ export default struct PbContentRender {
                       .fontColor(textPrimary(this.isDark))
                   }
                 }, (seg: UrlSeg) => seg.text + (seg.isUrl ? '#u' : '#t'))
+              } else if (Number(item.type) === 4 && (item.text || item.c)) {
+                Span(String(item.text || item.c || ''))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
+                  .fontColor('#4477E0')
+              } else if (Number(item.type) === 18 && (item.text || item.c) && this.getType18EmojiUrl(item)) {
+                ImageSpan(this.getType18EmojiUrl(item).replace('https://', 'http://'))
+                  .width(20).height(20).objectFit(ImageFit.Contain)
+                  .verticalAlign(ImageSpanAlignment.CENTER)
               } else if (this.getEmojiUrl(item as Dict)) {
                 ImageSpan(this.getEmojiUrl(item as Dict).replace('https://', 'http://'))
                   .width(20).height(20).objectFit(ImageFit.Contain)
                   .verticalAlign(ImageSpanAlignment.CENTER)
+              } else if (Number(item.type) === 18) {
+                Span(String(item.text || item.c || ''))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
+                  .fontColor(textPrimary(this.isDark))
               } else if (item.c || item.text) {
                 Span(String(item.c || item.text || ''))
                   .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
@@ -394,12 +410,17 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
     .width('100%')
   }
 
+  private getType18EmojiUrl(item: Dict): string {
+    const text = String(item.text || item.c || '');
+    return text ? resolveEmojiIdFromMgr(text) : '';
+  }
+
   private getImgSrc(item: Dict): string {
-    return String(item.originSrc || item.src || item.origin_src || item.cdn_src || item.c || '');
+    return String(item.originSrc || item.src || item.origin_src || item.cdn_src || item.c || item.text || item.imgSrc || item.imageSrc || item.originalSrc || item.httpsSrc || '');
   }
 
   static resolveImageSrc(item: Dict): string {
-    const u = String(item.originSrc || item.src || item.origin_src || item.cdn_src || item.c || '');
+    const u = String(item.originSrc || item.src || item.origin_src || item.cdn_src || item.c || item.text || item.imgSrc || item.imageSrc || item.originalSrc || item.httpsSrc || '');
     if (!u) return '';
     if (u.startsWith('https://')) return u;
     if (u.startsWith('http://')) return 'https://' + u.substring(7);
@@ -446,15 +467,17 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
   static resolveEmojiId(rawId: string): string {
     const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
     if (!id) return '';
+    const strippedId = id.replace(/^#+/, '');
+    if (/^\d+$/.test(strippedId)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + strippedId + '.png';
     const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
-    if (/^\d+$/.test(id)) return 'https://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
+    if (/^\d+$/.test(id)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
     const spaced = PbContentRender.getSpacedEmojiId(id);
-    if (spaced) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
-    if (knownPrefixes.some(p => id.startsWith(p))) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
+    if (spaced) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
+    if (knownPrefixes.some(p => id.startsWith(p))) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
     const mapped = getEmojiIdFromMap(id);
-    if (mapped) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
+    if (mapped) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
     const encoded = encodeURIComponent(id);
-    return 'https://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
+    return 'http://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
   }
 
   static getSpacedEmojiId(text: string): string {
@@ -466,8 +489,10 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
   private isEmojiText(text: string): boolean {
     const id = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
     if (!id) return false;
+    const strippedId = id.replace(/^#+/, '');
     const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
     if (knownPrefixes.some(p => id.startsWith(p))) return true;
+    if (/^\d+$/.test(strippedId)) return true;
     if (/^\d+$/.test(id)) return true;
     if (getEmojiIdFromMap(id)) return true;
     if (PbContentRender.getSpacedEmojiId(id)) return true;

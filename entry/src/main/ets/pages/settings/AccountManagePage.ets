@@ -75,7 +75,7 @@ struct AccountManagePage {
                 }
               })
               if (idx < this.accounts.length - 1) {
-                Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 68 })
+                Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 68 })
               }
             })
           }

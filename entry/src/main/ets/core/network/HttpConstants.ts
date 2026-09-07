@@ -100,6 +100,7 @@ export enum ClientVersion {
   TIEBA_V11 = '11.10.8.6',
   TIEBA_V12 = '12.52.1.0',
   TIEBA_V12_POST = '12.35.1.0',
+  TIEBA_V22 = '22.10.1.0',
   MINI_V7 = '7.2.0.0',
   MINI_V8 = '8.0.8.0',
   NEW_V8 = '8.2.2'

@@ -132,7 +132,7 @@ struct BlockSettingsPage {
             })
 
             if (this.showAddInput) {
-              Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+              Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
               Row() {
                 TextInput({ placeholder: '输入关键词', text: this.addKeywordText })
@@ -152,13 +152,13 @@ struct BlockSettingsPage {
             }
 
             if (this.keywords.length === 0) {
-              Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+              Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
               Text('暂无屏蔽关键词').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark))
                 .width('100%').padding(16).textAlign(TextAlign.Center)
             }
 
             ForEach(this.keywords, (kw: string, idx: number) => {
-              Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+              Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
               Row() {
                 Text(kw).fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark)).layoutWeight(1)
                 Text('删除').fontFamily(this.appFontFamily).fontSize(14).fontColor('#FF4444')
@@ -196,7 +196,7 @@ struct BlockSettingsPage {
 
             ForEach(this.blockedUsers, (u: BlockedUser, idx: number) => {
               if (idx > 0) {
-                Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+                Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
               }
               Row() {
                 Column() {
@@ -239,7 +239,7 @@ struct BlockSettingsPage {
 
             ForEach(this.blockedForums, (fname: string, idx: number) => {
               if (idx > 0) {
-                Divider().height(1).color(dividerColor(this.isDark)).margin({ left: 16 })
+                Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
               }
               Row() {
                 Text(fname).fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark)).layoutWeight(1)

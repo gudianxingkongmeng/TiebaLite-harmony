@@ -51,9 +51,9 @@ struct ForumPage {
   @State forumRule: Dict | null = null;
   @State ruleTitle: string = '';
   @State page: number = 1;
-  @State sortType: number = 0;
+  @State sortType: number = 6;
   @State showSortDropdown: boolean = false;
-  private sortNames: string[] = ['按发布时间', '按回复时间'];
+  private sortNames: string[] = ['按回复时间', '按发布时间'];
   @State loading: boolean = true;
   @State error: string = '';
   @State hasMore: boolean = true;
@@ -333,7 +333,7 @@ struct ForumPage {
       const data: Dict = await this.repo.loadGeneralTabList(
         this.forumId, this.forumName,
         tab.tabId, tab.tabName, tab.tabType, tab.isGeneralTab,
-        pn, this.sortType === 0 ? 1 : 0, pn > 1 ? (this.catLastId[ci] || 0) : 0
+        pn, this.sortType, pn > 1 ? (this.catLastId[ci] || 0) : 0
       );
       const d = (data.data as Dict) || data;
       const list: Dict[] = (d.thread_list as Dict[] | undefined) || [];
@@ -364,7 +364,7 @@ struct ForumPage {
         this.loading = false;
         return;
       }
-      const data: Dict = await this.repo.loadFrsPage(this.forumName, 1, this.sortType === 0 ? 1 : 0, 0, 0);
+      const data: Dict = await this.repo.loadFrsPage(this.forumName, 1, this.sortType, 0, 0);
       console.info('TiebaLite: ForumPage error_code=' + JSON.stringify(data.error_code) + ' sortType=' + this.sortType + ' keys=' + Object.keys(data).join(','));
       const errCode = data.error_code;
       if (errCode !== undefined && errCode !== null && String(errCode) !== '0' && String(errCode) !== '300000') {
@@ -431,8 +431,7 @@ struct ForumPage {
           this.ruleTitle = rt;
         }
       }
-      this.threads = allThreads.sort((a, b) => this.compareBySortTime(b, a, this.sortType));
-      this.threads = this.threads.filter((t: Dict) => !this.isThreadBlocked(t));
+      this.threads = allThreads.filter((t: Dict) => !this.isThreadBlocked(t));
       if (this.threads.length > 0) {
         const ft = this.threads[0];
         console.info('TiebaLite: first processed thread keys=' + Object.keys(ft).join(',') + ' hasAuthor=' + (ft.author !== undefined) + ' authorKeys=' + (ft.author ? Object.keys(ft.author).join(',') : 'none'));
@@ -599,7 +598,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   }
 
   private getThreadSortTime(thread: Dict, sortType: number): number {
-    const field = sortType === 0
+    const field = sortType === 6
       ? getStr(thread, 'lastTimeInt', 'lastTime', 'last_time', 'lastTimeStr', 'last_time_str')
       : getStr(thread, 'createTime', 'create_time');
     if (!field) return 0;
@@ -735,9 +734,9 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   @Builder
   sortDropdownBuilder() {
     Column() {
-      this.sortOptionRow(0)
-      Divider().height(0.5).color(this.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)').width('80%')
       this.sortOptionRow(1)
+      Divider().height(0.75).color(this.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)').width('80%')
+      this.sortOptionRow(6)
     }
     .width('100%')
     .padding({ left: 3, right: 3, top: 3, bottom: 3 })
@@ -745,10 +744,14 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     .borderRadius(4)
   }
 
+  private getSortNameByValue(sortValue: number): string {
+    return sortValue === 6 ? '按回复时间' : '按发布时间';
+  }
+
   @Builder
   sortOptionRow(opt: number) {
     Row() {
-      Text(this.sortNames[opt])
+      Text(this.getSortNameByValue(opt))
         .fontFamily(this.appFontFamily)
         .fontSize(Math.round(15 * this.fontScale))
         .fontWeight(this.sortType === opt ? FontWeight.Bold : FontWeight.Regular)
@@ -771,6 +774,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     .onClick(() => {
       if (this.sortType !== opt) {
         this.sortType = opt; this.page = 1; void this.loadThreads();
+        void this.prefs.putInt('forum_sort', opt).catch((e: Error) => { console.warn('TiebaLite: save forum_sort failed ' + JSON.stringify(e)); });
       }
       this.showSortDropdown = false;
     })
@@ -1024,7 +1028,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
               .borderRadius(10)
               .margin({ left: 12, right: 12, top: 8, bottom: 4 })
               .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
-              Divider().height(0.5).color(pageBg(this.isDark)).margin({ left: 56, right: 56 })
+              Divider().height(0.75).color(pageBg(this.isDark)).margin({ left: 56, right: 56 })
             }
 
             ForEach(this.threads, (thread: Dict, index: number) => {
@@ -1476,7 +1480,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   private async loadMore(): Promise<void> {
     this.loadingMore = true;
     try {
-      const data: Dict = await this.repo.loadFrsPage(this.forumName, this.page, this.sortType === 0 ? 1 : 0, 0, 0);
+      const data: Dict = await this.repo.loadFrsPage(this.forumName, this.page, this.sortType, 0, 0);
       const d = (data.data as Dict) || data;
       const ul = d.user_list;
       const userMap: Map<string, Dict> = new Map();
@@ -1486,7 +1490,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
           if (uid) userMap.set(uid, u);
         }
       }
-      const more: Dict[] = this.extractThreads(d, userMap).sort((a, b) => this.compareBySortTime(b, a, this.sortType));
+      const more: Dict[] = this.extractThreads(d, userMap);
       if (more.length === 0) { this.hasMore = false; this.loadingMore = false; return; }
       const existingIds = new Set(this.threads.map(t => getStr(t, 'id', 'tid', 'threadId', 'thread_id')));
       const uniqueNew = more.filter(t => !existingIds.has(getStr(t, 'id', 'tid', 'threadId', 'thread_id')));
@@ -1645,7 +1649,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         }
       })
       if (index < this.getVisibleItems().length - 1) {
-        Divider().height(0.5).color(pageBg(this.isDark)).margin({ left: 14 })
+        Divider().height(0.75).color(pageBg(this.isDark)).margin({ left: 14 })
       }
     })
     if (this.hasMoreItems()) {
