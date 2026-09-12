@@ -217,7 +217,8 @@ export default struct ThreadCard {
       } else {
         if (this.thread.title !== undefined && this.thread.title !== null) {
           Text(getStr(this.thread, 'title'))
-            .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark))
+            .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontWeight(FontWeight.Bold)
+            .fontColor(this.isDeleted ? textSecondary(this.isDark) : textPrimary(this.isDark))
             .lineHeight(Math.round(24 * this.fontScale)).letterSpacing(0.4).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
             .width('100%').margin({ top: 8 })
             .decoration({ type: this.isDeleted ? TextDecorationType.LineThrough : TextDecorationType.None })

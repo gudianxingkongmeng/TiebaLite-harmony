@@ -32,7 +32,7 @@ export default interface ITiebaApi {
   // Thread Content
   threadContent(threadId: number, page: number, seeLz: boolean, callback: ApiCallback<Dict>): void;
   pbPage(threadId: number, page: number, postId: number | null, seeLz: boolean, sortType: number | null, callback: ApiCallback<Dict>): void;
-  pbFloor(threadId: number, postId: number, forumId: number, page: number, callback: ApiCallback<Dict>): void;
+  pbFloor(threadId: number, postId: number, forumId: number, page: number, callback: ApiCallback<Dict>, subPostId?: number): void;
 
   // Search
   searchPost(keyword: string, forumName: string, page: number, sortMode: number, callback: ApiCallback<Dict>, onlyThread?: string): void;

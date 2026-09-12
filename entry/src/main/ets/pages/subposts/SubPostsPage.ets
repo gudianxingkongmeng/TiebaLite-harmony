@@ -17,11 +17,13 @@ import Avatar from '../../components/Avatar';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
+import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
 import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
+import BackToTopButton from '../../components/BackToTopButton';
 import EmojiImage from '../../components/EmojiImage';
 import { registerEmoji, getEmojiIdFromMap, richEditorToText } from '../../components/EmojiManager';
 import { EmoticonInfo, getAllEmoticons } from '../../components/EmojiManager';
@@ -160,6 +162,7 @@ function emojiUrl(id: string): string {
 @Entry
 @Component
 struct SubPostsPage {
+  @State scrollTop: number = 0;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('gripSide') @Watch('onGripSideChanged') gripSide: number = 0;
   @StorageLink('fabRadius') fabRadius: number = 60;
@@ -216,6 +219,7 @@ struct SubPostsPage {
   private floorOwnerId: number = 0;
   private _userMap: Map<number, Dict> = new Map();
   private _pendingSub: Dict | null = null;
+  private _scrollToSubPostId: number = 0;
   private _win: window.Window | null = null;
   private _density: number = 1;
 
@@ -264,6 +268,11 @@ struct SubPostsPage {
     this.postId = parseInt(params?.postId || '0');
     this.forumId = parseInt(params?.forumId || '0');
     this.forumName = params?.forumName || '';
+    const subPostIdParam = parseInt(params?.subPostId || '0');
+    if (subPostIdParam > 0) {
+      this.subPostId = subPostIdParam;
+      this._scrollToSubPostId = subPostIdParam;
+    }
     const lzIdParam = parseInt(params?.lzId || '0');
     if (lzIdParam > 0) {
       this.lzId = lzIdParam;
@@ -421,6 +430,7 @@ struct SubPostsPage {
 
   private handleFabScroll(): void {
     const y = this.fabScroller.currentOffset().yOffset;
+    this.scrollTop = y;
     const delta = y - this.lastFabScrollY;
     this.lastFabScrollY = y;
     if (Math.abs(delta) > 2000 || Math.abs(delta) < 0.5) return;
@@ -523,7 +533,7 @@ struct SubPostsPage {
     this.error = '';
     this.page = 1;
     try {
-      const data: Dict = await this.repo.loadFloorPage(this.threadId, this.postId, this.forumId, this.page);
+      const data: Dict = await this.repo.loadFloorPage(this.threadId, this.postId, this.forumId, this.page, this._scrollToSubPostId > 0 ? this._scrollToSubPostId : undefined);
       this.parentPost = this.extractParentPost(data);
       this.subPosts = this.extractSubPosts(data);
       const pending: Dict | null = this._pendingSub;
@@ -537,6 +547,7 @@ struct SubPostsPage {
         }
       }
       this.hasMore = this.checkHasMore(data);
+      this.scrollToTargetSubPost();
       const rawUserList = data.user_list || (data.data as Dict)?.user_list || [];
       if (Array.isArray(rawUserList)) {
         for (const u of rawUserList as Dict[]) {
@@ -563,6 +574,18 @@ struct SubPostsPage {
       this.error = (e as Dict)?.msg as string || (e as Dict)?.message as string || '加载失败';
     } finally {
       this.loading = false;
+    }
+  }
+
+  private scrollToTargetSubPost(): void {
+    if (this._scrollToSubPostId <= 0 || this.subPosts.length === 0) return;
+    const targetId = this._scrollToSubPostId;
+    this._scrollToSubPostId = 0;
+    const idx = this.subPosts.findIndex((s: Dict) => Number(s.id || s.pid || 0) === targetId);
+    if (idx >= 0) {
+      setTimeout(() => {
+        try { this.fabScroller.scrollToIndex(idx + 2); } catch (_e) {}
+      }, 200);
     }
   }
 
@@ -617,7 +640,7 @@ struct SubPostsPage {
               if (this.hasMore && this.subPosts.length > 0) {
                 Row() {
                   if (this.loadingMore) {
-                    GearLoading({ gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
+                    RefreshAnimation({ refreshing: true, gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
                   } else {
                     Text('加载更多...')
                       .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark))
@@ -837,6 +860,11 @@ struct SubPostsPage {
         .backgroundColor('#33000000')
         .onClick(() => { this.menuShow = false; })
       }
+
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.fabScroller.scrollEdge(Edge.Top); }
+      })
     }
     .width('100%')
     .height('100%')
@@ -851,7 +879,6 @@ struct SubPostsPage {
         this.switchFabSide(false);
       }
     })
-    
   }
 
   @Builder
@@ -979,6 +1006,7 @@ struct SubPostsPage {
                 .borderRadius(999)
                 .border({ width: 1, color: blendWithBg('#FF6B35', 0.5, this.isDark) })
                 .margin({ left: 4 })
+                .textAlign(TextAlign.Center)
             }
             if (this.getSubBawuRole(sub) === 1) {
               Text('吧主').fontFamily(this.appFontFamily).fontSize(Math.round(10 * this.fontScale)).fontColor('#FFB800').fontWeight(FontWeight.Bold)
@@ -1025,29 +1053,58 @@ struct SubPostsPage {
 
       if (sub.content) {
         Column() {
-          PbContentRender({ contents: sub.content as Dict[], threadId: this.threadId, forumId: this.forumId, forumName: this.forumName })
-            .width('100%')
-          if (this.getQuoteName(sub)) {
-            Text('回复 @' + this.getQuoteName(sub))
-              .fontFamily(this.appFontFamily).fontSize(Math.round(12 * this.fontScale)).fontColor('#4477E0').lineHeight(Math.round(18 * this.fontScale))
-              .padding({ top: 2 })
-              .onClick(async () => {
-                if (!AccountManager.getInstance().isLoggedIn()) { NavigationHelper.navigate('pages/login/LoginPage'); return; }
-                if (!this.agreeToRisk) {
-                  const prefsAgreed = await PreferencesManager.getInstance().getBoolean('reply_risk_agreed', false);
-                  if (prefsAgreed) {
-                    this.agreeToRisk = true;
+          Text() {
+            ForEach(sub.content as Dict[], (item: Dict) => {
+              if (Number(item.type) === 0) {
+                if (String(item.text || item.c || '') && isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
+                  ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
+                    .width(20).height(20).objectFit(ImageFit.Contain)
+                    .verticalAlign(ImageSpanAlignment.CENTER)
+                } else if (String(item.text || item.c || '')) {
+                  Span(this.cleanAtReference(String(item.text || item.c || '')))
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                }
+              } else if (Number(item.type) === 2 || Number(item.type) === 6 || Number(item.type) === 7 || Number(item.type) === 9 || Number(item.type) === 10 || Number(item.type) === 11 || Number(item.type) === 12 || Number(item.type) === 13) {
+                if (getEmojiUrl(item)) {
+                  ImageSpan(getEmojiUrl(item).replace('https://', 'http://'))
+                    .width(20).height(20).objectFit(ImageFit.Contain)
+                    .verticalAlign(ImageSpanAlignment.CENTER)
+                } else if (item.text || item.c) {
+                  Span(this.cleanAtReference(String(item.text || item.c || '')))
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                }
+              } else if (Number(item.type) === 1 && PbContentRender.resolveImageSrc(item)) {
+                ImageSpan(PbContentRender.resolveImageSrc(item))
+                  .width(120).height(120).objectFit(ImageFit.Contain)
+                  .verticalAlign(ImageSpanAlignment.CENTER)
+              } else if (Number(item.type) === 1 || Number(item.type) === 3 || Number(item.type) === 20) {
+                Span('[图片]')
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+} else if (Number(item.type) === 5) {
+                Span('[视频]')
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+              } else if (Number(item.type) === 4 && String(item.text || item.c || '').length > 0) {
+                Span(this.cleanAtReference(String(item.text || item.c || '')))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                  .onClick(() => {
+                    const uid = Number(item.uid || item.user_id || item.userId || item.id || 0);
+                    if (uid > 0) {
+                      NavigationHelper.navigate('pages/user/UserProfilePage', { uid: String(uid) });
+                    }
+                  })
+              } else if (item.text || item.c) {
+                  if (isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
+                    ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
+                      .width(20).height(20).objectFit(ImageFit.Contain)
+                      .verticalAlign(ImageSpanAlignment.CENTER)
                   } else {
-                    this.showRiskWarning = true;
+                    Span(this.cleanAtReference(String(item.text || item.c || '')))
+                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
                   }
                 }
-                this.replyHint = '回复 ' + this.getQuoteName(sub);
-                this.subPostId = Number(sub.id || sub.pid || 0);
-                this.replyUserId = Number((sub.author as Dict)?.id || sub.author_id || 0);
-                this.replyPortrait = String((sub.author as Dict)?.portrait || '');
-                this.showReply = true;
-              }, 12)
+            })
           }
+          .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).lineHeight(Math.round(24 * this.fontScale)).letterSpacing(0.4).textAlign(TextAlign.Start).width('100%')
         }
         .width('100%').padding({ left: 60, right: 12 })
         .onClick(async () => {
@@ -1304,6 +1361,10 @@ struct SubPostsPage {
       if (n.length > 0) return n;
     }
     return '';
+  }
+
+  private cleanAtReference(text: string): string {
+    return text.replace(/@[^:：\s].*?(?=[：:]|$)/g, '');
   }
 
   private formatSubTime(ts: number): string {

@@ -50,6 +50,7 @@ export default struct GearCycle {
   private morphT: number = 0;
   private morphIdx: number = 0;
   private spin: number = 0;
+  private tickCount: number = 0;
 
   aboutToAppear(): void {
     this.startTimerIfNeeded();
@@ -89,8 +90,14 @@ export default struct GearCycle {
   }
 
   private tick(): void {
+    this.tickCount++;
     if (this.refreshing) {
-      this.spin = (this.spin + 360 * 30 / 4666) % 360;
+      this.spin = (this.spin + 360 * 30 / 1167) % 360;
+      // 齿轮形状切换速度：每 10 tick（约 300ms）切换一次形状，旋转平滑（30ms）
+      if (this.tickCount % 10 === 0) {
+        this.morphIdx = (this.morphIdx + 1) % MORPH_ORDER.length;
+      }
+      this.morphT = (this.morphT + 0.006) % 1;
     }
     this.draw();
   }
@@ -106,7 +113,7 @@ export default struct GearCycle {
     ctx.clearRect(0, 0, this.gearSize, this.gearSize);
     ctx.beginPath();
     ctx.arc(half, half, half - 0.5, 0, TAU);
-    ctx.fillStyle = this.containerColor;
+    ctx.fillStyle = '#00000000';
     ctx.fill();
     if (this.refreshing) {
       const idxA = MORPH_ORDER[this.morphIdx];

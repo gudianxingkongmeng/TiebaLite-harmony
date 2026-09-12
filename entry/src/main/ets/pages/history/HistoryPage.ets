@@ -10,6 +10,7 @@ import ThreadCard from '../../components/ThreadCard';
 import GearLoading from '../../components/GearLoading';
 import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
+import BackToTopButton from '../../components/BackToTopButton';
 import { Dict } from '../../core/types/Dict';
 import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
@@ -27,6 +28,7 @@ struct HistoryPage {
   @State pullDistance: number = 0;
   @State pullRefreshing: boolean = false;
   @State topInset: number = 24;
+  @State scrollTop: number = 0;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -154,7 +156,8 @@ struct HistoryPage {
           onRefresh: (): void => { this.isRefreshing = true; },
           onTimeout: (): void => { this.isRefreshing = false; }
         }) {
-          Scroll(this.scroller) {            Column() {
+          Scroll(this.scroller) {
+            Column() {
               ForEach(this.items, (item: Dict, index: number) => {
                 Column() {
                   ThreadCard({
@@ -192,16 +195,24 @@ struct HistoryPage {
               })
             }
           }
-            .scrollBar(BarState.Off)
+          .scrollBar(BarState.Off)
+          .onDidScroll(() => {
+            this.scrollTop = this.scroller.currentOffset().yOffset;
+          })
           .width('100%').layoutWeight(1)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
           .backgroundColor(pageBg(this.isDark))
           .edgeEffect(EdgeEffect.None)
         }
       }
-    }
-    .width('100%').height('100%').justifyContent(FlexAlign.Start)
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+      }
+      .width('100%').height('100%').justifyContent(FlexAlign.Start)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.scroller.scrollEdge(Edge.Top); }
+      })
     }
     .width('100%').height('100%').backgroundColor(pageBg(this.isDark)).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }

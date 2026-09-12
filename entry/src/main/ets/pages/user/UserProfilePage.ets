@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import display from '@ohos.display';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import Window from '@ohos.window';
 import UserProfileRepository from '../../core/repository/UserProfileRepository';
@@ -9,8 +10,11 @@ import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import AccountManager from '../../core/auth/AccountManager';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
+import { GripDetector } from '../../core/utils/GripDetector';
+import BackToTopButton from '../../components/BackToTopButton';
+import RefreshAnimation from '../../components/RefreshAnimation';
 
 @Entry
 @Component
@@ -24,6 +28,12 @@ struct UserProfilePage {
   @State profile: Dict | null = null;
   @State userPosts: Dict[] = [];
   @State userReplies: Dict[] = [];
+  @State userPostsPage: number = 1;
+  @State userRepliesPage: number = 1;
+  @State userPostsHasMore: boolean = true;
+  @State userRepliesHasMore: boolean = true;
+  @State loadingMorePosts: boolean = false;
+  @State loadingMoreReplies: boolean = false;
   @State selectedTab: number = 0;
   @State loading: boolean = true;
   @State loadingTab: boolean = false;
@@ -38,6 +48,14 @@ struct UserProfilePage {
   @State isSelf: boolean = false;
   @State genderText: string = '';
   @State ipText: string = '';
+  @State scrollTop: number = 0;
+  @State showScrollTop: boolean = false;
+  @StorageLink('gripSide') @Watch('onGripSideChanged') gripSide: number = 0;
+  @StorageLink('fabRadius') fabRadius: number = 60;
+  @State fabLeft: boolean = false;
+  @State screenWidth: number = 360;
+  private fabTimer: number = -1;
+  private pageScroller: Scroller = new Scroller();
   private repo: UserProfileRepository = UserProfileRepository.getInstance();
 
   aboutToAppear(): void {
@@ -47,6 +65,11 @@ struct UserProfilePage {
     this.isSelf = account !== null && account.uid === this.uid;
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     this.loadProfile();
+    try {
+      const d = display.getDefaultDisplaySync();
+      if (d && d.width > 0) this.screenWidth = d.width / d.densityPixels;
+    } catch (_e) {}
+    this.onGripSideChanged();
     BlockRepository.getInstance().ensureLoaded().then(() => {
       this.isBlocked = BlockRepository.getInstance().isUserBlocked(this.uid);
     }).catch(() => {});
@@ -54,6 +77,40 @@ struct UserProfilePage {
 
   onIsDarkChange(): void {
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
+  }
+
+  onGripSideChanged(): void {
+    if (!GripDetector.isEnabled()) {
+      if (this.fabLeft) this.fabLeft = false;
+      return;
+    }
+    if (this.gripSide === -1 && !this.fabLeft) {
+      this.switchFabSide(true);
+    } else if (this.gripSide === 1 && this.fabLeft) {
+      this.switchFabSide(false);
+    }
+  }
+
+  private switchFabSide(toLeft: boolean): void {
+    if (this.fabLeft === toLeft) return;
+    if (this.fabTimer !== -1) { clearTimeout(this.fabTimer); }
+    if (!this.showScrollTop) {
+      this.fabLeft = toLeft;
+      return;
+    }
+    const wasVisible = this.showScrollTop;
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.showScrollTop = false;
+    });
+    this.fabTimer = setTimeout(() => {
+      this.fabTimer = -1;
+      this.fabLeft = toLeft;
+      if (wasVisible) {
+        animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+          this.showScrollTop = true;
+        });
+      }
+    }, 250);
   }
 
   onPageShow(): void {
@@ -168,7 +225,7 @@ struct UserProfilePage {
       } else if (this.error) {
         ErrorState({ message: this.error, onRetryAction: (): void => { void this.loadProfile(); } })
       } else if (this.profile) {
-        Scroll() {
+        Scroll(this.pageScroller) {
           Column() {
             Column() {
               Avatar({ portrait: buildPortraitUrl(getStr(this.profile!, 'portrait', 'avatar', 'user_portrait', 'portrait_url')), avatarSize: 64, defaultName: getStr(this.profile!, 'name', 'nickname', 'userName', 'user_name', 'un', 'username') })
@@ -231,7 +288,7 @@ struct UserProfilePage {
             .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
 
             if (this.loadingTab) {
-              Text('加载中...').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).padding(32).width('100%').textAlign(TextAlign.Center)
+              RefreshAnimation({ refreshing: true, gearSize: 32, color: this.primaryColor })
             } else if (this.selectedTab === 0 && this.userPosts.length === 0) {
               Text('暂无帖子').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).padding(32).width('100%').textAlign(TextAlign.Center)
             } else if (this.selectedTab === 1 && this.userReplies.length === 0) {
@@ -289,6 +346,18 @@ struct UserProfilePage {
                 })
               })
             }
+            Column() {
+              if (this.selectedTab === 0 ? this.loadingMorePosts : this.loadingMoreReplies) {
+                RefreshAnimation({ refreshing: true, gearSize: 32, color: this.primaryColor })
+              } else {
+                Text(this.selectedTab === 0
+                  ? (this.userPostsHasMore ? '上拉加载更多' : '')
+                  : (this.userRepliesHasMore ? '上拉加载更多' : ''))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale)).fontColor(textTertiary(this.isDark))
+                  .width('100%').textAlign(TextAlign.Center).padding(12)
+              }
+            }
+            .width('100%')
           }
           .width('100%').padding({ bottom: 8 })
         }
@@ -297,7 +366,13 @@ struct UserProfilePage {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
         .backgroundColor(pageBg(this.isDark))
         .edgeEffect(EdgeEffect.Spring)
+        .onReachEnd(() => { void this.loadMoreUserPosts(); })
+        .onScroll(() => {
+          const y = this.pageScroller.currentOffset().yOffset;
+          this.scrollTop = y;
+        })
       }
+      BackToTopButton({ scrollTop: $scrollTop, onTopClick: () => { this.pageScroller.scrollEdge(Edge.Top); } })
     }
     .width('100%').height('100%').justifyContent(FlexAlign.Start).backgroundColor(pageBg(this.isDark)).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
   }
@@ -343,23 +418,73 @@ struct UserProfilePage {
 
   private async loadUserPosts(): Promise<void> {
     this.loadingTab = true;
+    this.userPostsPage = 1;
+    this.userRepliesPage = 1;
     try {
       const data: Dict = await this.repo.loadUserPosts(this.uid, 1, this.selectedTab === 0);
       const d = (data.data as Dict) || data;
       console.info('TiebaLite: UserProfilePage dataKeys=' + Object.keys(d).join(',') + ' topKeys=' + Object.keys(data).join(','));
 
       const arr = this.extractAnyArray(d, data);
+      const pageInfo = (d.page as Dict) || {};
+      const hasMore = (pageInfo.has_more ?? d.has_more ?? d.hasMore ?? data.has_more ?? data.hasMore ?? 0);
+      const totalPage = Number(pageInfo.total_page ?? d.total_page ?? data.total_page ?? 0);
       if (this.selectedTab === 0) {
         this.userPosts = arr;
+        this.userPostsHasMore = arr.length > 0;
         console.info('TiebaLite: userPosts loaded count=' + this.userPosts.length);
       } else {
         this.userReplies = arr;
+        this.userRepliesHasMore = arr.length > 0;
         console.info('TiebaLite: userReplies loaded count=' + this.userReplies.length);
       }
     } catch (e) {
       console.error('TiebaLite: loadUserPosts error=' + String(e));
     }
     this.loadingTab = false;
+  }
+
+  private async loadMoreUserPosts(): Promise<void> {
+    const isThread = this.selectedTab === 0;
+    if (isThread) {
+      if (this.loadingMorePosts || !this.userPostsHasMore || this.loadingTab) return;
+      this.loadingMorePosts = true;
+    } else {
+      if (this.loadingMoreReplies || !this.userRepliesHasMore || this.loadingTab) return;
+      this.loadingMoreReplies = true;
+    }
+    try {
+      const nextPage = (isThread ? this.userPostsPage : this.userRepliesPage) + 1;
+      const data: Dict = await this.repo.loadUserPosts(this.uid, nextPage, isThread);
+      const d = (data.data as Dict) || data;
+      const arr = this.extractAnyArray(d, data);
+      const pageInfo = (d.page as Dict) || {};
+      const hasMore = (pageInfo.has_more ?? d.has_more ?? d.hasMore ?? data.has_more ?? data.hasMore ?? 0);
+      if (isThread) {
+        if (arr.length === 0) {
+          this.userPostsHasMore = false;
+        } else {
+          this.userPosts = [...this.userPosts, ...arr];
+          this.userPostsPage = nextPage;
+          this.userPostsHasMore = arr.length > 0;
+        }
+      } else {
+        if (arr.length === 0) {
+          this.userRepliesHasMore = false;
+        } else {
+          this.userReplies = [...this.userReplies, ...arr];
+          this.userRepliesPage = nextPage;
+          this.userRepliesHasMore = arr.length > 0;
+        }
+      }
+    } catch (e) {
+      console.error('TiebaLite: loadMoreUserPosts error=' + String(e));
+      if (isThread) this.userPostsHasMore = false;
+      else this.userRepliesHasMore = false;
+    } finally {
+      if (isThread) this.loadingMorePosts = false;
+      else this.loadingMoreReplies = false;
+    }
   }
 
   private async toggleFollow(): Promise<void> {

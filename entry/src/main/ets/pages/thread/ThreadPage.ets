@@ -11,6 +11,7 @@ import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import { systemShare } from '@kit.ShareKit';
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
+import { LengthMetrics } from '@kit.ArkUI';
 
 import common from '@ohos.app.ability.common';
 import webview from '@ohos.web.webview';
@@ -36,6 +37,7 @@ import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
 import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
+import BackToTopButton from '../../components/BackToTopButton';
 import { uploadChunked } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
 import MD5 from '../../core/encryption/MD5';
@@ -149,6 +151,7 @@ struct ThreadPage {
   @State showJump: boolean = false;
   @State jumpPageText: string = '';
   @State scrollTop: number = 0;
+  private postId: number = 0;
   @State isCollected: boolean = false;
   @State immersiveMode: boolean = false;
   @State replyText: string = '';
@@ -240,6 +243,10 @@ struct ThreadPage {
       this.forumId = parseInt(params?.forumId || '0');
       this.forumName = params?.forumName || '';
       if (params?.isCollected === '1' || params?.isCollected === 'true') this.isCollected = true;
+      const postIdParam = params?.postId || '';
+      if (postIdParam && postIdParam !== '0') {
+        this.postId = parseInt(postIdParam);
+      }
       const displayInfo = display.getDefaultDisplaySync();
       this.screenWidth = displayInfo.width / displayInfo.densityPixels;
       this.screenHeight = displayInfo.height / displayInfo.densityPixels;
@@ -473,7 +480,9 @@ struct ThreadPage {
       }
       const reqPage: number = initialPage || 1;
       console.info('TiebaLite: [D3] calling loadThreadPage');
-      const data: Dict = await this.repo.loadThreadPage(this.threadId, reqPage, this.seeLz, this.sortType);
+      const targetPostId: number | null = this.postId > 0 && reqPage <= 1 ? this.postId : null;
+      const data: Dict = await this.repo.loadThreadPage(this.threadId, reqPage, this.seeLz, this.sortType, targetPostId);
+      if (targetPostId) this.postId = 0;
       console.info('TiebaLite: [D4] loadThreadPage returned data=' + (data ? 'ok' : 'null'));
       if (!data) { if (!silent) { this.error = '帖子数据为空'; } return; }
         try {
@@ -1844,7 +1853,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
         Column() {
           ForEach(this.getShownSubPosts(post), (sub: Dict, idx: number) => {
             Text() {
-              Span(this.resolveSubAuthorName(sub) + (this.resolveSubAuthorNameId(sub).length > 0 ? this.resolveSubAuthorNameId(sub) : ''))
+              Span(this.resolveSubAuthorName(sub))
                 .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(darkenColor(this.primaryColor, this.isDark ? 0.25 : 0.55)).fontWeight(FontWeight.Bold)
                 .onClick(() => {
                   const uid = String((sub.author as Dict)?.id || sub.author_id || 0);
@@ -1853,8 +1862,9 @@ Text(this.uploadingImages ? '上传中...' : '发送')
                   }
                 })
               if (Number((sub.author as Dict)?.id || sub.author_id || 0) > 0 && Number((sub.author as Dict)?.id || sub.author_id || 0) === Number(this.threadData?.authorId || 0)) {
-                Span(' 楼主')
+                Span('楼主')
                   .fontFamily(this.appFontFamily).fontSize(Math.round(12 * this.fontScale)).fontColor('#FF6B35').fontWeight(FontWeight.Bold)
+                  .baselineOffset(LengthMetrics.vp(1))
               }
               Span(': ')
               if ((sub.content as Dict[]) && (sub.content as Dict[]).length > 0) {

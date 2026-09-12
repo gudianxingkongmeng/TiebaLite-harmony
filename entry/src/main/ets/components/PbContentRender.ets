@@ -100,6 +100,24 @@ export default struct PbContentRender {
 
   private openUrl(url: string): void {
     if (!url) return;
+    // 贴吧帖子链接 → 进入 app 内帖子页
+    const tidMatch = url.match(/(?:tieba\.baidu\.com\/p\/|tieba\.baidu\.com\/mo\/q\/view\?tid=)(\d+)/);
+    if (tidMatch) {
+      const tid = Number(tidMatch[1]);
+      if (tid > 0) {
+        AppRouter.navigate('thread', { threadId: String(tid), forumId: '0', forumName: '' });
+        return;
+      }
+    }
+    // 贴吧吧链接 → 进入 app 内吧页
+    const kwMatch = url.match(/(?:tieba\.baidu\.com\/f\?(?:.*&)?kw=|tieba\.baidu\.com\/f\?kw=)([^&#]+)/);
+    if (kwMatch) {
+      const kw = decodeURIComponent(kwMatch[1]);
+      if (kw) {
+        AppRouter.navigate('forum', { forumName: kw, forumId: '0' });
+        return;
+      }
+    }
     PreferencesManager.getInstance().getBoolean('open_links_in_app', true).then((inApp: boolean) => {
       if (inApp) {
         AppRouter.navigate('webview', { url: url });
@@ -174,10 +192,12 @@ export default struct PbContentRender {
 } else if (String(item.text || item.c || '')) {
                   ForEach(this.splitUrlText(String(item.text || item.c || '')), (seg: UrlSeg) => {
                     if (seg.isUrl) {
-                      Span(seg.text)
+                      ImageSpan($r('app.media.ic_link'))
+                        .width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
+                        .objectFit(ImageFit.Contain).verticalAlign(ImageSpanAlignment.CENTER)
+                      Span(' ' + seg.text)
                         .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
                         .fontColor('#4477E0')
-                        .decoration({ type: TextDecorationType.Underline })
                         .onClick(() => { this.openUrl(seg.text); })
                     } else {
                       Span(seg.text)
@@ -189,10 +209,12 @@ export default struct PbContentRender {
               } else if (Number(item.type) === 40 && (item.c || item.text)) {
                 ForEach(this.splitUrlText(String(item.c || item.text || '')), (seg: UrlSeg) => {
                   if (seg.isUrl) {
-                    Span(seg.text)
+                    ImageSpan($r('app.media.ic_link'))
+                      .width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
+                      .objectFit(ImageFit.Contain).verticalAlign(ImageSpanAlignment.CENTER)
+                    Span(' ' + seg.text)
                       .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
                       .fontColor('#4477E0')
-                      .decoration({ type: TextDecorationType.Underline })
                       .onClick(() => { this.openUrl(seg.text); })
                   } else {
                     Span(seg.text)
@@ -228,12 +250,16 @@ export default struct PbContentRender {
           ForEach(group.items, (item: Dict, gi: number) => {
             if (Number(item.type) === 1 && String(item.link || '')) {
               Column() {
-                Text(String(item.text || item.link || ''))
-                  .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
-                  .fontColor('#4477E0')
-                  .decoration({ type: TextDecorationType.Underline })
-                  .onClick(() => { this.openUrl(String(item.link || '')); })
-                  .width('100%')
+                Row() {
+                  Image($r('app.media.ic_link')).width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
+                    .fillColor('#4477E0').margin({ right: 4 })
+                  Text(String(item.text || item.link || ''))
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
+                    .fontColor('#4477E0')
+                    .onClick(() => { this.openUrl(String(item.link || '')); })
+                }
+                .alignItems(VerticalAlign.Center)
+                .width('100%')
               }
               .width('100%')
               .margin({ top: 4, bottom: 4 })
@@ -349,13 +375,17 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
                     this.navigatePhotoView(group.origIndices[gi]);
                   })
                 } else {
-                  Text(String(item.text || item.c || ''))
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale))
-                    .fontColor('#4477E0')
-                    .decoration({ type: TextDecorationType.Underline })
-                    .onClick(() => {
-                      this.openUrl(String(item.link || item.text || ''));
-                    })
+                  Row() {
+                    Image($r('app.media.ic_link')).width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
+                      .fillColor('#4477E0').margin({ right: 4 })
+                    Text(String(item.text || item.c || ''))
+                      .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale))
+                      .fontColor('#4477E0')
+                      .onClick(() => {
+                        this.openUrl(String(item.link || item.text || ''));
+                      })
+                  }
+                  .alignItems(VerticalAlign.Center)
                 }
               }
               .width('100%')

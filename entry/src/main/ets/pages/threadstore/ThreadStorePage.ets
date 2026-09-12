@@ -17,6 +17,7 @@ import { Dict } from '../../core/types/Dict';
 import { getStr, getNum, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import promptAction from '@ohos.promptAction';
+import BackToTopButton from '../../components/BackToTopButton';
 
 let _storeInitialLoadDone: boolean = false;
 
@@ -28,7 +29,7 @@ struct ThreadStorePage {
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @State threads: Dict[] = [];
-  @State page: number = 1;
+  @State page: number = 0;
   @State hasMore: boolean = true;
   @State loading: boolean = true;
   @State loadingMore: boolean = false;
@@ -39,6 +40,7 @@ struct ThreadStorePage {
   @State @Watch('onRefreshStateChange') isRefreshing: boolean = false;
   @State pullDistance: number = 0;
   @State pullRefreshing: boolean = false;
+  @State scrollTop: number = 0;
   @State topInset: number = 24;
   private scroller: Scroller = new Scroller();
 
@@ -89,8 +91,10 @@ struct ThreadStorePage {
   async loadStores(): Promise<void> {
     this.loading = true;
     this.error = '';
+    this.page = 0;
+    this.hasMore = true;
     try {
-      const data: Dict = await this.repo.loadStores(1);
+      const data: Dict = await this.repo.loadStores(0);
       this.threads = this.extractThreads(data);
       void this.enrichAgree();
     } catch (e) {
@@ -111,10 +115,10 @@ struct ThreadStorePage {
   }
 
   async onPullRefresh(): Promise<void> {
-    this.page = 1;
+    this.page = 0;
     this.hasMore = true;
     try {
-      const data: Dict = await this.repo.loadStores(1);
+      const data: Dict = await this.repo.loadStores(0);
       this.threads = this.extractThreads(data);
       void this.enrichAgree();
     } catch (_e) {}
@@ -315,9 +319,11 @@ struct ThreadStorePage {
               .edgeEffect(EdgeEffect.None)
               .onReachEnd(() => {
                 if (this.hasMore) {
-                  this.page++;
                   void this.loadMore();
                 }
+              })
+              .onDidScroll(() => {
+                this.scrollTop = this.scroller.currentOffset().yOffset;
               })
             }
           }
@@ -356,6 +362,10 @@ struct ThreadStorePage {
       .width('100%').height('100%')
       .justifyContent(FlexAlign.Start)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.scroller.scrollEdge(Edge.Top); }
+      })
     }
     .width('100%').height('100%')
     .backgroundColor(pageBg(this.isDark))
@@ -519,14 +529,17 @@ struct ThreadStorePage {
   private async loadMore(): Promise<void> {
     if (!this.hasMore || this.loadingMore) return;
     this.loadingMore = true;
+    const nextPage = this.page + 1;
     try {
-      const data: Dict = await this.repo.loadStores(this.page);
+      const data: Dict = await this.repo.loadStores(nextPage);
       const more: Dict[] = this.extractThreads(data);
       if (more.length === 0) { this.hasMore = false; return; }
       const existingIds = new Set(this.threads.map(t => getStr(t, 'id', 'tid', 'threadId', 'thread_id')));
       const uniqueNew = more.filter(t => !existingIds.has(getStr(t, 'id', 'tid', 'threadId', 'thread_id')));
       if (uniqueNew.length === 0) { this.hasMore = false; return; }
       this.threads = [...this.threads, ...uniqueNew];
+      this.page = nextPage;
+      this.hasMore = more.length >= 50;
       void this.enrichAgree();
     } catch (e) {
       this.hasMore = false;

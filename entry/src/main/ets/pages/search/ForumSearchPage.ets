@@ -27,6 +27,9 @@ struct ForumSearchPage {
   @State forumName: string = '';
   @State sortMode: number = 2;
   @State selectedScope: number = 0;
+  @State searchPage: number = 1;
+  @State searchHasMore: boolean = true;
+  @State searchLoadingMore: boolean = false;
   @State threadResults: Dict[] = [];
   @State userList: Dict[] = [];
   @State searchHistory: string[] = [];
@@ -177,10 +180,21 @@ struct ForumSearchPage {
                 }).margin({ left: 16, right: 16, top: 6, bottom: 8 })
               }
             })
+            ListItem() {
+              Row() {
+                Text(this.searchLoadingMore
+                  ? '加载中...'
+                  : (this.searchHasMore ? '上拉加载更多' : ''))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale))
+                  .fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+              .width('100%').justifyContent(FlexAlign.Center)
+            }
           }
           .width('100%').layoutWeight(1)
           .edgeEffect(EdgeEffect.Spring)
           .onDidScroll(() => { this.onSearchScroll(); })
+          .onReachEnd(() => { void this.loadMoreThreads(); })
           .key('result-' + this.showResults + '-' + this.searching + '-' + this.refreshKey)
         }
       }
@@ -251,7 +265,7 @@ struct ForumSearchPage {
       .zIndex(2)
       .width('100%')
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .backgroundColor(this.cardStyle === 1 ? withAlpha(darkenColor(this.bgColor, this.headerTint / 100), 1 - this.headerAlpha / 100) : withAlpha(this.bgColor, 1 - this.headerAlpha / 100))
+      .backgroundColor(this.bgColor)
       .backdropBlur(60)
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
@@ -356,6 +370,8 @@ struct ForumSearchPage {
     this.showResults = true;
     this.threadResults = [];
     this.userList = [];
+    this.searchPage = 1;
+    this.searchHasMore = true;
     try {
       await this.repo.saveSearchHistory(this.keyword);
     } catch (e) {
@@ -366,12 +382,40 @@ struct ForumSearchPage {
       const d = (data.data as Dict) || data;
       const list = (d.thread_list || d.post_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
       if (list.length > 0) this.threadResults = list;
+      const hm = d.has_more ?? d.hasMore ?? 0;
+      this.searchHasMore = (list.length > 0 && Number(hm) === 1) || list.length >= 30;
+      const ul = d.user_list;
+      if (ul && Array.isArray(ul)) this.userList = ul as Dict[];
     } catch (e) {
       console.error('TiebaLite: forumSearch error=' + String(e));
     }
     this.searching = false;
     this.loadHistory();
     this.refreshKey++;
+  }
+
+  private async loadMoreThreads(): Promise<void> {
+    if (this.searchLoadingMore || !this.searchHasMore || this.searching) return;
+    this.searchLoadingMore = true;
+    try {
+      const nextPage = this.searchPage + 1;
+      const data = await this.repo.searchThread(this.keyword, nextPage, this.sortMode, this.forumName, this.selectedScope);
+      const d = (data.data as Dict) || data;
+      const list = (d.thread_list || d.post_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
+      if (list.length === 0) {
+        this.searchHasMore = false;
+      } else {
+        this.threadResults = [...this.threadResults, ...list];
+        this.searchPage = nextPage;
+        const hm = d.has_more ?? d.hasMore ?? 0;
+        this.searchHasMore = Number(hm) === 1 || list.length >= 30;
+      }
+    } catch (e) {
+      this.searchHasMore = false;
+      console.error('TiebaLite: loadMoreThreads error=' + String(e));
+    } finally {
+      this.searchLoadingMore = false;
+    }
   }
 
   onBackPress(): boolean {

@@ -9,10 +9,12 @@ import Avatar from '../../components/Avatar';
 import GearLoading from '../../components/GearLoading';
 import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
+import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
 import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
+import BackToTopButton from '../../components/BackToTopButton';
 
 @Entry
 @Component
@@ -368,9 +370,7 @@ onIsDarkChange(): void {
         })
         Row() {
           if (this.searchLoadingMore) {
-            if (this.reduceEffects) {
-              GearLoading({ gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
-            }
+            RefreshAnimation({ refreshing: true, gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
           } else if (this.searchHasMore) {
             Text('上拉加载更多').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark))
               .onClick(() => { void this.loadMoreThreads(); })
@@ -463,9 +463,7 @@ onIsDarkChange(): void {
       ListItem() {
         Row() {
           if (this.searchLoadingMore) {
-            if (this.reduceEffects) {
-              GearLoading({ gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
-            }
+            RefreshAnimation({ refreshing: true, gearSize: 24, color: darkenColor(this.primaryColor, 0.2), text: '加载中...' })
           } else if (this.searchHasMore) {
             Text('上拉加载更多').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark))
               .onClick(() => { void this.loadMoreThreads(); })
@@ -871,16 +869,10 @@ onIsDarkChange(): void {
         .width('100%').position({ top: 106, left: 0, right: 0 }).padding({ left: 12, top: 2, bottom: 4 }).zIndex(3)
       }
 
-      if (this.scrollTop > 500) {
-        Image($r('app.media.ic_arrow_up')).width(Math.round(22 * this.fontScale)).height(Math.round(22 * this.fontScale))
-          .fillColor(onPrimaryContainer(this.isDark))
-          .width(44).height(44).borderRadius(22 * this.fabRadius / 100)
-          .backgroundColor(primaryContainer(this.isDark))
-          .shadow({ radius: 6, color: shadowColor(this.isDark), offsetY: 3 })
-          .position({ bottom: 64, right: 16 })
-          .translate({ x: this.showScrollTop ? (this.fabLeft ? -(this.getWinWidth() - 76) : 0) : (this.fabLeft ? -(this.getWinWidth() - 76) - 60 : 60) })
-          .onClick(() => this.scrollResultsToTop())
-      }
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.scrollResultsToTop(); }
+      })
     }
     .width('100%').height('100%')
     .onTouch((event: TouchEvent) => {
@@ -1007,6 +999,9 @@ onIsDarkChange(): void {
       if (list.length > 0) { this.threadResults = list; }
       const ul = d.user_list;
       if (ul && Array.isArray(ul)) this.userList = ul as Dict[];
+      // 优先用服务端 has_more 判断是否有下一页
+      const hm = d.has_more ?? d.hasMore ?? 0;
+      this.searchHasMore = (list.length > 0 && Number(hm) === 1) || (list.length >= 30);
     } catch (e) {
       console.error('TiebaLite: searchThreads error=' + String(e));
     }
@@ -1030,6 +1025,9 @@ onIsDarkChange(): void {
       } else {
         this.threadResults = [...this.threadResults, ...list];
         this.searchPage = nextPage;
+        // 优先用服务端 has_more，回退到 list.length >= rn
+        const hm = d.has_more ?? d.hasMore ?? 0;
+        this.searchHasMore = Number(hm) === 1 || list.length >= 30;
       }
     } catch (e) {
       this.searchHasMore = false;

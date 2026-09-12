@@ -13,6 +13,8 @@ import ErrorState from '../../../components/ErrorState';
 import GearLoading from '../../../components/GearLoading';
 import GearCycle from '../../../components/GearCycle';
 import PullToRefresh from '../../../components/PullToRefresh';
+import RefreshAnimation from '../../../components/RefreshAnimation';
+import BackToTopButton from '../../../components/BackToTopButton';
 import { Dict } from '../../../core/types/Dict';
 import ITiebaApi, { ApiCallback } from '../../../core/api/ITiebaApi';
 import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../../core/utils/DataHelper';
@@ -60,6 +62,7 @@ export default struct NotificationsPage {
   private api: ITiebaApi = TiebaApi.getInstance();
   private loadLock: boolean = false;
   private scrollers: Scroller[] = [new Scroller(), new Scroller(), new Scroller()];
+  @State scrollTop: number = 0;
   @Prop @Watch('onActiveChanged') active: boolean = true;
 
   onActiveChanged(): void {
@@ -213,7 +216,8 @@ export default struct NotificationsPage {
     if (items.length === 0) {
       this.hasMoreReply = false;
     } else {
-      const hasMoreField = d['has_more'] ?? d['hasMore'];
+      const pageObj = (d.page as Dict) || {};
+      const hasMoreField = pageObj['has_more'] ?? d['has_more'] ?? d['hasMore'];
       this.hasMoreReply = hasMoreField !== undefined ? Number(hasMoreField) !== 0 : true;
     }
   }
@@ -237,8 +241,7 @@ export default struct NotificationsPage {
     if (items.length === 0) {
       this.hasMoreMention = false;
     } else {
-      const hasMoreField = d['has_more'] ?? d['hasMore'];
-      this.hasMoreMention = hasMoreField !== undefined ? Number(hasMoreField) !== 0 : true;
+      this.hasMoreMention = true;
     }
   }
 
@@ -273,8 +276,7 @@ export default struct NotificationsPage {
     if (items.length === 0) {
       this.hasMoreAgree = false;
     } else {
-      const hasMoreField = d['has_more'] ?? d['hasMore'];
-      this.hasMoreAgree = hasMoreField !== undefined ? Number(hasMoreField) !== 0 : true;
+      this.hasMoreAgree = true;
     }
   }
 
@@ -714,6 +716,25 @@ export default struct NotificationsPage {
           ForEach(this.replies, (item: Dict, idx: number) => {
             ListItem() { this.NotificationItem(item) }
           }, (item: Dict): string => this.getItemId(item))
+          if (this.loadingMore) {
+            ListItem() {
+              Column() {
+                Text('加载中...').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+            }
+          } else if (this.hasMoreReply) {
+            ListItem() {
+              Column() {
+                Text('加载更多').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor('#4477E0').width('100%').textAlign(TextAlign.Center).padding(16).onClick(() => { void this.loadNextPage(); })
+              }
+            }
+          } else {
+            ListItem() {
+              Column() {
+                Text('没有更多了').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+            }
+          }
         }
       } else if (tab === 1) {
         if (this.mentions.length === 0) {
@@ -722,6 +743,25 @@ export default struct NotificationsPage {
           ForEach(this.mentions, (item: Dict, idx: number) => {
             ListItem() { this.NotificationItem(item) }
           }, (item: Dict): string => this.getItemId(item))
+          if (this.loadingMore) {
+            ListItem() {
+              Column() {
+                Text('加载中...').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+            }
+          } else if (this.hasMoreMention) {
+            ListItem() {
+              Column() {
+                Text('加载更多').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor('#4477E0').width('100%').textAlign(TextAlign.Center).padding(16).onClick(() => { void this.loadNextPage(); })
+              }
+            }
+          } else {
+            ListItem() {
+              Column() {
+                Text('没有更多了').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+            }
+          }
         }
       } else {
         if (this.agrees.length === 0) {
@@ -731,6 +771,11 @@ export default struct NotificationsPage {
             ListItem() { this.NotificationItem(item) }
           }, (item: Dict): string => this.getItemId(item))
           if (this.agreeLoadingMore) {
+            ListItem() {
+              Column() {
+                Text('加载中...').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).padding(16)
+              }
+            }
           } else if (this.hasMoreAgree) {
             ListItem() {
               Column() {
@@ -754,6 +799,9 @@ export default struct NotificationsPage {
     .backgroundColor(this.bgColor)
     .edgeEffect(EdgeEffect.None)
     .onReachEnd(() => { void this.loadNextPage(); })
+    .onScroll(() => {
+      this.scrollTop = this.scrollers[tab].currentOffset().yOffset;
+    })
   }
 
   build() {
@@ -917,6 +965,10 @@ export default struct NotificationsPage {
         .position({ bottom: 90, left: 0, right: 0 })
         .zIndex(10)
       }
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.scrollers[this.selectedTab].scrollEdge(Edge.Top); }
+      })
     }
     .width('100%').height('100%').backgroundColor(this.bgColor)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
@@ -969,8 +1021,8 @@ export default struct NotificationsPage {
     }
     .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
-      let threadId = getStr(item, 'thread_id', 'threadId', 'tid');
-      const postId = getStr(item, 'post_id', 'postId', 'pid');
+      let threadId = getStr(item, 'thread_id', 'threadId', 'tid', 'thread_id');
+      let postId = getStr(item, 'post_id', 'postId', 'pid', 'post_id', 'floor_id', 'floorId', 'postId', 'subPostId');
       if (!threadId || threadId === '0') {
         const source = item.source as Dict;
         if (source) threadId = getStr(source, 'thread_id', 'threadId', 'tid');
@@ -992,11 +1044,21 @@ export default struct NotificationsPage {
         threadId = getStr(ai, 'thread_id', 'threadId', 'tid');
       }
       if (threadId && threadId !== '0') {
-        NavigationHelper.navigate('pages/thread/ThreadPage', {
-          threadId: threadId,
-          postId: postId,
-          forumName: this.getForumName(item)
-        });
+        const isFloorReply = !!item.quote || !!item.quote_pid || !!item.quotePid || !!item.re_floor || getStr(item, 'post_id', 'postId', 'pid') !== getStr(item, 'quote_pid', 'quotePid');
+        if (isFloorReply) {
+          NavigationHelper.navigate('pages/subposts/SubPostsPage', {
+            threadId: threadId,
+            postId: '0',
+            subPostId: postId,
+            forumName: this.getForumName(item)
+          });
+        } else {
+          NavigationHelper.navigate('pages/thread/ThreadPage', {
+            threadId: threadId,
+            postId: postId,
+            forumName: this.getForumName(item)
+          });
+        }
       }
     })
   }

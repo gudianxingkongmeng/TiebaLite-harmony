@@ -228,13 +228,13 @@ export default class MixedTiebaApiImpl implements ITiebaApi {
     }, callback);
   }
 
-  pbFloor(threadId: number, postId: number, forumId: number, page: number, callback: ApiCallback<Dict>): void {
+  pbFloor(threadId: number, postId: number, forumId: number, page: number, callback: ApiCallback<Dict>, subPostId?: number): void {
     this.postProtoApi(URLS.PB_FLOOR, PROTO_CMDS.PB_FLOOR, {
       kz: threadId,
       pid: postId,
       forum_id: forumId > 0 ? forumId : 0,
       pn: page,
-      spid: 0,
+      spid: subPostId && subPostId > 0 ? subPostId : 0,
       [PARAM.CLIENT_VERSION]: ClientVersion.TIEBA_V22
     }, callback);
   }
@@ -319,32 +319,37 @@ export default class MixedTiebaApiImpl implements ITiebaApi {
     const params: Record<string, string> = {
       word: keyword,
       pn: String(page),
-      rn: '20',
-      st: String(sortMode),
-      tt: String(filterType ?? 1),
-      ct: '1',
-      cv: '99.9.101'
+      rn: '30',
+      only_thread: '1',
+      sm: String(sortMode),
+      need_floor: '1'
     };
-    if (forumName) params.fname = forumName;
-    const referer = 'https://tieba.baidu.com/mo/q/hybrid/search?keyword=' + encodeURIComponent(keyword) + '&_webview_time=' + Date.now();
-    this.http.get(API_BASE_URLS.WEB_TIEBA, URLS.SEARCH_THREAD, params, {
-      [HEADER.REFERER]: referer,
-      [HEADER.NO_COMMON_PARAMS]: 'true',
-      [HEADER.NO_ST_PARAMS]: 'true'
-    }).then(resp => {
-      const d = resp.data as Dict || {};
-      const data = (d.data as Dict) || d;
-      let list: Dict[] = [];
-      const tl = data.thread_list || data.post_list;
-      if (tl && Array.isArray(tl)) list = tl as Dict[];
-      if (list.length === 0) {
-        console.info('TiebaLite: searchThread empty, keys=' + Object.keys(d).join(','));
+    if (forumName) params.kw = forumName;
+    this.postMiniApi(URLS.SEARCH_POST, params, {
+      onSuccess: (data: Dict) => {
+        const d = (data.data as Dict) || data;
+        let list: Dict[] = [];
+        const tl = d.post_list || d.thread_list || d.list || d.result || [];
+        if (tl && Array.isArray(tl)) list = tl as Dict[];
+        if (list.length === 0) {
+          console.info('TiebaLite: searchThread empty, keys=' + Object.keys(data).join(',') + ' dKeys=' + Object.keys(d).join(','));
+        }
+        const pageInfo = (d.page as Dict) || {};
+        const hm = Number(pageInfo.has_more ?? d.has_more ?? data.has_more ?? 0);
+        const currentPage = Number(pageInfo.current_page ?? d.current_page ?? data.current_page ?? page);
+        const totalPage = Number(pageInfo.total_page ?? d.total_page ?? data.total_page ?? 0);
+        const result: Dict = {
+          thread_list: list as Object,
+          has_more: hm,
+          current_page: currentPage,
+          total_page: totalPage
+        };
+        callback.onSuccess(result);
+      },
+      onError: (code: number, msg: string) => {
+        console.error('TiebaLite: searchThread err=' + code + ' ' + msg);
+        callback.onError(code, msg);
       }
-      const result: Dict = { thread_list: list as Object };
-      callback.onSuccess(result);
-    }).catch(err => {
-      console.error('TiebaLite: searchThread error=' + String(err));
-      callback.onError(-1, err.message || String(err));
     });
   }
 
@@ -502,10 +507,13 @@ export default class MixedTiebaApiImpl implements ITiebaApi {
   }
 
   threadStore(page: number, callback: ApiCallback<Dict>): void {
+    const offset = page * 50;
+    const account = AccountManager.getInstance().getCurrentAccountSync();
     this.postOfficialApi(URLS.THREAD_STORE, {
-      pn: String(page),
-      rn: '30'
-    }, callback);
+      rn: '50',
+      offset: String(offset),
+      user_id: String(account?.uid || 0)
+    }, callback, { [HEADER.FORCE_LOGIN]: 'true' });
   }
 
   addStore(threadId: number, postId: number, callback: ApiCallback<Dict>): void {

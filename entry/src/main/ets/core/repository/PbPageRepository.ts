@@ -51,14 +51,14 @@ export default class PbPageRepository {
     return PbPageRepository.instance;
   }
 
-  async loadThreadPage(threadId: number, page: number, seeLz: boolean, sortType: number | null): Promise<Dict> {
-    const cacheKey = `${threadId}_${page}_${seeLz}_${sortType}`;
+  async loadThreadPage(threadId: number, page: number, seeLz: boolean, sortType: number | null, postId?: number | null): Promise<Dict> {
+    const cacheKey = `${threadId}_${page}_${seeLz}_${sortType}_${postId ?? 0}`;
     const cached = this.threadCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < PbPageRepository.THREAD_CACHE_TTL) {
       return cached.data;
     }
     return new Promise((resolve, reject) => {
-      this.api.pbPage(threadId, page, null, seeLz, sortType, {
+      this.api.pbPage(threadId, page, postId ?? null, seeLz, sortType, {
         onSuccess: (data) => {
           this.threadCache.set(cacheKey, { data, timestamp: Date.now() });
           resolve(data);
@@ -72,12 +72,12 @@ export default class PbPageRepository {
     this.threadCache.clear();
   }
 
-  async loadFloorPage(threadId: number, postId: number, forumId: number, page: number): Promise<Dict> {
+  async loadFloorPage(threadId: number, postId: number, forumId: number, page: number, subPostId?: number): Promise<Dict> {
     return new Promise((resolve, reject) => {
       this.api.pbFloor(threadId, postId, forumId, page, {
         onSuccess: (data) => resolve(data),
         onError: (code, msg) => reject({ code, msg })
-      });
+      }, subPostId ?? undefined);
     });
   }
 
