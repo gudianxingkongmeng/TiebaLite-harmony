@@ -7,7 +7,7 @@ import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, te
 import { Dict } from '../../core/types/Dict';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
-const APP_VERSION = '4.0.0 Beta 4.5.4';
+const APP_VERSION = '4.0.0 Beta 4.5.5';
 const APP_VERSION_CODE = '390986';
 const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 
