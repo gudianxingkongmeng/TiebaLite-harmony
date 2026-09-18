@@ -43,6 +43,8 @@ cd TiebaLite-harmony
 hvigorw assembleHap --mode module -p module=entry@default -p product=default -p buildMode=release
 ```
 
+命令行构建前，请设置 `JAVA_HOME` 指向 DevEco Studio 自带 JBR。
+
 成功后，构建的产物在 `entry/build/default/outputs/default/` 下。
 
 ## 注意
