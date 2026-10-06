@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@babel/core": "^7.26.0"
+  }
+}

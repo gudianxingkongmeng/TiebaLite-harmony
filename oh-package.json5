@@ -1,0 +1,17 @@
+{
+  "modelVersion": "26.0.0",
+  "name": "tieba-lite-ohos",
+  "version": "4.0.0",
+  "description": "Tieba Lite - 极简的贴吧第三方客户端 for HarmonyOS Next",
+  "main": "",
+  "scripts": {},
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@ohos/protobufjs": "^1.0.0",
+    "long": "^5.2.0",
+    "@ohos/axios": "^2.2.0"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
+}

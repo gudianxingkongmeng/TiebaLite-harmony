@@ -1,0 +1,44 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "贴吧Lite"
+    },
+    {
+      "name": "main_title",
+      "value": "贴吧"
+    },
+    {
+      "name": "tab_home",
+      "value": "首页"
+    },
+    {
+      "name": "tab_explore",
+      "value": "发现"
+    },
+    {
+      "name": "tab_notifications",
+      "value": "通知"
+    },
+    {
+      "name": "tab_user",
+      "value": "我的"
+    },
+    {
+      "name": "login",
+      "value": "登录"
+    },
+    {
+      "name": "logout",
+      "value": "退出登录"
+    },
+    {
+      "name": "settings",
+      "value": "设置"
+    },
+    {
+      "name": "search",
+      "value": "搜索"
+    }
+  ]
+}

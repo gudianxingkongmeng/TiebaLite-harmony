@@ -1,0 +1,12 @@
+{
+  "modelVersion": "26.0.0",
+  "name": "entry",
+  "version": "4.0.0",
+  "description": "Tieba Lite Entry",
+  "scripts": {},
+  "dependencies": {
+    "@ohos/protobufjs": "^3.0.1",
+    "long": "^5.2.0",
+    "@ohos/axios": "^2.2.0"
+  }
+}
