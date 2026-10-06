@@ -666,34 +666,6 @@ struct SubPostsPage {
           .onDidScroll(() => { this.handleFabScroll(); })
         }
 
-        if (!this.showReply) {
-          Stack() {
-            Image($r('app.media.ic_edit')).width(20).height(20).fillColor(onPrimaryContainer(this.isDark))
-          }
-            .width(48).height(48)
-            .backgroundColor(primaryContainer(this.isDark))
-            .borderRadius(24 * this.fabRadius / 100)
-            .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 4 })
-            .position({ bottom: 32, right: 24 })
-            .translate({ x: this.fabVisible ? (this.fabLeft ? -(this.screenWidth - 96) : 0) : (this.fabLeft ? -(this.screenWidth - 96) - 96 : 96) })
-            .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
-            .onClick(async () => {
-              if (!AccountManager.getInstance().isLoggedIn()) { NavigationHelper.navigate('pages/login/LoginPage'); return; }
-              if (!this.agreeToRisk) {
-                const prefsAgreed = await PreferencesManager.getInstance().getBoolean('reply_risk_agreed', false);
-                if (prefsAgreed) {
-                  this.agreeToRisk = true;
-                } else {
-                  this.showRiskWarning = true;
-                }
-              }
-              this.replyHint = '回复 ' + this.getAuthorName(this.parentPost?.author as Dict);
-              this.subPostId = 0;
-              this.replyUserId = Number((this.parentPost?.author as Dict)?.id || 0);
-              this.replyPortrait = '';
-              this.showReply = true;
-            }, 12)
-        }
       }
       .width('100%')
       .height('100%')
@@ -952,6 +924,22 @@ struct SubPostsPage {
           PbContentRender({ contents: post.content as Dict[], threadId: this.threadId, forumId: this.forumId, forumName: this.forumName })
             .padding({ left: 60, right: 12 })
         }
+        .onClick(async () => {
+          if (!AccountManager.getInstance().isLoggedIn()) { NavigationHelper.navigate('pages/login/LoginPage'); return; }
+          if (!this.agreeToRisk) {
+            const prefsAgreed = await PreferencesManager.getInstance().getBoolean('reply_risk_agreed', false);
+            if (prefsAgreed) {
+              this.agreeToRisk = true;
+            } else {
+              this.showRiskWarning = true;
+            }
+          }
+          this.replyHint = '回复 ' + this.getAuthorName(post.author as Dict);
+          this.subPostId = Number(post.id || post.pid || 0);
+          this.replyUserId = Number((post.author as Dict)?.id || post.author_id || 0);
+          this.replyPortrait = String((post.author as Dict)?.portrait || '');
+          this.showReply = true;
+        }, 12)
         .gesture(
           LongPressGesture({ repeat: false, duration: 500 })
             .onAction((event?: GestureEvent) => {
@@ -1099,6 +1087,17 @@ struct SubPostsPage {
                 if (!PbContentRender.resolveImageSrc(item)) {
                   Span('[图片]')
                     .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                } else {
+                  Span('图片')
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                    .decoration({ type: TextDecorationType.Underline })
+                    .onClick(() => {
+                      const urls: string[] = [];
+                      const imgs = this.getSubImageItems(sub);
+                      for (let i = 0; i < imgs.length; i++) { urls.push(PbContentRender.resolveImageSrc(imgs[i])); }
+                      const imgIdx = imgs.indexOf(item);
+                      NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: imgIdx >= 0 ? imgIdx : 0 });
+                    })
                 }
               } else if (Number(item.type) === 5) {
                 Span('[视频]')

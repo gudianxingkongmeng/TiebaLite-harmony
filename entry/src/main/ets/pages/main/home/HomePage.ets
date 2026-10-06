@@ -126,6 +126,7 @@ export default struct HomePage {
   }
 
   onPageHide(): void {
+    this.pendingDeleteForumId = '';
     const v = AppStorage.get<number>('pageHideTick') || 0;
     AppStorage.SetOrCreate('pageHideTick', v + 1);
   }
@@ -832,7 +833,7 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
               Row() {
                 Text(getStr(forum, 'name', 'forumName', 'forum_name'))
                   .fontFamily(this.appFontFamily).fontSize(Math.round(12 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                if (this.pendingDeleteForumId === getStr(forum, 'id')) {
+                if (this.pendingDeleteForumId.length > 0 && this.pendingDeleteForumId === getStr(forum, 'id')) {
                   Image($r('app.media.ic_close')).width(Math.round(12 * this.fontScale)).height(Math.round(12 * this.fontScale)).fillColor('#FF4444').margin({ left: 4 })
                     .onClick(() => {
                       this.removeRecentForum(forum);

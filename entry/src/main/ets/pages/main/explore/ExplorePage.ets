@@ -323,11 +323,6 @@ export default struct ExplorePage {
   }
 
   private async loadPersonalizedWithFallback(page: number): Promise<Dict | null> {
-    const isLoggedIn = AccountManager.getInstance().isLoggedIn();
-    if (!isLoggedIn) {
-      console.info('TiebaLite: not logged in, cannot load personalized');
-      return null;
-    }
     const attempts = [
       () => this.repo.loadPersonalized(page),
       () => this.repo.loadPersonalizedProto(page)
