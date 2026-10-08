@@ -759,8 +759,8 @@ console.info('TiebaLite: [D5] building userMap');
       }
       }
       .width('100%')
-      .backgroundColor(withAlpha(pageBg(this.isDark), 1 - this.headerAlpha / 100))
-      .backdropBlur(60)
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), this.headerAlpha / 100))
+      .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
       .border({ width: { bottom: this.showFixedBar ? 0 : 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .position({ x: 0, y: 0 })
@@ -1736,6 +1736,20 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     return false;
   }
 
+  private hasSubPostImage(sub: Dict): boolean {
+    const contents = sub.content as Dict[] | null;
+    if (contents && Array.isArray(contents)) {
+      for (const c of contents) {
+        const t = Number(c.type);
+        if (t === 1 || t === 3 || t === 20) return true;
+      }
+    }
+    // 兜底：检查 sub 是否还有 media 字段
+    const media = sub.media as Dict[] | null;
+    if (media && Array.isArray(media) && media.length > 0) return true;
+    return false;
+  }
+
   @Builder
   MetaDot() {
     Text('·')
@@ -1862,7 +1876,8 @@ Text(this.uploadingImages ? '上传中...' : '发送')
       if (post.sub_post_list) {
         Column() {
           ForEach(this.getShownSubPosts(post), (sub: Dict, idx: number) => {
-            Text() {
+            Column() {
+              Text() {
               Span(this.resolveSubAuthorName(sub))
                 .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(darkenColor(this.primaryColor, this.isDark ? 0.25 : 0.55)).fontWeight(FontWeight.Bold)
                 .onClick(() => {
@@ -1888,13 +1903,24 @@ Text(this.uploadingImages ? '上传中...' : '发送')
                     ImageSpan(PbContentRender.resolveEmojiId(String(item.id || item.text || item.c || '')).replace('https://', 'http://'))
                       .width(20).height(20).objectFit(ImageFit.Contain)
                       .verticalAlign(ImageSpanAlignment.CENTER)
-                  } else if (Number(item.type) === 1 && PbContentRender.resolveImageSrc(item)) {
-                    ImageSpan(PbContentRender.resolveImageSrc(item))
-                      .width(72).height(72).objectFit(ImageFit.Contain)
-                      .verticalAlign(ImageSpanAlignment.CENTER)
-                  } else if (Number(item.type) === 1) {
-                    Span('[图片]')
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                  } else if (Number(item.type) === 1 || Number(item.type) === 3 || Number(item.type) === 20) {
+                    Span(' 查看图片 ')
+                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                      .decoration({ type: TextDecorationType.Underline })
+                      .onClick(() => {
+                        const urls: string[] = [];
+                        const sc = sub.content as Dict[] | null;
+                        if (sc) {
+                          for (const it of sc) {
+                            const t = Number(it.type);
+                            const u = PbContentRender.resolveImageSrc(it);
+                            if ((t === 1 || t === 3 || t === 20) && u.length > 0) urls.push(u);
+                          }
+                        }
+                        if (urls.length > 0) {
+                          NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: 0 });
+                        }
+                      })
                   } else if (Number(item.type) === 3 || Number(item.type) === 5) {
                     Span('[视频]')
                       .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
@@ -1917,6 +1943,30 @@ Text(this.uploadingImages ? '上传中...' : '发送')
             .onClick(() => {
               NavigationHelper.navigate('pages/subposts/SubPostsPage', { threadId: String(this.threadId), postId: String(post.id || post.pid), forumId: String(this.forumId), forumName: this.forumName, lzId: String(this.threadData?.authorId || 0) });
             }, 12)
+            if (this.hasSubPostImage(sub)) {
+              Row() {
+                Text('查看图片')
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                  .decoration({ type: TextDecorationType.Underline })
+              }
+              .hitTestBehavior(HitTestMode.Block)
+              .width('100%').padding({ left: 16, right: 12, top: 0, bottom: 8 })
+              .onClick(() => {
+                const urls: string[] = [];
+                const sc = sub.content as Dict[] | null;
+                if (sc) {
+                  for (const it of sc) {
+                    const t = Number(it.type);
+                    const u = PbContentRender.resolveImageSrc(it);
+                    if ((t === 1 || t === 3 || t === 20) && u.length > 0) urls.push(u);
+                  }
+                }
+                if (urls.length > 0) {
+                  NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: 0 });
+                }
+              }, 12)
+            }
+            }
           })
           if (this.shouldShowMoreLink(post)) {
             Text('查看全部' + String(post.sub_post_number || post.subPostNumber || this.extractSubPostList(post).length) + '条回复')

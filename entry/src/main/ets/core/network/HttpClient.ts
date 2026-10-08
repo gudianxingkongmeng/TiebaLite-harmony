@@ -238,16 +238,12 @@ export class HttpClient {
       parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`);
     }
     toSign += APP_SECRET;
-    console.info('TiebaLite: DEBUG toSign=' + toSign);
     const sign = await MD5.hash(toSign);
-    console.info('TiebaLite: DEBUG sign=' + sign);
     parts.push(`${encodeURIComponent(PARAM.SIGN)}=${encodeURIComponent(sign)}`);
 
     const bodyStr = parts.join('&');
     const url = baseURL.replace(/\/$/, '') + path;
 
-    console.info('TiebaLite: POST url=' + url);
-    console.info('TiebaLite: POST body=' + bodyStr);
 
     const httpHeaders: Record<string, string> = {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -278,7 +274,6 @@ export class HttpClient {
         } else {
           respData = raw;
         }
-        console.info('TiebaLite: POST response code=' + resp.responseCode + ' body=' + JSON.stringify(respData));
         resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
       }).catch((err) => {
         httpRequest.destroy();
@@ -316,21 +311,15 @@ export class HttpClient {
     };
     if (cuid.length > 0) { headers['cuid'] = cuid; }
     const tempClient = axios.create({ responseType: 'array_buffer' });
-    console.info('TiebaLite: postUserLikeProtobuf calling url=' + url);
     const response = await tempClient.post(url, body.buffer as ArrayBuffer, { headers: headers });
     const statusCode: number = (response as any).responseCode || (response as any).status || 0;
-    console.info('TiebaLite: postUserLikeProtobuf status=' + statusCode + ' dataType=' + typeof response.data);
     if (statusCode !== 0 && statusCode !== 200) {
       throw new Error('protobuf POST returned status ' + statusCode);
     }
     const rawBytes = new Uint8Array(response.data as ArrayBuffer);
-    console.info('TiebaLite: postUserLikeProtobuf rawBytesLen=' + rawBytes.length +
-      ' firstBytes=' + (rawBytes.length >= 2 ? rawBytes[0].toString(16) + ',' + rawBytes[1].toString(16) : 'none'));
     if (rawBytes.length >= 2 && rawBytes[0] === 0x1f && rawBytes[1] === 0x8b) {
-      console.info('TiebaLite: postUserLikeProtobuf detected gzip, decompressing...');
       try {
         const decompressed = ungzip(rawBytes);
-        console.info('TiebaLite: postUserLikeProtobuf decompressed len=' + decompressed.length);
         return decompressed;
       } catch (e) {
         throw new Error('gzip decompress failed: ' + String(e));

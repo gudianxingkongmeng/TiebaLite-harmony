@@ -18,6 +18,7 @@ interface CacheTask {
   aborted: boolean;
   paused: boolean;
   dataEnded: boolean;
+  restartCount: number;
 }
 
 type CacheListener = (pct: number, done: boolean, path: string) => void;
@@ -128,7 +129,8 @@ export default class VideoCacheManager {
       high: highPriority,
       aborted: false,
       paused: false,
-      dataEnded: false
+      dataEnded: false,
+      restartCount: 0
     };
     this.tasks.set(url, task);
     const ls = this.listeners.get(url);
@@ -279,6 +281,13 @@ export default class VideoCacheManager {
         if (task.fd !== -1) {
           try { fs.closeSync(task.fd); } catch (e) {}
           task.fd = -1;
+        }
+        // 防死循环：服务器持续忽略 Range 时，限制最多重启次数，避免无限重下写盘
+        task.restartCount++;
+        if (task.restartCount > 3) {
+          console.warn('TiebaLite: dl too many restarts, abort ' + this.cachePathFor(task.url));
+          this.cleanupTask(task);
+          return;
         }
         try { fs.unlinkSync(task.path); } catch (e) {}
         task.lastPct = 0;

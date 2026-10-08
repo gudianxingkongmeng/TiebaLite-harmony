@@ -206,7 +206,10 @@ export function pageBg(isDark: boolean): string {
     const primary = AppStorage.Get<string>('primaryColor') ?? '#4477E0';
     return blendWithWhite(primary, 0.03);
   }
-  if (idx === 6) return '#000000';
+  if (idx === 6) {
+    const primary = AppStorage.Get<string>('primaryColor') ?? '#4477E0';
+    return blendWithBg(primary, 0.06, true);
+  }
   return getMaterial(isDark).bg;
 }
 

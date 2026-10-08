@@ -1087,17 +1087,6 @@ struct SubPostsPage {
                 if (!PbContentRender.resolveImageSrc(item)) {
                   Span('[图片]')
                     .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
-                } else {
-                  Span('图片')
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
-                    .decoration({ type: TextDecorationType.Underline })
-                    .onClick(() => {
-                      const urls: string[] = [];
-                      const imgs = this.getSubImageItems(sub);
-                      for (let i = 0; i < imgs.length; i++) { urls.push(PbContentRender.resolveImageSrc(imgs[i])); }
-                      const imgIdx = imgs.indexOf(item);
-                      NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: imgIdx >= 0 ? imgIdx : 0 });
-                    })
                 }
               } else if (Number(item.type) === 5) {
                 Span('[视频]')

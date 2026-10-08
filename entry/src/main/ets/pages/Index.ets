@@ -35,6 +35,7 @@ struct Index {
   @StorageLink('showNavLabels') showNavLabels: boolean = true;
   @StorageLink('isDarkTheme') @Watch('onDarkThemeChanged') isDark: boolean = false;
   @StorageLink('appFontFamily') appFontFamily: string = '';
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
   reduceEffects: boolean = false;
   @State indicatorLeft: number = 0;
   @State indicatorWidth: number = 20;
@@ -545,8 +546,8 @@ struct Index {
         .width('100%')
         .height(62)
         .onTouch((event: TouchEvent) => this.handleTabTouch(event))
-        .backgroundColor(withAlpha(cardBg(this.isDark), 0.75))
-        .backdropBlur(60)
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), this.headerAlpha / 100))
+        .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
         .borderRadius(24)
         .clip(true)
         .border({ width: 1, color: blendWithBg(this.tertiaryColor, 0.35, this.isDark, '#1E1E1E') })

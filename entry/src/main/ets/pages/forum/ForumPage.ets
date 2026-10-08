@@ -901,8 +901,8 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       .width('100%')
       .position({ x: 0, y: 0 })
       .zIndex(2)
-      .backgroundColor(this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(pageBg(this.isDark), this.headerTint / 100) : pageBg(this.isDark)), 1 - this.headerAlpha / 100) : withAlpha(pageBg(this.isDark), 1 - this.headerAlpha / 100))
-      .backdropBlur(60)
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(pageBg(this.isDark), this.headerTint / 100) : pageBg(this.isDark)), this.headerAlpha / 100) : withAlpha(pageBg(this.isDark), this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
