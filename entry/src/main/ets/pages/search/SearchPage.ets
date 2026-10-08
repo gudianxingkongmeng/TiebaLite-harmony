@@ -785,8 +785,8 @@ onIsDarkChange(): void {
       .zIndex(2)
       .width('100%')
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha(darkenColor(this.bgColor, this.headerTint / 100), this.headerAlpha / 100) : withAlpha(this.bgColor, this.headerAlpha / 100)))
-      .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha(darkenColor(this.bgColor, this.headerTint / 100), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
       .border({ width: { bottom: 1 }, color: this.isForumSearch ? blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') : dividerColor(this.isDark) })
 
       if (this.searchLoadingMore) {

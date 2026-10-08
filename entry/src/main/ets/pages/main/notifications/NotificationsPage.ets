@@ -844,8 +844,8 @@ export default struct NotificationsPage {
           .position({ left: this.tabIndicatorOffset, bottom: 0 })
       }
       .width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, this.headerAlpha / 100))
-      .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .position({ x: 0, y: 0 })
