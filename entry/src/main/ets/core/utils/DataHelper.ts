@@ -262,9 +262,47 @@ export function dividerColor(isDark: boolean): string {
 }
 
 export function shadowColor(isDark: boolean): string {
-  return isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)';
-}
-
+      return isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)';
+    }
+    
+    export function glassSurface(isDark: boolean): string {
+      return isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.55)';
+    }
+    
+    export function glassBorder(isDark: boolean): string {
+      return isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.75)';
+    }
+    
+    export function glassShadow(isDark: boolean): string {
+      return isDark ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.16)';
+    }
+    
+    export function glassBlur(): number {
+      return 30;
+    }
+    
+    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+      const base = isDark ? 0.42 : 0.34;
+      const a = base * (0.35 + 0.65 * (glassAlpha / 100));
+      return withAlpha(primaryColor, a);
+    }
+    
+    export function glassTintBorder(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+      const base = isDark ? 0.55 : 0.6;
+      const a = base * (0.4 + 0.6 * (glassAlpha / 100));
+      return withAlpha(primaryColor, a);
+    }
+    
+    export function glassTintShadow(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+      const base = isDark ? 0.42 : 0.45;
+      const a = base * (0.4 + 0.6 * (glassAlpha / 100));
+      return withAlpha(primaryColor, a);
+    }
+    
+    export function glassBlurLevel(glassAlpha: number): number {
+      return glassAlpha > 0 ? Math.max(6, Math.round(35 * (glassAlpha / 100))) : 0;
+    }
+    
 export function withAlpha(color: string, alpha: number): string {
   if (color.startsWith('#')) {
     const h = color.substring(1);

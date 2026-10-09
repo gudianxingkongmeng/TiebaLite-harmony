@@ -15,10 +15,11 @@ import Avatar from '../../components/Avatar';
 import GearLoading from '../../components/GearLoading';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
+import { FabPositionManager, FabOffset } from '../../core/utils/FabPositionManager';
 
 interface ForumTab {
   tabId: number;
@@ -70,6 +71,16 @@ struct ForumPage {
   @State goodError: string = '';
   @State fabVisible: boolean = false;
   @State fabLeft: boolean = false;
+  @StorageLink('fabPositionResetTick') @Watch('onFabResetTick') fabResetTick: number = 0;
+  @State fabDx: number = 0;
+  @State fabDy: number = 0;
+  private fabScreenHeight: number = 640;
+  private fabDragging: boolean = false;
+  private fabDragMoved: boolean = false;
+  private fabDragStartX: number = 0;
+  private fabDragStartY: number = 0;
+  private fabDragBaseDx: number = 0;
+  private fabDragBaseDy: number = 0;
   @State showFabMenu: boolean = false;
   private fabTimer: number = -1;
   private lastFabScrollY: number = -1;
@@ -133,6 +144,16 @@ struct ForumPage {
     this.initTopInset();
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     this.onGripSideChanged();
+    try {
+      const d = display.getDefaultDisplaySync();
+      if (d && d.height > 0) {
+        this.fabScreenHeight = d.height / d.densityPixels;
+      }
+    } catch (e) {}
+    void FabPositionManager.load('forumFab').then((o: FabOffset): void => {
+      this.fabDx = o.dx;
+      this.fabDy = o.dy;
+    }).catch(() => {});
     void this.blockRepo.ensureLoaded();
     void this.syncSortFromPrefs();
     this.loadThreads();
@@ -616,6 +637,59 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     return this.getThreadSortTime(a, sortType) - this.getThreadSortTime(b, sortType);
   }
 
+  private clampFabDx(v: number): number {
+    return Math.max(64 - this.getWinWidth(), Math.min(8, v));
+  }
+
+  private clampFabDy(v: number): number {
+    return Math.max(180 - this.fabScreenHeight, Math.min(48, v));
+  }
+
+  private onFabDragStart(e: GestureEvent): void {
+    this.fabDragging = true;
+    this.fabDragMoved = false;
+    this.fabDragStartX = e.fingerList.length > 0 ? e.fingerList[0].globalX : 0;
+    this.fabDragStartY = e.fingerList.length > 0 ? e.fingerList[0].globalY : 0;
+    this.fabDragBaseDx = this.fabDx;
+    this.fabDragBaseDy = this.fabDy;
+  }
+
+  private onFabDragUpdate(e: GestureEvent): void {
+    if (!this.fabDragging || e.fingerList.length === 0) {
+      return;
+    }
+    const x = e.fingerList[0].globalX;
+    const y = e.fingerList[0].globalY;
+    if (Math.abs(x - this.fabDragStartX) > 3 || Math.abs(y - this.fabDragStartY) > 3) {
+      this.fabDragMoved = true;
+    }
+    this.fabDx = this.clampFabDx(this.fabDragBaseDx + (x - this.fabDragStartX));
+    this.fabDy = this.clampFabDy(this.fabDragBaseDy + (y - this.fabDragStartY));
+  }
+
+  private onFabDragEnd(): void {
+    if (!this.fabDragging) {
+      return;
+    }
+    this.fabDragging = false;
+    if (this.fabDragMoved) {
+      void FabPositionManager.save('forumFab', this.fabDx, this.fabDy).catch(() => {});
+    }
+  }
+
+  onFabResetTick(): void {
+    this.resetFabPosition();
+  }
+
+  private resetFabPosition(): void {
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.fabDx = 0;
+      this.fabDy = 0;
+    });
+    this.showFabMenu = false;
+    void FabPositionManager.save('forumFab', 0, 0).catch(() => {});
+  }
+
   private getWinWidth(): number {
     try {
       const d = display.getDefaultDisplaySync();
@@ -963,8 +1037,14 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       }
       .alignItems(this.fabLeft ? HorizontalAlign.Start : HorizontalAlign.End)
       .position({ bottom: 32, right: 16 })
-      .translate({ x: this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 96 : 96) })
+      .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 96 : 96)) + this.fabDx, y: this.fabDy })
       .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
+      .gesture(
+        PanGesture({ fingers: 1, distance: 2 })
+          .onActionStart((e: GestureEvent): void => { this.onFabDragStart(e); })
+          .onActionUpdate((e: GestureEvent): void => { this.onFabDragUpdate(e); })
+          .onActionEnd((): void => { this.onFabDragEnd(); })
+      )
     }
     .width('100%').height('100%').backgroundColor(pageBg(this.isDark)).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .onTouch((event: TouchEvent) => {
@@ -1622,8 +1702,11 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         .rotate({ angle: this.showFabMenu ? 135 : 0 })
         .animation({ duration: 200, curve: Curve.FastOutSlowIn })
     }
-    .width(52).height(52).borderRadius(26 * this.fabRadius / 100).backgroundColor(primaryContainer(this.isDark))
-    .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 4 })
+    .width(52).height(52).borderRadius(26 * this.fabRadius / 100)
+    .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+    .backdropBlur(glassBlurLevel(this.headerAlpha))
+    .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+    .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }
 

@@ -19,7 +19,7 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
+import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
@@ -163,6 +163,9 @@ function emojiUrl(id: string): string {
 @Component
 struct SubPostsPage {
   @State scrollTop: number = 0;
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
+  @State headerH: number = 0;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('gripSide') @Watch('onGripSideChanged') gripSide: number = 0;
   @StorageLink('fabRadius') fabRadius: number = 60;
@@ -263,6 +266,7 @@ struct SubPostsPage {
 
   aboutToAppear(): void {
     try { this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.NONE); } catch (e) {}
+    this.initTopInset();
     const params = router.getParams() as Record<string, string>;
     this.threadId = parseInt(params?.threadId || '0');
     this.postId = parseInt(params?.postId || '0');
@@ -291,6 +295,21 @@ struct SubPostsPage {
     this.onGripSideChanged();
     void BlockRepository.getInstance().ensureLoaded();
     void this.loadSubPosts();
+  }
+
+  private initTopInset(): void {
+    try {
+      const ctx = getContext(this);
+      window.getLastWindow(ctx).then((win: window.Window) => {
+        const avoidArea = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        if (avoidArea.topRect.height > 0) {
+          const density = display.getDefaultDisplaySync().densityPixels;
+          this.topInset = Math.max(20, Math.round(avoidArea.topRect.height / density));
+        }
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('TiebaLite: SubPostsPage initTopInset failed ' + JSON.stringify(e));
+    }
   }
 
   onIsDarkChange(): void {
@@ -607,8 +626,17 @@ struct SubPostsPage {
         }
         .padding(12)
         .width('100%')
-        .backgroundColor(pageBg(this.isDark))
-        .backdropBlur(40)
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+        .position({ x: 0, y: 0 })
+        .zIndex(2)
+        .onAreaChange((_old: Area, newArea: Area) => {
+          const h = newArea.height as number;
+          if (h > 0 && Math.abs(h - this.headerH) > 1) {
+            this.headerH = h;
+          }
+        })
 
         if (this.loading) {
           LoadingState({ message: '加载中...' })
@@ -629,7 +657,8 @@ struct SubPostsPage {
                 }
               }
               Column() {
-                Divider().height(96).color(this.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)').width('100%').margin({ top: 6, bottom: 6 }).strokeWidth(4)
+                Blank().height(this.headerH > 0 ? this.headerH : 46)
+                Divider().height(4).color(this.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)').width('100%').strokeWidth(4)
               }
               .width('100%').backgroundColor(pageBg(this.isDark)).padding({ left: 12, right: 12 })
 
@@ -841,7 +870,7 @@ struct SubPostsPage {
     .width('100%')
     .height('100%')
     .align(Alignment.TopStart)
-    .backgroundColor(pageBg(this.isDark)).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .onTouch((event: TouchEvent) => {
       if (!GripDetector.isEnabled() || GripDetector.isNativeAvailable()) return;
       const side = GripDetector.touchSide(event.touches);

@@ -4,6 +4,8 @@ import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textS
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import NetworkUtil from '../../core/utils/NetworkUtil';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
+import { FabPositionManager } from '../../core/utils/FabPositionManager';
+import promptAction from '@ohos.promptAction';
 
 @Entry
 @Component
@@ -263,6 +265,24 @@ struct HabitsSettingsPage {
                 })
             }
             .width('100%').height(56).padding({ left: 16, right: 16 })
+          }
+          .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8)).margin({ top: 8 })
+
+          Column() {
+            Row() {
+              Text('重置悬浮按钮位置').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
+              Text('恢复回到顶部 / 刷新 / 发帖按钮的默认位置').fontFamily(this.appFontFamily).fontSize(12).fontColor(textTertiary(this.isDark)).margin({ left: 8 })
+              Blank()
+              Text('重置').fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark))
+            }
+            .width('100%').height(56).padding({ left: 16, right: 16 })
+              .onClick(() => {
+                void FabPositionManager.reset('backToTop');
+                void FabPositionManager.reset('exploreFab');
+                void FabPositionManager.reset('forumFab');
+                AppStorage.SetOrCreate<number>('fabPositionResetTick', (AppStorage.Get<number>('fabPositionResetTick') || 0) + 1);
+                promptAction.showToast({ message: '悬浮按钮位置已重置', duration: 1500 });
+              })
           }
           .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8)).margin({ top: 8 })
         }

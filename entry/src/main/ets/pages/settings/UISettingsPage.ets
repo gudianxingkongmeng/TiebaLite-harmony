@@ -222,7 +222,11 @@ struct UISettingsPage {
             Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
 
             Row() {
-              Text('顶栏透明度').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
+              Column() {
+                Text('玻璃透明度').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
+                Text('影响顶栏与悬浮按钮的玻璃浓度').fontFamily(this.appFontFamily).fontSize(11).fontColor(textTertiary(this.isDark)).margin({ top: 2 })
+              }
+              .alignItems(HorizontalAlign.Start)
               Blank()
               Text(this.headerAlpha + '%')
                 .fontFamily(this.appFontFamily).fontSize(13).fontColor(textTertiary(this.isDark)).margin({ right: 8 })

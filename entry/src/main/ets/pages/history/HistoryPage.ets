@@ -12,8 +12,51 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import BackToTopButton from '../../components/BackToTopButton';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
+
+class HistoryDataSource implements IDataSource {
+  private listeners: DataChangeListener[] = [];
+  private items: Dict[] = [];
+
+  totalCount(): number {
+    return this.items.length;
+  }
+
+  getData(index: number): Dict {
+    return this.items[index];
+  }
+
+  getDataId(index: number): string {
+    return String(this.items[index].id ?? index);
+  }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) {
+      this.listeners.push(listener);
+    }
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const idx = this.listeners.indexOf(listener);
+    if (idx >= 0) {
+      this.listeners.splice(idx, 1);
+    }
+  }
+
+  resetData(newItems: Dict[]): void {
+    this.items = newItems;
+    this.listeners.forEach((l: DataChangeListener) => { l.onDataReloaded(); });
+  }
+
+  removeById(id: number): void {
+    const idx = this.items.findIndex((i: Dict) => Number(i.id) === id);
+    if (idx >= 0) {
+      this.items.splice(idx, 1);
+      this.listeners.forEach((l: DataChangeListener) => { l.onDataDeleted(idx); });
+    }
+  }
+}
 
 @Entry
 @Component
@@ -28,8 +71,11 @@ struct HistoryPage {
   @State pullDistance: number = 0;
   @State pullRefreshing: boolean = false;
   @State topInset: number = 24;
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State headerH: number = 0;
   @State scrollTop: number = 0;
   private scroller: Scroller = new Scroller();
+  private dataSource: HistoryDataSource = new HistoryDataSource();
 
   aboutToAppear(): void {
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
@@ -79,6 +125,7 @@ struct HistoryPage {
     try {
       const raw = await HistoryRepository.getInstance().getThreadHistories();
       this.items = raw.map((h: ThreadHistoryEntity) => this.toThreadDict(h));
+      this.dataSource.resetData(this.items);
     } catch (e) {}
     this.loading = false;
   }
@@ -141,7 +188,19 @@ struct HistoryPage {
             this.items = [];
           })
       }
-      .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+      .padding(12).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+      .position({ x: 0, y: 0 })
+      .zIndex(2)
+      .onAreaChange((_old: Area, newArea: Area) => {
+        const h = newArea.height as number;
+        if (h > 0 && Math.abs(h - this.headerH) > 1) {
+          this.headerH = h;
+        }
+      })
 
       if (this.loading) {
         Text('加载中...').fontFamily(this.appFontFamily).fontSize(16).fontColor(textTertiary(this.isDark))
@@ -156,9 +215,15 @@ struct HistoryPage {
           onRefresh: (): void => { this.isRefreshing = true; },
           onTimeout: (): void => { this.isRefreshing = false; }
         }) {
-          Scroll(this.scroller) {
-            Column() {
-              ForEach(this.items, (item: Dict, index: number) => {
+          List({ scroller: this.scroller }) {
+            ListItem() {
+              Column() {
+                Blank().height(this.headerH > 0 ? this.headerH : 46)
+              }
+              .width('100%')
+            }
+            LazyForEach(this.dataSource, (item: Dict) => {
+              ListItem() {
                 Column() {
                   ThreadCard({
                     thread: item,
@@ -187,13 +252,14 @@ struct HistoryPage {
                       .onClick(async () => {
                         await HistoryRepository.getInstance().deleteThreadHistory(item.id as number);
                         this.items = this.items.filter((i: Dict) => i.id !== item.id);
+                        this.dataSource.removeById(item.id as number);
                       })
                   }
                   .padding({ right: 12, bottom: 6 })
                   .width('100%')
                 }
-              })
-            }
+              }
+            }, (item: Dict) => String(item.id ?? item.tid))
           }
           .scrollBar(BarState.Off)
           .onDidScroll(() => {

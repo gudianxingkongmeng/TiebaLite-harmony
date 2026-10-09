@@ -19,8 +19,9 @@ import BlockRepository from '../../../core/repository/BlockRepository';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
+import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
 import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, 
-textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer } from '../../../core/utils/DataHelper';
+textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow } from '../../../core/utils/DataHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -104,6 +105,15 @@ export default struct ExplorePage {
   @State tabBarWidth: number = 0;
   @State fabVisible: boolean = false;
   @State fabLeft: boolean = false;
+  @StorageLink('fabPositionResetTick') @Watch('onFabResetTick') fabResetTick: number = 0;
+  @State fabDx: number = 0;
+  @State fabDy: number = 0;
+  private fabDragging: boolean = false;
+  private fabDragMoved: boolean = false;
+  private fabDragStartX: number = 0;
+  private fabDragStartY: number = 0;
+  private fabDragBaseDx: number = 0;
+  private fabDragBaseDy: number = 0;
   @State showFabMenu: boolean = false;
   private fabTimer: number = -1;
   @State showHotTabMenu: boolean = false;
@@ -111,6 +121,7 @@ export default struct ExplorePage {
   private lastScrollYByTab: number[] = [0, 0, 0];
   private scrollers: Scroller[] = [new Scroller(), new Scroller(), new Scroller()];
   private screenWidth: number = 0;
+  private screenHeight: number = 0;
 
   onColorChanged(): void {
     this.bgColor = pageBg(this.isDark);
@@ -159,6 +170,16 @@ export default struct ExplorePage {
       }
     } catch (e) {}
     this.screenWidth = 360;
+    try {
+      const d = display.getDefaultDisplaySync();
+      if (d && d.height > 0) {
+        this.screenHeight = d.height / d.densityPixels;
+      }
+    } catch (e) {}
+    void FabPositionManager.load('exploreFab').then((o: FabOffset): void => {
+      this.fabDx = o.dx;
+      this.fabDy = o.dy;
+    }).catch(() => {});
     void this.loadHotTabConfig();
     const initialDone = AppStorage.Get<boolean>('exploreInitialLoadDone') ?? false;
     if (!initialDone) {
@@ -593,6 +614,60 @@ export default struct ExplorePage {
 
   private getWinWidth(): number {
     return 360;
+  }
+
+  private clampFabDx(v: number): number {
+    return Math.max(64 - this.getWinWidth(), Math.min(8, v));
+  }
+
+  private clampFabDy(v: number): number {
+    const h = this.screenHeight > 0 ? this.screenHeight : 640;
+    return Math.max(180 - h, Math.min(72, v));
+  }
+
+  private onFabDragStart(e: GestureEvent): void {
+    this.fabDragging = true;
+    this.fabDragMoved = false;
+    this.fabDragStartX = e.fingerList.length > 0 ? e.fingerList[0].globalX : 0;
+    this.fabDragStartY = e.fingerList.length > 0 ? e.fingerList[0].globalY : 0;
+    this.fabDragBaseDx = this.fabDx;
+    this.fabDragBaseDy = this.fabDy;
+  }
+
+  private onFabDragUpdate(e: GestureEvent): void {
+    if (!this.fabDragging || e.fingerList.length === 0) {
+      return;
+    }
+    const x = e.fingerList[0].globalX;
+    const y = e.fingerList[0].globalY;
+    if (Math.abs(x - this.fabDragStartX) > 3 || Math.abs(y - this.fabDragStartY) > 3) {
+      this.fabDragMoved = true;
+    }
+    this.fabDx = this.clampFabDx(this.fabDragBaseDx + (x - this.fabDragStartX));
+    this.fabDy = this.clampFabDy(this.fabDragBaseDy + (y - this.fabDragStartY));
+  }
+
+  private onFabDragEnd(): void {
+    if (!this.fabDragging) {
+      return;
+    }
+    this.fabDragging = false;
+    if (this.fabDragMoved) {
+      void FabPositionManager.save('exploreFab', this.fabDx, this.fabDy).catch(() => {});
+    }
+  }
+
+  onFabResetTick(): void {
+    this.resetFabPosition();
+  }
+
+  private resetFabPosition(): void {
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.fabDx = 0;
+      this.fabDy = 0;
+    });
+    this.showFabMenu = false;
+    void FabPositionManager.save('exploreFab', 0, 0).catch(() => {});
   }
 
   private updateIndicatorOffset(): void {
@@ -1137,8 +1212,14 @@ export default struct ExplorePage {
       }
       .alignItems(HorizontalAlign.Center).width(52)
       .position({ right: 16, bottom: 80 })
-      .translate({ x: this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 80 : 80) })
+      .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 80 : 80)) + this.fabDx, y: this.fabDy })
       .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
+      .gesture(
+        PanGesture({ fingers: 1, distance: 2 })
+          .onActionStart((e: GestureEvent): void => { this.onFabDragStart(e); })
+          .onActionUpdate((e: GestureEvent): void => { this.onFabDragUpdate(e); })
+          .onActionEnd((): void => { this.onFabDragEnd(); })
+      )
 
       if (this.refreshBanner) {
         Row() {
@@ -1188,8 +1269,11 @@ export default struct ExplorePage {
         .rotate({ angle: this.showFabMenu ? 135 : 0 })
         .animation({ duration: 200, curve: Curve.FastOutSlowIn })
     }
-    .width(52).height(52).borderRadius(26 * this.fabRadius / 100).backgroundColor(primaryContainer(this.isDark))
-    .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 4 })
+    .width(52).height(52).borderRadius(26 * this.fabRadius / 100)
+    .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+    .backdropBlur(glassBlurLevel(this.headerAlpha))
+    .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+    .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }
 

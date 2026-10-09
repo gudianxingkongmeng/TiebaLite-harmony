@@ -14,7 +14,7 @@ import GearLoading from '../../components/GearLoading';
 import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import promptAction from '@ohos.promptAction';
 import BackToTopButton from '../../components/BackToTopButton';
@@ -42,6 +42,8 @@ struct ThreadStorePage {
   @State pullRefreshing: boolean = false;
   @State scrollTop: number = 0;
   @State topInset: number = 24;
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State headerH: number = 0;
   private scroller: Scroller = new Scroller();
 
   private repo: ThreadStoreRepository = ThreadStoreRepository.getInstance();
@@ -227,7 +229,18 @@ struct ThreadStorePage {
         }
         .padding(12)
         .width('100%')
-        .backgroundColor(pageBg(this.isDark))
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+        .position({ x: 0, y: 0 })
+        .zIndex(2)
+        .onAreaChange((_old: Area, newArea: Area) => {
+          const h = newArea.height as number;
+          if (h > 0 && Math.abs(h - this.headerH) > 1) {
+            this.headerH = h;
+          }
+        })
 
         if (this.loading) {
           LoadingState({ message: '加载中...' })
@@ -245,6 +258,12 @@ struct ThreadStorePage {
               onTimeout: (): void => { this.isRefreshing = false; }
             }) {
               List({ space: 0, scroller: this.scroller }) {
+                ListItem() {
+                  Column() {
+                    Blank().height(this.headerH > 0 ? this.headerH : 46)
+                  }
+                  .width('100%')
+                }
                 ForEach(this.threads, (thread: Dict, index: number) => {
                   ListItem() {
                     ThreadCard({

@@ -21,6 +21,7 @@ import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../../core/utils/DataHelper';
+import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
 export default struct HomePage {
@@ -80,6 +81,7 @@ export default struct HomePage {
   aboutToAppear(): void {
     const t0 = new Date().getTime();
     console.info('TiebaLite: [H1] HomePage aboutToAppear start t=' + t0);
+    void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, this.bgColor);
     this.initTopInset();
     const acct = AccountManager.getInstance().getCurrentAccountSync();
     this.isLoggedIn = acct !== null && acct.bduss.length > 0;
@@ -121,6 +123,7 @@ export default struct HomePage {
   }
 
   onPageShow(): void {
+    void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, this.bgColor);
     const v = AppStorage.get<number>('pageShowTick') || 0;
     AppStorage.SetOrCreate('pageShowTick', v + 1);
   }
@@ -458,7 +461,7 @@ export default struct HomePage {
           .zIndex(2)
         }
       }
-      .width('100%').height('100%').justifyContent(FlexAlign.Start).backgroundColor(this.bgColor).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+      .width('100%').height('100%').justifyContent(FlexAlign.Start).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       if (this.showAccountMenu) {
         Column().width('100%').height('100%').onClick(() => { this.showAccountMenu = false; })
         Column() {
@@ -1153,9 +1156,24 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
 
   private getRecentForums(): Dict[] {
     try {
-      if (this.recentForumsJson) return JSON.parse(this.recentForumsJson) as Dict[];
-    } catch (_e) {}
-    return [];
+      const raw = this.recentForumsJson;
+      if (!raw) return [];
+      const parsed: Dict | Dict[] = JSON.parse(raw) as Dict | Dict[];
+      // RecentForumHelper 按账号 uid 分组存储，形如 {"uid": [...], "": [...]}；
+      // 旧数据也可能直接是数组。两种形态都要处理，否则拿到对象时
+      // .length 为 undefined，RecentForumsRow 的 length > 0 判断恒为 false。
+      if (Array.isArray(parsed)) return parsed as Dict[];
+      const all = parsed as Dict;
+      const acct = AccountManager.getInstance().getCurrentAccountSync();
+      const uid = acct ? String(acct.uid || '') : '';
+      const mine = all[uid] as Dict[] | undefined;
+      if (Array.isArray(mine) && mine.length > 0) return mine;
+      const global = all[''] as Dict[] | undefined;
+      if (Array.isArray(global)) return global;
+      return [];
+    } catch (_e) {
+      return [];
+    }
   }
 
   private getLevelColor(level: number): string {

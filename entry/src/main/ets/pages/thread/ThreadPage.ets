@@ -35,7 +35,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
-import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
 import PollCard from '../../components/PollCard';
@@ -43,7 +43,6 @@ import { pollDataToDict } from '../../proto/PollProto';
 import { uploadChunked } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
 import MD5 from '../../core/encryption/MD5';
-import { GripDetector } from '../../core/utils/GripDetector';
 import { richEditorToText, getAllEmoticons, EmoticonInfo } from '../../components/EmojiManager';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
 
@@ -123,7 +122,7 @@ struct ThreadPage {
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('secondaryColor') secondaryColor: string = '#575E71';
   @StorageLink('tertiaryColor') tertiaryColor: string = '#5F5791';
-  @StorageLink('gripSide') @Watch('onGripSideChanged') gripSide: number = 0;
+  @StorageLink('gripSide') gripSide: number = 0;
   @StorageLink('fabRadius') fabRadius: number = 60;
   reduceEffects: boolean = false;
   @StorageLink('fontScale') fontScale: number = 1.06;
@@ -174,10 +173,7 @@ struct ThreadPage {
   @State showForumBar: boolean = true;
   @State headerH: number = 56;
   @State showBottomBar: boolean = true;
-  @State showScrollTop: boolean = false;
   @State lastScrollY: number = 0;
-  @State fabLeft: boolean = false;
-  private fabTimer: number = -1;
   @State replyHint: string = '';
   @State replyPostId: number = 0;
   @State replyUserId: number = 0;
@@ -264,7 +260,6 @@ struct ThreadPage {
       }).catch(() => {});
       void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
       void BlockRepository.getInstance().ensureLoaded();
-      this.onGripSideChanged();
       this.loadThread(1);
     } catch (e) {
       console.error('TiebaLite: [CERR] ThreadPage aboutToAppear error=' + String(e));
@@ -987,11 +982,6 @@ console.info('TiebaLite: [D5] building userMap');
             } else if (delta < -5 && !this.showBottomBar) {
               animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showBottomBar = true; });
             }
-            if (delta > 5 && this.showScrollTop && newY > 500) {
-              animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showScrollTop = false; });
-            } else if (delta < -5 && !this.showScrollTop && newY > 500) {
-              animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showScrollTop = true; });
-            }
             if (this.hideOnScroll && !this.showReply) {
               if (delta > 5 && this.showForumBar && newY > 40) {
                 this.showForumBar = false;
@@ -1012,18 +1002,10 @@ console.info('TiebaLite: [D5] building userMap');
         .backdropBlur(40)
       }
 
-      if (this.scrollTop > 500) {
-        Image($r('app.media.ic_arrow_up')).width(Math.round(22 * this.fontScale)).height(Math.round(22 * this.fontScale))
-          .fillColor(onPrimaryContainer(this.isDark))
-          .width(44).height(44).borderRadius(22 * this.fabRadius / 100)
-          .backgroundColor(primaryContainer(this.isDark))
-          .shadow({ radius: 6, color: shadowColor(this.isDark), offsetY: 3 })
-          .position({ bottom: 64, right: 16 })
-          .translate({ x: this.showScrollTop ? (this.fabLeft ? -(this.screenWidth - 76) : 0) : (this.fabLeft ? -(this.screenWidth - 76) - 60 : 60) })
-          .onClick(() => {
-            this.scroller.scrollEdge(Edge.Top);
-          })
-      }
+      BackToTopButton({
+        scrollTop: $scrollTop,
+        onTopClick: () => { this.scroller.scrollEdge(Edge.Top); }
+      })
 
       if (this.showBottomBar) {
         Row() {
@@ -1090,8 +1072,8 @@ console.info('TiebaLite: [D5] building userMap');
           .height(50)
           .width('100%')
           .onTouch((event: TouchEvent) => this.handleBarTouch(event))
-          .backgroundColor(withAlpha(blendWithBg(this.secondaryColor, 0.18, this.isDark, '#1E1E1E'), 0.75))
-          .backdropBlur(60)
+          .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(blendWithBg(this.secondaryColor, 0.18, this.isDark, '#1E1E1E'), Math.max(0.5, this.headerAlpha / 100)))
+          .backdropBlur(this.headerAlpha > 0 ? 60 : 0)
           .borderRadius(24)
           .clip(true)
           .border({ width: 1, color: blendWithBg(this.secondaryColor, 0.35, this.isDark, '#1E1E1E') })
@@ -1394,15 +1376,6 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     .width('100%').height('100%')
     .backgroundColor(pageBg(this.isDark))
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-    .onTouch((event: TouchEvent) => {
-      if (!GripDetector.isEnabled() || GripDetector.isNativeAvailable()) return;
-      const side = GripDetector.touchSide(event.touches);
-      if (side === -1 && !this.fabLeft) {
-        this.switchFabSide(true);
-      } else if (side === 1 && this.fabLeft) {
-        this.switchFabSide(false);
-      }
-    })
     
   }
 
@@ -2704,40 +2677,6 @@ Text(this.uploadingImages ? '上传中...' : '发送')
       this.liquidAlpha = 0;
       this.drawLiquid();
     }
-  }
-
-  onGripSideChanged(): void {
-    if (!GripDetector.isEnabled()) {
-      if (this.fabLeft) this.fabLeft = false;
-      return;
-    }
-    if (this.gripSide === -1 && !this.fabLeft) {
-      this.switchFabSide(true);
-    } else if (this.gripSide === 1 && this.fabLeft) {
-      this.switchFabSide(false);
-    }
-  }
-
-  private switchFabSide(toLeft: boolean): void {
-    if (this.fabLeft === toLeft) return;
-    if (this.fabTimer !== -1) { clearTimeout(this.fabTimer); }
-    if (!this.showScrollTop) {
-      this.fabLeft = toLeft;
-      return;
-    }
-    const wasVisible = this.showScrollTop;
-    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
-      this.showScrollTop = false;
-    });
-    this.fabTimer = setTimeout(() => {
-      this.fabTimer = -1;
-      this.fabLeft = toLeft;
-      if (wasVisible) {
-        animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
-          this.showScrollTop = true;
-        });
-      }
-    }, 250);
   }
 
   private startRippleExpand(): void {
