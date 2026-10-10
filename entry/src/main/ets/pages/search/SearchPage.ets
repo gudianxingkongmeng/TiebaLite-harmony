@@ -13,7 +13,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassTintSurface, glassTintBorder, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
@@ -123,7 +123,7 @@ struct SearchPage {
   @Builder
   private historyContent(): void {
     Column() {
-      Blank().height(104)
+      Blank().height(this.searchBarVisible ? this.topInset + 104 : this.topInset + 44)
       Row() {
         Text('搜索历史').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark))
         Blank()
@@ -347,7 +347,7 @@ onIsDarkChange(): void {
   fsSearchContent() {
     Scroll(this.scrollers[0]) {
       Column() {
-        Blank().height(this.searchBarVisible ? 106 : 46)
+        Blank().height(this.searchBarVisible ? this.topInset + 106 : this.topInset + 46)
         ForEach(this.threadResults, (item: Dict, idx: number) => {
           Divider().height(2).color(dividerColor(this.isDark)).margin({ left: 12 }).visibility(this.cardStyle === 1 ? Visibility.Visible : Visibility.None)
           ThreadCard({
@@ -400,7 +400,7 @@ onIsDarkChange(): void {
     List({ scroller: this.scrollers[1] }) {
       ListItem() {
         Column() {
-          Blank().height(this.searchBarVisible ? 104 : 44)
+          Blank().height(this.searchBarVisible ? this.topInset + 104 : this.topInset + 44)
         }
         .width('100%')
       }
@@ -439,7 +439,7 @@ onIsDarkChange(): void {
     List({ scroller: this.scrollers[2] }) {
       ListItem() {
         Column() {
-          Blank().height(this.searchBarVisible ? 104 : 44)
+          Blank().height(this.searchBarVisible ? this.topInset + 104 : this.topInset + 44)
         }
         .width('100%')
       }
@@ -494,7 +494,7 @@ onIsDarkChange(): void {
     List({ scroller: this.scrollers[3] }) {
       ListItem() {
         Column() {
-          Blank().height(this.searchBarVisible ? 104 : 44)
+          Blank().height(this.searchBarVisible ? this.topInset + 104 : this.topInset + 44)
         }
         .width('100%')
       }
@@ -689,7 +689,9 @@ onIsDarkChange(): void {
         }
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Start)
-      .padding({ top: this.topInset })
+      // 不在此处 padding top：固定顶栏以 position(y:0) 定位在本容器内，
+      // 若容器先下移 topInset，顶栏会被推到状态栏下方，玻璃背景覆盖不到状态栏。
+      // 状态栏避让由固定顶栏自身的 padding top 完成。
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
@@ -699,11 +701,13 @@ onIsDarkChange(): void {
           TextInput({ text: this.keyword, placeholder: this.forumName ? '搜索 ' + this.forumName : '搜索...' })
             .layoutWeight(1)
             .height(36)
-            .backgroundColor(pageBg(this.isDark))
+            .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+            .backdropBlur(glassBlurLevel(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
             .padding({ left: 12 })
             .margin({ left: 8, right: 8 })
             .defaultFocus(true)
+            .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
             .fontColor(textPrimary(this.isDark))
             .placeholderColor(textTertiary(this.isDark))
             .onChange((v: string) => {
@@ -716,8 +720,10 @@ onIsDarkChange(): void {
           Button('搜索')
             .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor('#FFFFFF')
             .backgroundColor(this.primaryColor)
-            .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
-            .height(36)
+            .borderRadius(Math.max(0, Math.round(15 * this.searchBoxRound / 100)))
+            .height(32)
+            .padding({ left: 14, right: 14 })
+            .margin({ right: 4 })
             .onClick(() => this.doSearch())
         }
         .padding(this.searchBarVisible ? 12 : 0)
@@ -789,6 +795,8 @@ onIsDarkChange(): void {
       .position({ x: 0, y: 0 })
       .zIndex(2)
       .width('100%')
+      // 顶栏自身延伸到状态栏区域（由背景色+模糊实现玻璃），
+      // 内容用 padding top 避让。不能用 height 固定，否则收起时高度不跟随。
       .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha(darkenColor(this.bgColor, this.headerTint / 100), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))

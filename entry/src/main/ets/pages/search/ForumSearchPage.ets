@@ -8,7 +8,7 @@ import SearchRepository from '../../core/repository/SearchRepository';
 import PbPageRepository from '../../core/repository/PbPageRepository';
 import ThreadCard from '../../components/ThreadCard';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 
@@ -123,7 +123,7 @@ struct ForumSearchPage {
             .width('100%').textAlign(TextAlign.Center).padding(32)
         } else if (!this.showResults) {
           Column() {
-            Blank().height(106)
+            Blank().height(this.searchBarVisible ? this.topInset + 106 : this.topInset + 46)
             Text('搜索历史').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).width('100%').padding({ left: 16, top: 16, bottom: 8 })
             if (this.searchHistory.length === 0) {
               Text('暂无搜索历史').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).padding(24)
@@ -155,7 +155,7 @@ struct ForumSearchPage {
           List({ scroller: this.resultScroller }) {
             ListItem() {
               Column() {
-                Blank().height(this.searchBarVisible ? 106 : 46)
+        Blank().height(this.searchBarVisible ? this.topInset + 106 : this.topInset + 46)
               }
               .width('100%')
             }
@@ -203,14 +203,20 @@ struct ForumSearchPage {
         }
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Start)
-      .padding({ top: this.topInset })
+      // 不在此处 padding top：固定顶栏以 position(y:0) 定位在本容器内，
+      // 若容器先下移 topInset，顶栏会被推到状态栏下方，玻璃背景覆盖不到状态栏。
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
         Row() {
           Image($r('app.media.ic_arrow_back')).width(22).height(22).fillColor(textPrimary(this.isDark)).onClick(() => router.back())
           TextInput({ text: this.keyword, placeholder: this.forumName ? '搜索 ' + this.forumName : '搜索贴吧...' })
-            .layoutWeight(1).height(36).backgroundColor(pageBg(this.isDark)).borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100))).padding({ left: 12 }).margin({ left: 8, right: 8 }).defaultFocus(true)
+            .layoutWeight(1).height(36)
+            .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+            .backdropBlur(glassBlurLevel(this.headerAlpha))
+            .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
+            .padding({ left: 12 }).margin({ left: 8, right: 8 }).defaultFocus(true)
+            .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
             .fontColor(textPrimary(this.isDark))
             .placeholderColor(textTertiary(this.isDark))
             .onChange((v: string) => {
@@ -220,7 +226,12 @@ struct ForumSearchPage {
             })
             .onSubmit(() => this.doSearch())
           Button('搜索').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor('#FFFFFF')
-            .backgroundColor(this.primaryColor).borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100))).height(36).onClick(() => this.doSearch())
+            .backgroundColor(this.primaryColor)
+            .borderRadius(Math.max(0, Math.round(15 * this.searchBoxRound / 100)))
+            .height(32)
+            .padding({ left: 14, right: 14 })
+            .margin({ right: 4 })
+            .onClick(() => this.doSearch())
         }
         .padding(this.searchBarVisible ? 12 : 0)
         .width('100%')
@@ -271,8 +282,9 @@ struct ForumSearchPage {
       .width('100%')
       .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .backgroundColor(this.bgColor)
-      .backdropBlur(60)
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
+        withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
       if (this.showSuggestions) {
@@ -384,12 +396,12 @@ struct ForumSearchPage {
       console.error('TiebaLite: saveHistory error=' + String(e));
     }
     try {
-      const data = await this.repo.searchThread(this.keyword, 1, this.sortMode, this.forumName, this.selectedScope);
+      const data = await this.repo.searchPost(this.keyword, this.forumName, 1, this.sortMode);
       const d = (data.data as Dict) || data;
-      const list = (d.thread_list || d.post_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
+      const list = (d.post_list || d.thread_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
       if (list.length > 0) this.threadResults = list;
       const hm = d.has_more ?? d.hasMore ?? 0;
-      this.searchHasMore = (list.length > 0 && Number(hm) === 1) || list.length >= 30;
+      this.searchHasMore = (list.length > 0 && Number(hm) === 1) || list.length >= 20;
       const ul = d.user_list;
       if (ul && Array.isArray(ul)) this.userList = ul as Dict[];
     } catch (e) {
@@ -405,16 +417,16 @@ struct ForumSearchPage {
     this.searchLoadingMore = true;
     try {
       const nextPage = this.searchPage + 1;
-      const data = await this.repo.searchThread(this.keyword, nextPage, this.sortMode, this.forumName, this.selectedScope);
+      const data = await this.repo.searchPost(this.keyword, this.forumName, nextPage, this.sortMode);
       const d = (data.data as Dict) || data;
-      const list = (d.thread_list || d.post_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
+      const list = (d.post_list || d.thread_list || d.list || d.data_list || d.data || d.result || d.items || d.feed || []) as Dict[];
       if (list.length === 0) {
         this.searchHasMore = false;
       } else {
         this.threadResults = [...this.threadResults, ...list];
         this.searchPage = nextPage;
         const hm = d.has_more ?? d.hasMore ?? 0;
-        this.searchHasMore = Number(hm) === 1 || list.length >= 30;
+        this.searchHasMore = Number(hm) === 1 || list.length >= 20;
       }
     } catch (e) {
       this.searchHasMore = false;
