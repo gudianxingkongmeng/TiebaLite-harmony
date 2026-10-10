@@ -219,6 +219,12 @@ struct HistoryPage {
                 Column() {
                   ThreadCard({
                     thread: item,
+                    showDelete: true,
+                    onDeleteClick: async (): Promise<void> => {
+                      await HistoryRepository.getInstance().deleteThreadHistory(item.id as number);
+                      this.items = this.items.filter((i: Dict) => i.id !== item.id);
+                      this.dataSource.removeById(item.id as number);
+                    },
                     onCardClick: (): void => {
                       NavigationHelper.navigate('pages/thread/ThreadPage', {
                         threadId: String(item.id || item.tid || 0),
@@ -235,20 +241,6 @@ struct HistoryPage {
                     }
                   })
                   .margin({ left: 16, right: 16, top: 6, bottom: 6 })
-                  Row() {
-                    Blank()
-                    Row() {
-                      Image($r('app.media.ic_close')).width(14).height(14).fillColor(textTertiary(this.isDark))
-                      Text('删除').fontFamily(this.appFontFamily).fontSize(12).fontColor(textTertiary(this.isDark)).margin({ left: 4 })
-                    }
-                      .onClick(async () => {
-                        await HistoryRepository.getInstance().deleteThreadHistory(item.id as number);
-                        this.items = this.items.filter((i: Dict) => i.id !== item.id);
-                        this.dataSource.removeById(item.id as number);
-                      })
-                  }
-                  .padding({ right: 12, bottom: 6 })
-                  .width('100%')
                 }
               }
             }, (item: Dict) => String(item.id ?? item.tid))

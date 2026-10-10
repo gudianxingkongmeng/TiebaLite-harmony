@@ -24,7 +24,7 @@ import AccountManager from '../../core/auth/AccountManager';
 import BlockRepository from '../../core/repository/BlockRepository';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import DeviceFingerprint from '../../core/device/DeviceFingerprint';
-import PbContentRender from '../../components/PbContentRender';
+import PbContentRender, { AppRouter } from '../../components/PbContentRender';
 import ThreadImageFetcher, { PhotoUrlCache, ThreadImageCollectResult } from '../../core/utils/ThreadImageFetcher';
 import ThreadCard from '../../components/ThreadCard';
 import LoadingState from '../../components/LoadingState';
@@ -906,7 +906,7 @@ struct ThreadPage {
                             .width('100%').padding(16).textAlign(TextAlign.Center)
                         }
                         .width('100%')
-                        .padding({ left: 12, right: 6, bottom: 12 })
+                        .padding({ left: 12, right: 12, bottom: 12 })
                       } else {
                         Column() {
                         PbContentRender({ contents: this.threadData.content as Dict[], allImageUrls: this.allThreadImageUrls, allImageStartIndex: 0, threadId: this.threadId, forumId: this.forumId, forumName: this.forumName })
@@ -918,7 +918,7 @@ struct ThreadPage {
                             }
                           }
                         })
-                  .padding({ left: 12, right: 6, bottom: 12 })
+                  .padding({ left: 12, right: 12, bottom: 12 })
                         }
                         .gesture(
                           LongPressGesture({ repeat: false, duration: 500 })
@@ -956,6 +956,10 @@ struct ThreadPage {
                 this.actionBarRow(false)
               }
               .visibility(this.showFixedBar ? Visibility.Hidden : Visibility.Visible)
+              // 与顶栏保持一致的玻璃质感：同色背景 + 背景模糊 + 顶部分隔线
+              .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+              .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+              .border({ width: { top: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
               if (this.canLoadPrev && !this.jumpHintFloor) {
                 Row() {
@@ -1794,13 +1798,66 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     if (contents && Array.isArray(contents)) {
       for (const c of contents) {
         const t = Number(c.type);
-        if (t === 1 || t === 3 || t === 20) return true;
+        if ((t === 1 || t === 3 || t === 20) && this.isImageUrl(this.resolveSubImageSrc(c))) return true;
       }
     }
     // 兜底：检查 sub 是否还有 media 字段
     const media = sub.media as Dict[] | null;
     if (media && Array.isArray(media) && media.length > 0) return true;
     return false;
+  }
+
+  /**
+   * 从楼中楼内容项提取图片 URL。
+   * 与 PbContentRender.getImgSrc 不同，这里不把 c/text 当 URL——
+   * 贴吧链接类内容的 c 字段存的是链接地址，直接当图片会误判。
+   */
+  private resolveSubImageSrc(item: Dict): string {
+    const u = String(item.originSrc || item.src || item.origin_src || item.cdn_src ||
+      item.imgSrc || item.imageSrc || item.originalSrc || item.httpsSrc || '');
+    if (!u) return '';
+    if (u.startsWith('https://')) return u;
+    if (u.startsWith('http://')) return 'https://' + u.substring(7);
+    if (u.startsWith('//')) return 'https:' + u;
+    return u;
+  }
+
+  /** 判断 URL 是否指向图片（去掉查询参数后看扩展名，或匹配贴吧图片域名） */
+  private isImageUrl(url: string): boolean {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    // 贴吧图片 URL 常带 ?tbpicau=...，需先剥离查询参数
+    const pathOnly = lower.split('?')[0];
+    if (pathOnly.endsWith('.jpg') || pathOnly.endsWith('.jpeg') || pathOnly.endsWith('.png') ||
+      pathOnly.endsWith('.gif') || pathOnly.endsWith('.webp') || pathOnly.endsWith('.bmp')) {
+      return true;
+    }
+    return lower.includes('tiebapic.baidu.com') || lower.includes('imgsa.baidu.com') ||
+      lower.includes('imgsrc.baidu.com') || lower.includes('bkimg.cdn.bcebos.com') ||
+      lower.includes('img.baidu.com') || lower.includes('hiphotos.baidu.com') ||
+      lower.includes('imgsrc.cdn.bcebos.com');
+  }
+
+  /** 打开链接：贴吧帖子/吧链接走 app 内页面，其余走 WebView */
+  private openSubUrl(url: string): void {
+    if (!url) return;
+    const tidMatch = url.match(/(?:tieba\.baidu\.com\/p\/|tieba\.baidu\.com\/mo\/q\/view\?tid=)(\d+)/);
+    if (tidMatch) {
+      const tid = Number(tidMatch[1]);
+      if (tid > 0) {
+        AppRouter.navigate('thread', { threadId: String(tid), forumId: '0', forumName: '' });
+        return;
+      }
+    }
+    const fidMatch = url.match(/(?:tieba\.baidu\.com\/f\?kw=|tieba\.baidu\.com\/f\?ie=utf-8&kw=)([^&]+)/);
+    if (fidMatch) {
+      const name = decodeURIComponent(fidMatch[1]);
+      if (name) {
+        AppRouter.navigate('forum', { forumName: name });
+        return;
+      }
+    }
+    NavigationHelper.navigate('pages/webview/WebViewPage', { url: url });
   }
 
   @Builder
@@ -1957,23 +2014,37 @@ Text(this.uploadingImages ? '上传中...' : '发送')
                       .width(20).height(20).objectFit(ImageFit.Contain)
                       .verticalAlign(ImageSpanAlignment.CENTER)
                   } else if (Number(item.type) === 1 || Number(item.type) === 3 || Number(item.type) === 20) {
-                    Span(' 查看图片 ')
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
-                      .decoration({ type: TextDecorationType.Underline })
-                      .onClick(() => {
-                        const urls: string[] = [];
-                        const sc = sub.content as Dict[] | null;
-                        if (sc) {
-                          for (const it of sc) {
-                            const t = Number(it.type);
-                            const u = PbContentRender.resolveImageSrc(it);
-                            if ((t === 1 || t === 3 || t === 20) && u.length > 0) urls.push(u);
+                    if (String(item.link || '') && !this.isImageUrl(String(item.link || ''))) {
+                      // 链接类内容：显示为可点击的链接，而不是「查看图片」
+                      Span(String(item.text || item.link || ''))
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                        .decoration({ type: TextDecorationType.Underline })
+                        .onClick(() => { this.openSubUrl(String(item.link || '')); })
+                    } else if (this.isImageUrl(this.resolveSubImageSrc(item))) {
+                      Span(' 查看图片 ')
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                        .decoration({ type: TextDecorationType.Underline })
+                        .onClick(() => {
+                          const urls: string[] = [];
+                          const sc = sub.content as Dict[] | null;
+                          if (sc) {
+                            for (const it of sc) {
+                              const t = Number(it.type);
+                              const u = this.resolveSubImageSrc(it);
+                              if ((t === 1 || t === 3 || t === 20) && u.length > 0) urls.push(u);
+                            }
                           }
-                        }
-                        if (urls.length > 0) {
-                          NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: 0 });
-                        }
-                      })
+                          if (urls.length > 0) {
+                            NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: urls, index: 0 });
+                          }
+                        })
+                    } else if (String(item.text || '').length > 0) {
+                      Span(String(item.text))
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    } else {
+                      Span('[图片]')
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    }
                   } else if (Number(item.type) === 3 || Number(item.type) === 5) {
                     Span('[视频]')
                       .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))

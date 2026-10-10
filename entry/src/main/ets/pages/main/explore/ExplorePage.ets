@@ -177,7 +177,7 @@ export default struct ExplorePage {
       }
     } catch (e) {}
     void FabPositionManager.load('exploreFab').then((o: FabOffset): void => {
-      this.fabDx = o.dx;
+      this.fabDx = 0; // X 轴固定贴侧边
       this.fabDy = o.dy;
     }).catch(() => {});
     void this.loadHotTabConfig();
@@ -652,9 +652,14 @@ export default struct ExplorePage {
       return;
     }
     this.fabDragging = false;
-    if (this.fabDragMoved) {
-      void FabPositionManager.save('exploreFab', this.fabDx, this.fabDy).catch(() => {});
+    if (!this.fabDragMoved) {
+      return;
     }
+    // X 轴允许拖动，松手后自动归位到侧边，仅保留 Y 轴位置
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.fabDx = 0;
+    });
+    void FabPositionManager.save('exploreFab', 0, this.fabDy).catch(() => {});
   }
 
   onFabResetTick(): void {
@@ -991,7 +996,8 @@ export default struct ExplorePage {
           .width('93%').height(this.searchBarVisible ? 44 : 0)
           .clip(true)
           .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
-          .backgroundColor(blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E'))
+          .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+          .backdropBlur(glassBlurLevel(this.headerAlpha))
           .border({ width: 1, color: dividerColor(this.isDark) })
           .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
           .margin({ top: this.searchBarVisible ? 8 : 0, bottom: this.searchBarVisible ? 4 : 0 })
@@ -1210,7 +1216,7 @@ export default struct ExplorePage {
 
         this.FabButton()
       }
-      .alignItems(HorizontalAlign.Center).width(52)
+      .alignItems(HorizontalAlign.Center).width(46)
       .position({ right: 16, bottom: 80 })
       .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 80 : 80)) + this.fabDx, y: this.fabDy })
       .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
@@ -1264,12 +1270,12 @@ export default struct ExplorePage {
   @Builder
   FabButton() {
     Stack() {
-      Text('+')
-        .fontFamily(this.appFontFamily).fontSize(28).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
+Text('+')
+              .fontFamily(this.appFontFamily).fontSize(25).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
         .rotate({ angle: this.showFabMenu ? 135 : 0 })
         .animation({ duration: 200, curve: Curve.FastOutSlowIn })
     }
-    .width(52).height(52).borderRadius(26 * this.fabRadius / 100)
+    .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBlurLevel(this.headerAlpha))
     .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })

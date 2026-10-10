@@ -151,7 +151,7 @@ struct ForumPage {
       }
     } catch (e) {}
     void FabPositionManager.load('forumFab').then((o: FabOffset): void => {
-      this.fabDx = o.dx;
+      this.fabDx = 0; // X 轴固定贴侧边
       this.fabDy = o.dy;
     }).catch(() => {});
     void this.blockRepo.ensureLoaded();
@@ -672,9 +672,14 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       return;
     }
     this.fabDragging = false;
-    if (this.fabDragMoved) {
-      void FabPositionManager.save('forumFab', this.fabDx, this.fabDy).catch(() => {});
+    if (!this.fabDragMoved) {
+      return;
     }
+    // X 轴允许拖动，松手后自动归位到侧边，仅保留 Y 轴位置
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.fabDx = 0;
+    });
+    void FabPositionManager.save('forumFab', 0, this.fabDy).catch(() => {});
   }
 
   onFabResetTick(): void {
@@ -1698,12 +1703,12 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   @Builder
   FabButton() {
     Stack() {
-      Text('+')
-        .fontFamily(this.appFontFamily).fontSize(28).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
-        .rotate({ angle: this.showFabMenu ? 135 : 0 })
-        .animation({ duration: 200, curve: Curve.FastOutSlowIn })
-    }
-    .width(52).height(52).borderRadius(26 * this.fabRadius / 100)
+Text('+')
+              .fontFamily(this.appFontFamily).fontSize(25).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
+              .rotate({ angle: this.showFabMenu ? 135 : 0 })
+              .animation({ duration: 200, curve: Curve.FastOutSlowIn })
+          }
+          .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBlurLevel(this.headerAlpha))
     .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })

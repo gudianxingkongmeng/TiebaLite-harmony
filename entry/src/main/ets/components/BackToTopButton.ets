@@ -40,7 +40,8 @@ export default struct BackToTopButton {
     this.lastScrollTop = this.scrollTop;
     this.onGripSideChanged();
     void FabPositionManager.load('backToTop').then((o: FabOffset) => {
-      this.fabDx = o.dx;
+      // X 轴固定贴右侧（旧版本可能存过非零 dx，这里强制归零）
+      this.fabDx = 0;
       this.fabDy = o.dy;
     }).catch(() => {});
   }
@@ -82,9 +83,15 @@ export default struct BackToTopButton {
       return;
     }
     this.dragging = false;
-    if (this.dragMoved) {
-      void FabPositionManager.save('backToTop', this.fabDx, this.fabDy).catch(() => {});
+    if (!this.dragMoved) {
+      return;
     }
+    // X 轴允许拖动，但松手后自动归位到侧边，只保留 Y 轴位置。
+    // 用动画归零，视觉上更自然；持久化时 dx 固定存 0。
+    animateTo({ duration: 200, curve: Curve.FastOutSlowIn }, () => {
+      this.fabDx = 0;
+    });
+    void FabPositionManager.save('backToTop', 0, this.fabDy).catch(() => {});
   }
 
   private handleResetPosition(): void {

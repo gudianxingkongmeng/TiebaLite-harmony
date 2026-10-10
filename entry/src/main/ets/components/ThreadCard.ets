@@ -45,6 +45,9 @@ export default struct ThreadCard {
   @StorageLink('likedVersion') @Watch('onLikedVersionChange') likedVersion: number = 0;
   onCardClick?: () => void;
   onForumClick?: () => void;
+  /** 是否显示右上角删除按钮（历史记录页使用），避免单独占一行 */
+  @Prop showDelete: boolean = false;
+  onDeleteClick?: () => void;
   private _logged: boolean = false;
   onAuthorClick?: () => void;
   onLikeClick?: (liked: boolean) => void;
@@ -144,6 +147,20 @@ export default struct ThreadCard {
               .fontFamily(this.appFontFamily).fontSize(Math.round(12 * this.fontScale)).fontColor(textSecondary(this.isDark)).letterSpacing(1).margin({ top: 6 })
           }
           .margin({ left: 10 }).layoutWeight(1).alignItems(HorizontalAlign.Start)
+
+          if (this.showDelete) {
+            // 删除按钮与头像垂直居中对齐，不单独占一行
+            Row() {
+              Image($r('app.media.ic_close')).width(13).height(13).fillColor(textTertiary(this.isDark))
+              Text('删除').fontFamily(this.appFontFamily).fontSize(12).fontColor(textTertiary(this.isDark)).margin({ left: 3 })
+            }
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+            .borderRadius(4)
+            .alignSelf(ItemAlign.Center)
+            .onClick(() => {
+              if (this.onDeleteClick) this.onDeleteClick();
+            }, 12)
+          }
 
           if (this.hotRank !== undefined) {
             Column() {

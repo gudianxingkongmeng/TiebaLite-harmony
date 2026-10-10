@@ -283,6 +283,7 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
                     }
                   }
                   .width('100%')
+                  .clip(true)
                   .margin({ top: 8, bottom: 8 })
                   .onClick(() => {
                     this.navigatePhotoView(group.origIndices[gi]);
@@ -292,7 +293,8 @@ Text(String(item.text || item.c || ''))
                     .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark)).lineHeight(Math.round(24 * this.fontScale)).letterSpacing(0.4).width('100%').padding({ top: 4, bottom: 4 })
                 }
               }
-              .width('100%')
+              // maxWidth 使 padding 生效，width('100%') 会导致 padding 失效并溢出
+              .constraintSize({ maxWidth: '100%' })
             } else if (Number(item.type) === 5) {
               Column() {
                 if (this.isFirstVideoGroup(gIdx) && this.firstVideoUrl) {
@@ -372,6 +374,7 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
                     }
                   }
                   .width('100%')
+                  .clip(true)
                   .margin({ top: 8, bottom: 8 })
                     .onClick(() => {
                     this.navigatePhotoView(group.origIndices[gi]);
@@ -390,7 +393,9 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
                   .alignItems(VerticalAlign.Center)
                 }
               }
-              .width('100%')
+              // 用 maxWidth 而非 width('100%')：后者会让 padding 失效并溢出到容器外，
+              // 导致图片超出正文边界。maxWidth 使 padding 正常生效。
+              .constraintSize({ maxWidth: '100%' })
             } else if (Number(item.type) === 4) {
               Row() {
                 Image($r('app.media.ic_notifications')).width(Math.round(16 * this.fontScale)).height(Math.round(16 * this.fontScale)).fillColor(textPrimary(this.isDark))
@@ -548,8 +553,18 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
     const w = Number(item.width || item.originWidth || 0);
     const h = Number(item.height || item.originHeight || 0);
     if (w > 0 && h > 0) return w / h;
+    // 贴吧图片的 bsize 为 "宽,高"（如 "560,257"），是最可靠的尺寸来源
+    const bsize = String(item.bsize || '');
+    if (bsize) {
+      const parts = bsize.split(/[,x*×]/);
+      if (parts.length >= 2) {
+        const bw = Number(parts[0]);
+        const bh = Number(parts[1]);
+        if (bw > 0 && bh > 0) return bw / bh;
+      }
+    }
     if (Number(item.type) === 5) return 16 / 9;
-    return 1;
+    return 16 / 9;
   }
 
   private resolveVideoUrl(item: Dict): string {

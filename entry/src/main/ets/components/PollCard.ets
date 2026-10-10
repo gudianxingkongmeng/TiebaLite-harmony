@@ -165,7 +165,7 @@ if (day > 0) return day + '天后结束';
           }
           .width('100%')
         }
-        .width('100%').padding({ left: 12, right: 12, top: 8, bottom: 8 })
+        .width('100%').padding({ left: 8, right: 8, top: 7, bottom: 7 })
         .borderRadius(9)
         .border({ width: 1, color: this.isChosen(Number(opt.id)) ? this.primaryColor : dividerColor(this.isDark) })
         .clip(true)
@@ -192,11 +192,14 @@ if (day > 0) return day + '天后结束';
           .onClick(() => { this.submit(); })
       }
     }
-    .width('100%').padding(14)
+    .padding(12)
     .backgroundColor(blendWithBg(this.primaryColor, 0.06, this.isDark))
     .borderRadius(14)
     .border({ width: 1, color: dividerColor(this.isDark) })
     .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 2 })
-    .margin({ left: 16, right: 16, top: 4, bottom: 12 })
+    // 用 maxWidth('100%') 而非 width('100%')：后者会撑满父容器使 margin 失效（ArkUI 行为），
+    // 导致卡片贴到屏幕两侧。maxWidth 允许 margin 正常生效。
+    .constraintSize({ maxWidth: '100%' })
+    .margin({ left: 12, right: 12, top: 4, bottom: 12 })
   }
 }
