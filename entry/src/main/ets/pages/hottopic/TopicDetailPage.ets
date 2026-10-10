@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import HotTopicRepository from '../../core/repository/HotTopicRepository';
@@ -8,12 +10,14 @@ import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { getStr, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
 @Component
 struct TopicDetailPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @State topicId: string = '';
   @State topicName: string = '';
 
@@ -33,6 +37,7 @@ struct TopicDetailPage {
   private searchRepo: SearchRepository = SearchRepository.getInstance();
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     const params = router.getParams() as Record<string, string>;
     this.topicId = params?.topicId || '';
     this.topicName = params?.topicName || '';
@@ -88,9 +93,13 @@ struct TopicDetailPage {
             .margin({ left: 12 })
           Blank()
         }
-        .padding(12)
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
       .width('100%')
-      .backgroundColor(cardBg(this.isDark))
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       if (this.loading) {
         LoadingState({ message: '加载中...' })
@@ -99,6 +108,7 @@ struct TopicDetailPage {
       } else {
         Scroll() {
           Column() {
+          Blank().height(46 + this.topInset)
             if (this.topicDetail) {
               this.topicHeader(this.topicDetail)
               Divider().height(12).color(dividerColor(this.isDark)).width('100%')
@@ -156,6 +166,7 @@ struct TopicDetailPage {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Start)
+    .padding({ top: this.topInset })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
     }
     .width('100%').height('100%')

@@ -738,39 +738,32 @@ export default class MixedTiebaApiImpl implements ITiebaApi {
   }
 
   private sendRequest(baseUrl: string, path: string, params: Record<string, string>, callback: ApiCallback<Dict>, extraHeaders?: Record<string, string>): void {
-    console.info('TiebaLite: [E1] sendRequest ' + path);
     const account = AccountManager.getInstance().getCurrentAccountSync();
     if (account) {
       params[PARAM.BDUSS] = account.bduss;
       params[PARAM.STOKEN] = account.sToken;
     }
 
-    console.info('TiebaLite: [E2] calling http.post');
     this.http.post(baseUrl, path, params, extraHeaders)
       .then(response => {
-        console.info('TiebaLite: [E3] http.post success');
         const raw = response.data;
         if (typeof raw !== 'object' || raw === null) {
-          // WAF/HTML 页或空响应：绝不能当作成功（否则收藏/取消收藏会假成功）
-          console.error('TiebaLite: [EERR] non-object response type=' + typeof raw);
+          // HttpClient 已对空响应重试；走到这里说明确实拿不到数据，如实上报便于排查
+          console.error('TiebaLite: bad response path=' + path + ' type=' + typeof raw);
           callback.onError(-1, '响应格式异常');
           return;
         }
         const data: Dict = raw as Dict;
         const code = data?.error_code;
         const msg = String(data?.error_msg || '');
-        console.info('TiebaLite: [E4] resp error_code=' + JSON.stringify(code) + ' error_msg=' + msg);
         if (code && code !== '0' && code !== 0 && code !== 300000 && code !== '300000') {
-          console.info('TiebaLite: [E5] calling onError');
           callback.onError(Number(code), msg || 'Unknown error');
         } else {
-          console.info('TiebaLite: [E6] calling onSuccess');
           callback.onSuccess(data);
         }
       })
       .catch(err => {
-        console.error('TiebaLite: [EERR] sendRequest catch err=' + String(err));
-        console.info('TiebaLite: [E7] calling onError from catch');
+        console.error('TiebaLite: sendRequest failed path=' + path + ' err=' + String(err));
         callback.onError(-1, err.message || 'Network error');
       });
   }

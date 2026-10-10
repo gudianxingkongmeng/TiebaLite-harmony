@@ -1,13 +1,17 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import ThemeProvider from '../../core/theme/ThemeProvider';
-import { blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
 @Component
 struct FontSettingsPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @State fontScale: number = 1.0;
   @State useSystemFont: boolean = true;
   @State selectedFontIndex: number = 0;
@@ -19,6 +23,7 @@ struct FontSettingsPage {
   private fontOptions: string[] = ['系统', '默认', '衬线', '无衬线', '等宽', '手写'];
 
   async aboutToAppear(): Promise<void> {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     this.fontScale = await this.prefs.getFloat('fontScale', 1.0);
     this.useSystemFont = await this.prefs.getBoolean('use_system_font', true);
@@ -52,10 +57,17 @@ struct FontSettingsPage {
           Text('字体设置').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ left: 16 })
           Blank()
         }
-      .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       Scroll() {
         Column() {
+
+        Blank().height(46 + this.topInset)
           Text('字体大小').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark)).width('100%').padding(16)
 
           Column() {

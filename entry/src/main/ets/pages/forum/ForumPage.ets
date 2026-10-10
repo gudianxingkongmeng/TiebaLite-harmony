@@ -973,6 +973,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       .width('100%').height(44)
       }
       .width('100%')
+      .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
       .zIndex(2)
       .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(pageBg(this.isDark), this.headerTint / 100) : pageBg(this.isDark)), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100))))
@@ -1606,7 +1607,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   }
 
   private contentTopPad(): number {
-    return this.headerCollapsed ? 101 - this.nameRowHeight : 101;
+    return (this.headerCollapsed ? 101 - this.nameRowHeight : 101) + this.topInset;
   }
 
   private handleHeaderScroll(sc: Scroller): void {

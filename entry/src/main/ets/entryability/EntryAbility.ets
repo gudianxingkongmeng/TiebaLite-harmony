@@ -227,8 +227,13 @@ export default class EntryAbility extends Ability {
       AppStorage.Delete('fullscreenPipStartTime');
       const win = await windowStage.getMainWindow();
       await win.setPreferredOrientation(Window.Orientation.PORTRAIT);
-      console.info('TiebaLite: [A13] done');
-    } catch (e) { console.error('TiebaLite: [A13] err: ' + JSON.stringify(e)); }
+    } catch (e) { console.error('TiebaLite: setPreferredOrientation err: ' + JSON.stringify(e)); }
+
+    try {
+      // 全屏沉浸式布局：各页面自行通过 TopInsetHelper 补状态栏/手势区安全距离
+      const fwin = await windowStage.getMainWindow();
+      fwin.setWindowLayoutFullScreen(true);
+    } catch (e) { console.error('TiebaLite: setWindowLayoutFullScreen err: ' + JSON.stringify(e)); }
 
     console.info('TiebaLite: [A11] loadContent');
     windowStage.loadContent('pages/Index', async (err) => {

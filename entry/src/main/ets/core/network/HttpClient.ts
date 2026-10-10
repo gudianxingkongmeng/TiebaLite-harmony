@@ -97,6 +97,9 @@ export class StParamInterceptor implements Interceptor {
 }
 
 export class HttpClient {
+  // 空响应（服务端限流/连接掐断）重试次数与基础间隔（毫秒）
+  private static readonly MAX_RETRY: number = 3;
+  private static readonly RETRY_DELAY: number = 300;
   private static instance: HttpClient;
   private clients: Map<string, AxiosInstance> = new Map();
   private interceptors: Interceptor[] = [];
@@ -167,35 +170,47 @@ export class HttpClient {
     }
     const qs = '?' + Object.entries(allParams).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
     const url = baseURL.replace(/\/$/, '') + path + qs;
-    const httpRequest = http.createHttp();
-    return new Promise<AxiosResponse<T>>((resolve, reject) => {
-      httpRequest.request(url, {
-        method: http.RequestMethod.GET,
-        header: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 14; HarmonyOS) AppleWebKit/537.36',
-          'Cookie': 'ka=open',
-          ...(extraHeaders || {})
-        },
-        expectDataType: http.HttpDataType.OBJECT
-      }).then((resp) => {
-        httpRequest.destroy();
-        const raw = resp.result as Object;
-        let respData: Object;
-        if (typeof raw === 'string') {
-          try { respData = JSON.parse(raw as string); } catch (e) {
-            console.error('TiebaLite: simpleGet JSON parse error=' + String(e));
-            respData = {};
+    const doGet = (attempt: number): Promise<AxiosResponse<T>> => {
+      const httpRequest = http.createHttp();
+      return new Promise<AxiosResponse<T>>((resolve, reject) => {
+        httpRequest.request(url, {
+          method: http.RequestMethod.GET,
+          header: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 14; HarmonyOS) AppleWebKit/537.36',
+            'Cookie': 'ka=open',
+            ...(extraHeaders || {})
+          },
+          expectDataType: http.HttpDataType.OBJECT
+        }).then((resp) => {
+          httpRequest.destroy();
+          const raw = resp.result as Object;
+          let respData: Object;
+          if (typeof raw === 'string') {
+            try { respData = JSON.parse(raw as string); } catch (e) {
+              console.error('TiebaLite: simpleGet JSON parse error=' + String(e));
+              respData = {};
+            }
+          } else {
+            respData = raw;
           }
-        } else {
-          respData = raw;
-        }
-        resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
-      }).catch((err) => {
-        httpRequest.destroy();
-        reject(new Error(String(err)));
+          // 服务端限流或连接被掐断时会返回空 body，result 为 undefined，属于可重试的偶发错误
+          if (respData === undefined || respData === null) {
+            if (attempt < HttpClient.MAX_RETRY) {
+              setTimeout(() => { doGet(attempt + 1).then(resolve).catch(reject); }, HttpClient.RETRY_DELAY * attempt);
+              return;
+            }
+            reject(new Error('网络响应为空'));
+            return;
+          }
+          resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
+        }).catch((err) => {
+          httpRequest.destroy();
+          reject(new Error(String(err)));
+        });
       });
-    });
+    };
+    return doGet(1);
   }
 
   async post<T>(baseURL: string, path: string, params?: Record<string, string>, extraHeaders?: Record<string, string>): Promise<AxiosResponse<T>> {
@@ -258,29 +273,41 @@ export class HttpClient {
       httpHeaders['client_user_token'] = String(account.uid || 0);
     }
 
-    const httpRequest = http.createHttp();
-    return new Promise<AxiosResponse<T>>((resolve, reject) => {
-      httpRequest.request(url, {
-        method: http.RequestMethod.POST,
-        header: httpHeaders,
-        extraData: bodyStr,
-        expectDataType: http.HttpDataType.OBJECT
-      }).then((resp) => {
-        httpRequest.destroy();
-        const raw = resp.result as Object;
-        let respData: Object;
-        if (typeof raw === 'string') {
-          try { respData = JSON.parse(raw as string); } catch (e) { respData = raw; }
-        } else {
-          respData = raw;
-        }
-        resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
-      }).catch((err) => {
-        httpRequest.destroy();
-        console.error('TiebaLite: POST error=' + String(err));
-        reject(new Error(String(err)));
+    const doPost = (attempt: number): Promise<AxiosResponse<T>> => {
+      const req = http.createHttp();
+      return new Promise<AxiosResponse<T>>((resolve, reject) => {
+        req.request(url, {
+          method: http.RequestMethod.POST,
+          header: httpHeaders,
+          extraData: bodyStr,
+          expectDataType: http.HttpDataType.OBJECT
+        }).then((resp) => {
+          req.destroy();
+          const raw = resp.result as Object;
+          let respData: Object;
+          if (typeof raw === 'string') {
+            try { respData = JSON.parse(raw as string); } catch (e) { respData = raw; }
+          } else {
+            respData = raw;
+          }
+          // 服务端限流或连接被掐断时会返回空 body，result 为 undefined，属于可重试的偶发错误
+          if (respData === undefined || respData === null) {
+            if (attempt < HttpClient.MAX_RETRY) {
+              setTimeout(() => { doPost(attempt + 1).then(resolve).catch(reject); }, HttpClient.RETRY_DELAY * attempt);
+              return;
+            }
+            reject(new Error('网络响应为空'));
+            return;
+          }
+          resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
+        }).catch((err) => {
+          req.destroy();
+          console.error('TiebaLite: POST error=' + String(err));
+          reject(new Error(String(err)));
+        });
       });
-    });
+    };
+    return doPost(1);
   }
 
   async postUserLikeProtobuf(path: string, protobufData: Uint8Array, cmd: number): Promise<Uint8Array> {

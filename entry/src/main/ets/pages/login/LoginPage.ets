@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import webview from '@ohos.web.webview';
@@ -8,6 +10,7 @@ import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 @Entry
 @Component
 struct LoginPage {
+  @State topInset: number = 24;
   private controller: webview.WebviewController = new webview.WebviewController();
   @State loading: boolean = true;
   @State loginSuccess: boolean = false;
@@ -19,6 +22,7 @@ struct LoginPage {
   private url: string = 'https://wappass.baidu.com/passport?login&u=https%3A%2F%2Ftieba.baidu.com%2Findex%2Ftbwise%2Fmine';
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
   }
 
@@ -35,6 +39,7 @@ struct LoginPage {
       Column()
         .width('100%').height('100%')
         .backgroundColor(pageBg(this.isDark))
+        .padding({ top: this.topInset })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       Column() {
         Row() {
@@ -48,7 +53,7 @@ struct LoginPage {
           .fontFamily(this.appFontFamily).fontSize(18).fontWeight(FontWeight.Bold)
         Blank()
       }
-      .padding(12)
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
       .width('100%')
 
       if (this.loginSuccess) {

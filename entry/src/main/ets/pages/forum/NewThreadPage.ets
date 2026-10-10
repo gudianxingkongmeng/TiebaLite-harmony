@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -6,7 +8,7 @@ import AddPostRepository from '../../core/repository/AddPostRepository';
 import HotTopicRepository from '../../core/repository/HotTopicRepository';
 import AccountManager, { Account } from '../../core/auth/AccountManager';
 import { Dict } from '../../core/types/Dict';
-import { blendWithBg, blendWithWhite, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, darkenColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithBg, blendWithWhite, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, darkenColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { uploadChunked, uploadVideoToTieba } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
@@ -17,7 +19,6 @@ import media from '@ohos.multimedia.media';
 import image from '@ohos.multimedia.image';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
-import common from '@ohos.app.ability.common';
 
 const EMOJIS: string[] = ['😀','😁','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫣','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','😮','🤤','😴','😪','😵','🤐','🥴','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😢','😭','😤','😡','🤬','💀','☠️','💩','🤡','👹','👺','👻','💀','☠️','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','👇','🫵','👍🏻','👍🏼','👍🏽','👍🏾','👍🏿','💪','🤳','🫶','💋','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💗','💖','💘','💝','💟','🔥','⭐','🌟','✨','💫','🎉','🎊','🎈','🎁','🎀','🪄','💯','✅','❌','💢','💥','🛑','🚫','📛','🔞','💬','🗯️','💭','👁️','👀','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🐍','🐢','🐸','🐳','🐬','🐟','🐠','🐡','🦈','🐙','🐚','🐌','🦋','🐛','🐜','🐝','🐞','🦗','🕷️','🦂','🌹','🌸','🌺','🌻','🌷','🌿','🍀','🌴','🌵','🌲','🌳','☘️','🍀','🍁','🍄','🌾','💐','🌸','🌼','🌻','🌞','🌝','🌚','🌛','🌜','☀️','🌤️','⛅','🌥️','🌦️','☁️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌀','🌪️','🌫️','🌈','☂️','☔','⚡','🔥','💥','✨','🌟','⭐','🌍','🌎','🌏','🌐','🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🌽','🥕','🧄','🧅','🥔','🍠','🥐','🍞','🥖','🥨','🧀','🥚','🍳','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🍵','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾','🧊','🥄','🍴','🍽️','🥣','🥡','🥢','🧂'];
 
@@ -59,6 +60,8 @@ interface ForumTabItem {
 @Entry
 @Component
 struct NewThreadPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('fontScale') fontScale: number = 1.0;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
@@ -80,6 +83,7 @@ struct NewThreadPage {
   @State showTopicSuggest: boolean = false;
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     try { this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE); } catch (e) {}
     const params = router.getParams() as Record<string, string>;
     this.forumName = params?.forumName || '';
@@ -175,12 +179,16 @@ struct NewThreadPage {
             }
           }
         }
-        .padding({ left: 12, right: 12, top: 8, bottom: 8 }).width('100%')
-        .backgroundColor(blendWithBg(this.primaryColor, 0.05, this.isDark, '#1E1E1E'))
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+        .padding({ left: 12, right: 12, top: 8 + this.topInset, bottom: 8 }).width('100%')
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(blendWithBg(this.primaryColor, 0.05, this.isDark, '#1E1E1E'), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+        .position({ x: 0, y: 0 })
+        .zIndex(2)
 
         Scroll() {
           Column() {
+            Blank().height(44 + this.topInset)
             Row() {
               TextInput({ text: this.title, placeholder: '请输入标题' })
                 .layoutWeight(1)

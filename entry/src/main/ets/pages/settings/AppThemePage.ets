@@ -1,6 +1,8 @@
-﻿import router from '@ohos.router';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
+import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { pageBg, textPrimary, textTertiary, textAccent, dividerColor, surfaceVariant } from '../../core/utils/DataHelper';
+import { pageBg, textPrimary, textTertiary, textAccent, dividerColor, surfaceVariant, withAlpha } from '../../core/utils/DataHelper';
 import ThemeProvider from '../../core/theme/ThemeProvider';
 import { BUILTIN_THEMES, ThemeDefinition, RECOMMENDED_COLORS } from '../../core/theme/ThemeColors';
 import { VARIANTS, VariantDef, generateVariantScheme, ColorTriple } from '../../core/theme/ThemeVariant';
@@ -31,6 +33,8 @@ interface TripleSwatchConfig {
 @Entry
 @Component
 struct AppThemePage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('primaryColor') @Watch('onPrimaryChange') primaryColor: string = '#4477E0';
   @StorageLink('customColor') customColor: string = '';
@@ -48,6 +52,7 @@ struct AppThemePage {
   @State b: number = 224;
   @State showColorSheet: boolean = false;
   async aboutToAppear(): Promise<void> {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     this.bg = pageBg(this.isDark);
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     const config = ThemeProvider.getInstance().getConfig();
@@ -81,10 +86,17 @@ struct AppThemePage {
           Text('主题设置').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ left: 16 })
           Blank()
         }
-      .padding(12).width('100%').backgroundColor(this.bg)
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bg, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       Scroll() {
         Column() {
+
+        Blank().height(46 + this.topInset)
           Text('内置主题').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark)).width('100%').padding(16)
           ForEach(this.themes, (theme: ThemeDefinition, idx: number) => {
             Row() {
@@ -215,6 +227,7 @@ struct AppThemePage {
 
       Scroll() {
         Column() {
+
           Row() {
             this.ColorTripleSwatch({
               primary: generateVariantScheme(this.previewColor, this.customVariant, this.isDark).primary,

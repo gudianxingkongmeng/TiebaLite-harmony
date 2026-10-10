@@ -1,5 +1,6 @@
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
+import { TopInsetHelper } from '../core/utils/TopInsetHelper';
 import { AppRouter } from '../components/PbContentRender';
 import HomePage from '../pages/main/home/HomePage';
 import ExplorePage from '../pages/main/explore/ExplorePage';
@@ -40,6 +41,7 @@ struct Index {
   @State indicatorLeft: number = 0;
   @State indicatorWidth: number = 20;
   @State barWidth: number = 0;
+  @State bottomInset: number = 0;
 
   @State touchX: number = 0;
   @State touchY: number = 0;
@@ -69,6 +71,7 @@ struct Index {
   ];
 
   aboutToAppear(): void {
+    void TopInsetHelper.getBottom(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.bottomInset = v; }).catch(() => {});
     const t0 = new Date().getTime();
     console.info('TiebaLite: [B1] Index aboutToAppear start t=' + t0);
     AppRouter.navigate = (page: string, params?: Record<string, Object>) => {
@@ -563,8 +566,7 @@ struct Index {
       }
       .width('100%')
       .padding({ left: 32, right: 32 })
-      .position({ bottom: 4 })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+      .position({ bottom: 10 + this.bottomInset })
 
       if (this.showClipLinkDialog) {
         Column() {

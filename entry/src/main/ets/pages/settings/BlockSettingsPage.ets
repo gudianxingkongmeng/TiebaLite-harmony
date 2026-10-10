@@ -1,6 +1,8 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import DatabaseManager from '../../core/storage/DatabaseManager';
 import BlockRepository from '../../core/repository/BlockRepository';
 import { textAccent } from '../../core/utils/DataHelper';
@@ -15,6 +17,8 @@ interface BlockedUser {
 @Entry
 @Component
 struct BlockSettingsPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('appFontFamily') appFontFamily: string = '';
@@ -28,6 +32,7 @@ struct BlockSettingsPage {
   private blockRepo: BlockRepository = BlockRepository.getInstance();
 
   async aboutToAppear(): Promise<void> {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     try { this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE); } catch (e) {}
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     await this.loadBlockData();
@@ -114,10 +119,17 @@ struct BlockSettingsPage {
           Text('屏蔽管理').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ left: 16 })
           Blank()
         }
-      .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       Scroll() {
         Column() {
+
+        Blank().height(46 + this.topInset)
           Text('屏蔽关键词').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark)).width('100%').padding(16)
 
           Column() {

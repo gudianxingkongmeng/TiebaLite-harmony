@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
@@ -6,6 +8,7 @@ import PreferencesManager from '../../core/storage/PreferencesManager';
 @Entry
 @Component
 struct WelcomeScreen {
+  @State topInset: number = 24;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('appFontFamily') appFontFamily: string = '';
@@ -13,6 +16,7 @@ struct WelcomeScreen {
   private pages = ['欢迎使用贴吧Lite', '无广告', '快速流畅', '开始使用'];
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
   }
 
@@ -29,6 +33,7 @@ struct WelcomeScreen {
       Column()
         .width('100%').height('100%')
         .backgroundColor(pageBg(this.isDark))
+        .padding({ top: this.topInset })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       Column() {
         Column() {

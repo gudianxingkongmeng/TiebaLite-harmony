@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import Avatar from '../../components/Avatar';
@@ -6,12 +8,14 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import { Dict } from '../../core/types/Dict';
 import { TiebaApi } from '../../core/api/TiebaApi';
-import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor } from '../../core/utils/DataHelper';
+import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
 @Component
 struct FollowsPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   reduceEffects: boolean = false;
   @StorageLink('fontScale') fontScale: number = 1.0;
@@ -34,6 +38,7 @@ struct FollowsPage {
   private api = TiebaApi.getInstance();
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     const params = router.getParams() as Record<string, Object>;
     this.uid = parseInt(String(params?.uid || '0'));
     this.currentTab = params?.initialTab === 1 ? 1 : 0;
@@ -209,12 +214,13 @@ struct FollowsPage {
         .backgroundColor(pageBg(this.isDark))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       Column() {
+      Column() {
         Row() {
           Image($r('app.media.ic_arrow_back')).width(Math.round(22 * this.fontScale)).height(Math.round(22 * this.fontScale)).fillColor(textPrimary(this.isDark)).onClick(() => NavigationHelper.back())
           Text(this.currentTab === 0 ? '我的粉丝' : '我的关注').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).margin({ left: 16 })
           Blank()
         }
-        .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
 
         Row() {
           Text('粉丝').fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale))
@@ -228,9 +234,13 @@ struct FollowsPage {
             .layoutWeight(1).textAlign(TextAlign.Center).padding(12)
             .onClick(() => { this.currentTab = 1; })
         }
-        .width('100%').backgroundColor(pageBg(this.isDark))
-        .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-
+        .width('100%')
+      }
+      .width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .position({ x: 0, y: 0 })
+      .zIndex(3)
         if (this.currentTab === 0) {
           if (this.fansLoading && this.fansList.length === 0) {
             LoadingState({ message: '加载中...' })
@@ -238,6 +248,10 @@ struct FollowsPage {
             ErrorState({ message: this.fansError, onRetryAction: (): void => { void this.loadFans(true); } })
           } else {
             List() {
+              ListItem() {
+                Column() { Blank().height(90 + this.topInset) }
+                .width('100%')
+              }
               ForEach(this.fansList, (item: Dict) => {
                 ListItem() {
                   this.userItem(item)
@@ -266,6 +280,10 @@ struct FollowsPage {
             ErrorState({ message: this.followsError, onRetryAction: (): void => { void this.loadFollows(true); } })
           } else {
             List() {
+              ListItem() {
+                Column() { Blank().height(90 + this.topInset) }
+                .width('100%')
+              }
               ForEach(this.followsList, (item: Dict) => {
                 ListItem() {
                   this.userItem(item)

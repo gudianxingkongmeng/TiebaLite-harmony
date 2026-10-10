@@ -1,6 +1,8 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import ThemeProvider from '../../core/theme/ThemeProvider';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
@@ -8,6 +10,7 @@ import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 @Entry
 @Component
 struct UISettingsPage {
+  @State topInset: number = 24;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('appFontFamily') appFontFamily: string = '';
@@ -32,6 +35,7 @@ struct UISettingsPage {
   private refreshStyles: string[] = ['齿轮', '圆环'];
 
   async aboutToAppear(): Promise<void> {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     this.navStyle = Math.max(0, Math.min(await this.prefs.getInt('nav_style', 0), this.navStyles.length - 1));
     this.showNavLabels = await this.prefs.getBoolean('show_nav_labels', true);
@@ -70,10 +74,17 @@ struct UISettingsPage {
           Text('界面设置').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ left: 16 })
           Blank()
         }
-      .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       Scroll() {
         Column() {
+
+          Blank().height(46 + this.topInset)
           Text('导航').fontFamily(this.appFontFamily).fontSize(14).fontColor(textTertiary(this.isDark)).width('100%').padding(16)
 
           Column() {

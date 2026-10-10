@@ -216,6 +216,21 @@ struct ThreadPage {
   private _bazhuIds: Set<number> = new Set();
   private _firstPostId: number = 0;
   private _postPosMap: Map<number, PostPosInfo> = new Map();
+  private _jumpTimer: number = -1;
+  private targetFloorNo: number = 0;
+  private _pendingJumpFloor: number = 0;
+  private _pendingJumpPid: number = 0;
+  @State jumpBusy: boolean = false;
+  @State canLoadPrev: boolean = false;
+  @State loadingPrev: boolean = false;
+  @State prevLoadPage: number = 0;
+  private _prevAnchorY: number = 0;
+  /** 进入时收藏所标记的楼层 pid（0 表示未收藏/整帖收藏） */
+  private collectMarkPid: number = 0;
+  /** 当前滚动位置首个可见楼层的 pid */
+  private currentVisiblePid: number = 0;
+  @State jumpHintFloor: number = 0;
+  @State jumpTargetPage: number = 0;
   private replyPanelH: number = 180;
   private _replyScrollTimer: number = -1;
 
@@ -244,9 +259,28 @@ struct ThreadPage {
       this.forumId = parseInt(params?.forumId || '0');
       this.forumName = params?.forumName || '';
       if (params?.isCollected === '1' || params?.isCollected === 'true') this.isCollected = true;
+      // 记录进入时收藏所标记的楼层，退出时用于比对是否已浏览到别的楼层
+      const markPidParam = params?.markPid || '';
+      if (markPidParam && markPidParam !== '0') {
+        const parsedMark = parseInt(markPidParam);
+        if (!isNaN(parsedMark) && parsedMark > 0) {
+          this.collectMarkPid = parsedMark;
+        }
+      }
       const postIdParam = params?.postId || '';
       if (postIdParam && postIdParam !== '0') {
-        this.postId = parseInt(postIdParam);
+        const parsedPostId = parseInt(postIdParam);
+        // parseInt 对非数字返回 NaN，脏 pid 会让服务端查不到楼层而误报"帖子不存在"
+        if (!isNaN(parsedPostId) && parsedPostId > 0) {
+          this.postId = parsedPostId;
+        }
+      }
+      const floorParam = params?.floorNo || params?.postNo || '';
+      if (floorParam) {
+        const parsedFloor = parseInt(floorParam);
+        if (!isNaN(parsedFloor) && parsedFloor > 0) {
+          this.targetFloorNo = parsedFloor;
+        }
       }
       const displayInfo = display.getDefaultDisplaySync();
       this.screenWidth = displayInfo.width / displayInfo.densityPixels;
@@ -463,23 +497,18 @@ struct ThreadPage {
   }
 
   async loadThread(initialPage?: number, silent?: boolean): Promise<void> {
-    console.info('TiebaLite: [D1] loadThread start page=' + (initialPage ?? 1) + ' sort=' + this.sortType);
     if (!silent) {
       this.loading = true;
       this.error = '';
     }
     try {
       if (!this.threadId || this.threadId <= 0) {
-        console.info('TiebaLite: [D2] invalid threadId');
         if (!silent) { this.error = '无效的帖子ID'; }
         return;
       }
       const reqPage: number = initialPage || 1;
-      console.info('TiebaLite: [D3] calling loadThreadPage');
-      const targetPostId: number | null = this.postId > 0 && reqPage <= 1 ? this.postId : null;
-      const data: Dict = await this.repo.loadThreadPage(this.threadId, reqPage, this.seeLz, this.sortType, targetPostId);
-      if (targetPostId) this.postId = 0;
-      console.info('TiebaLite: [D4] loadThreadPage returned data=' + (data ? 'ok' : 'null'));
+      // 服务端 pb/page 带 pid 会报 floor not exist，改为始终按页加载，pid 仅用于客户端定位
+      const data: Dict = await this.repo.loadThreadPage(this.threadId, reqPage, this.seeLz, this.sortType, null);
       if (!data) { if (!silent) { this.error = '帖子数据为空'; } return; }
         try {
           const forumObj = data.forum as Dict;
@@ -513,10 +542,8 @@ struct ThreadPage {
           }
         }
       const rawUserList = data.user_list || (data.data as Dict)?.user_list || [];
-console.info('TiebaLite: [D5] building userMap');
       this._userMap = this.buildUserMap(Array.isArray(rawUserList) ? rawUserList as Dict[] : []);
       this.collectManagerInfo(data);
-      console.info('TiebaLite: [D6] extractThreadInfo');
       this.threadData = this.extractThreadInfo(data);
       this.pollInfo = (this.threadData?.pollInfo as Dict) || null;
       if (!this.pollInfo || (this.pollInfo['options'] as object[])?.length === 0) {
@@ -541,7 +568,6 @@ console.info('TiebaLite: [D5] building userMap');
         agree: (firstPost?.agree as Dict) || null,
         replyNum: Number(this.threadData?.replyNum || this.threadData?.reply_num || 0)
       }).catch(() => {});
-      console.info('TiebaLite: [D7] extractPosts');
       const pageInfo = (data.page as Dict) || (data.data as Dict)?.page as Dict || {};
       this.totalPage = Number(pageInfo.totalPage || pageInfo.total_page || 0);
       if (this.sortType === 1 && reqPage === 1) {
@@ -577,16 +603,18 @@ console.info('TiebaLite: [D5] building userMap');
         this.hasMore = !this.isLastPage(data);
       }
       void this.prefetchAllThreadImages();
-      console.info('TiebaLite: [D9] loadThread done page=' + this.page);
+      this.scheduleJumpToTargetFloor();
     } catch (e) {
-      console.error('TiebaLite: [DERR] loadThread error=' + String(e));
+      console.error('TiebaLite: loadThread error=' + String(e));
       if (!silent) {
         const errObj = e as Dict;
-        this.error = String(errObj?.msg || errObj?.message || '加载失败');
+        const errMsg = String(errObj?.msg || errObj?.message || '');
+        // 目标楼层可能已删/被折叠，但整帖应正常展示
+        this.postId = 0;
+        this.error = errMsg || '加载失败';
       }
     } finally {
       if (!silent) { this.loading = false; }
-      console.info('TiebaLite: [D10] loadThread finally');
     }
   }
 
@@ -705,11 +733,23 @@ console.info('TiebaLite: [D5] building userMap');
       return;
     }
     try {
-      await ThreadStoreRepository.getInstance().addStore(this.threadId, postId);
-      promptAction.showToast({ message: '已收藏', duration: 1000 });
+      const pid = postId > 0 ? postId : this._firstPostId;
+      await ThreadStoreRepository.getInstance().addStore(this.threadId, pid);
+      if (!this.isCollected) {
+        this.isCollected = true;
+        this.collectCount++;
+        this.persistCollectState();
+      }
+      this.persistCollectMarkPid(pid);
+      this.repo.clearThreadCache();
+      promptAction.showToast({ message: '已收藏到该楼', duration: 1000 });
     } catch (e) {
       promptAction.showToast({ message: '收藏失败', duration: 1500 });
     }
+  }
+
+  private persistCollectMarkPid(pid: number): void {
+    void PreferencesManager.getInstance().putString('collected_pid_' + this.threadId, String(pid)).catch(() => {});
   }
 
   build() {
@@ -754,16 +794,16 @@ console.info('TiebaLite: [D5] building userMap');
       }
       }
       .width('100%')
+      .padding({ top: this.topInset })
       .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
       .border({ width: { bottom: this.showFixedBar ? 0 : 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .position({ x: 0, y: 0 })
       .zIndex(2)
       .onAreaChange((_old: Area, newArea: Area) => {
         const h = newArea.height as number;
         if (h > 0) {
-          const hh = h - this.topInset - (this.showFixedBar ? 44 : 0);
+          const hh = h - (this.showFixedBar ? 44 : 0);
           if (hh > 40 && Math.abs(hh - this.headerH) > 1) {
             this.headerH = hh;
           }
@@ -883,8 +923,8 @@ console.info('TiebaLite: [D5] building userMap');
                         .gesture(
                           LongPressGesture({ repeat: false, duration: 500 })
                             .onAction((event: GestureEvent) => {
-                              this.menuText = this.getPlainText(this.threadData!.content as Dict[]);
-                              this.menuPostId = 0;
+        this.menuText = this.getPlainText(this.threadData!.content as Dict[]);
+        this.menuPostId = this._firstPostId;
                               this.menuPostAuthorId = Number(this.threadData?.authorId || 0);
                               this.menuX = event.fingerList[0].globalX;
                               this.menuY = event.fingerList[0].globalY;
@@ -916,6 +956,45 @@ console.info('TiebaLite: [D5] building userMap');
                 this.actionBarRow(false)
               }
               .visibility(this.showFixedBar ? Visibility.Hidden : Visibility.Visible)
+
+              if (this.canLoadPrev && !this.jumpHintFloor) {
+                Row() {
+                  Text(this.loadingPrev ? '正在加载上一页…' : '查看之前的楼层')
+                    .fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark))
+                  Blank()
+                  if (!this.loadingPrev) {
+                    Text('↑ 点击加载').fontFamily(this.appFontFamily).fontSize(13).fontColor(textTertiary(this.isDark))
+                  }
+                }
+                .width('100%').height(40).padding({ left: 16, right: 16 })
+                .margin({ left: 8, right: 8, bottom: 8 })
+                .backgroundColor(blendWithBg(this.primaryColor, 0.14, this.isDark))
+                .borderRadius(8)
+                .onClick(() => {
+                  if (!this.loadingPrev) {
+                    void this.loadPrevPage();
+                  }
+                })
+              }
+              if (this.jumpHintFloor > 0) {
+                Row() {
+                  Text(this.jumpBusy ? '正在定位…' : ('跳转到第 ' + this.jumpHintFloor + ' 楼'))
+                    .fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark))
+                  Blank()
+                  if (!this.jumpBusy) {
+                    Text('点击前往 ↓').fontFamily(this.appFontFamily).fontSize(13).fontColor(textTertiary(this.isDark))
+                  }
+                }
+                .width('100%').height(40).padding({ left: 16, right: 16 })
+                .margin({ left: 8, right: 8, bottom: 8 })
+                .backgroundColor(blendWithBg(this.primaryColor, 0.14, this.isDark))
+                .borderRadius(8)
+                .onClick(() => {
+                  if (!this.jumpBusy) {
+                    this.doJumpToTargetPage();
+                  }
+                })
+              }
 
               Column() {
                 ForEach(Array.isArray(this.posts) ? this.posts : [], (post: Dict, index: number) => {
@@ -992,6 +1071,7 @@ console.info('TiebaLite: [D5] building userMap');
             this.lastScrollY = newY;
             this.scrollTop = newY;
             this.showFixedBar = this.scrollTop >= this.contentAboveHeight;
+            this.updateCurrentVisiblePid(newY);
           })
             }
         }
@@ -2084,6 +2164,240 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     }
   }
 
+  /**
+   * 跳转到目标楼层：服务端 pb/page 不接受 pid 定位（会报 floor not exist），
+   * 改为客户端在已加载的楼层中查找 post_floor 或 pid，命中则滚动定位。
+   */
+  private scheduleJumpToTargetFloor(): void {
+    if (this.postId <= 0 && this.targetFloorNo <= 0) return;
+    const targetPid = this.postId;
+    const targetFloor = this.targetFloorNo;
+    this.targetFloorNo = 0;
+    // 目标楼层在很后面时（如 2431 楼），不能直接翻页——那会让前面的楼层全部消失。
+    // 改为停在当前页，顶部给出「跳转到第 N 楼」横条，由用户主动点击再翻页。
+    if (targetFloor > 30) {
+      this._pendingJumpFloor = targetFloor;
+      this._pendingJumpPid = targetPid;
+      this.jumpTargetPage = Math.max(1, Math.floor((targetFloor - 1) / 30) + 1);
+      this.jumpHintFloor = targetFloor;
+      return;
+    }
+    this.scrollToFloorInPage(targetPid, targetFloor);
+  }
+
+  /** 用户点击「跳转到第 N 楼」横条后，真正翻页并定位 */
+  /**
+   * 用户点击「跳转到第 N 楼」横条后翻页并定位。
+   * 估算页码可能偏移（服务端实际每页条数不固定），因此用估算页起做一次探测：
+   * 若该页最大楼层仍小于目标楼层，则向后逐页探测，直到覆盖目标楼层。
+   */
+  private doJumpToTargetPage(): void {
+    const floor = this.jumpHintFloor;
+    if (floor <= 0 || this.jumpTargetPage <= 0) return;
+    const startPage = this.jumpTargetPage;
+    this._pendingJumpFloor = floor;
+    this.jumpHintFloor = 0;
+    this.jumpTargetPage = 0;
+    this.jumpBusy = true;
+    void this.probePageForFloor(startPage, floor);
+  }
+
+  private async probePageForFloor(page: number, floor: number): Promise<void> {
+    let cur = Math.max(1, page);
+    // 最多向后探测 12 页，避免异常数据导致无限请求
+    for (let i = 0; i < 12; i++) {
+      const data: Dict = await this.repo.loadThreadPage(this.threadId, cur, this.seeLz, this.sortType, null);
+      if (!data || !Array.isArray(data.post_list) || (data.post_list as object[]).length === 0) {
+        break;
+      }
+      const posts: Dict[] = this.extractPosts(data, cur);
+      const maxFloor = posts.reduce((mx: number, p: Dict) => {
+        const f = Number(p.floor || p.post_no || 0);
+        return f > mx ? f : mx;
+      }, 0);
+      if (maxFloor >= floor) {
+        // 只保留目标页，隐藏之前的首页楼层；用户可点「查看之前的楼层」逐页往回加载
+        this.posts = posts;
+        this.page = cur;
+        this.hasMore = !this.isLastPage(data);
+        this.prevLoadPage = cur - 1;
+        this.canLoadPrev = this.prevLoadPage >= 1;
+        this.jumpBusy = false;
+        this.applyJumpInPage();
+        return;
+      }
+      // 该页仍未覆盖目标楼层，向后一页
+      if (this.totalPage > 0 && cur >= this.totalPage) {
+        break;
+      }
+      cur++;
+    }
+    this._pendingJumpFloor = 0;
+    this.jumpBusy = false;
+    promptAction.showToast({ message: '未能定位到该楼层', duration: 1500 });
+  }
+
+  /**
+   * 加载上一页并前插到列表顶部（对应官方 app「查看之前的楼层」）。
+   * 跳楼后第 2 页~目标页之间存在缺口，用户可逐页向上补齐。
+   */
+  /**
+   * 加载上一页并前插到列表顶部。
+   * 关键：前插后保持当前可见楼层不动（按锚点补偿滚动距离），
+   * 新加载的楼层出现在上方，可继续上滑查看，划到最顶就是上一页的内容。
+   */
+  private async loadPrevPage(): Promise<void> {
+    if (this.loadingPrev || !this.canLoadPrev) return;
+    const targetPage = this.prevLoadPage;
+    if (targetPage < 1) {
+      this.canLoadPrev = false;
+      return;
+    }
+    this.loadingPrev = true;
+    // 记录插入前的滚动位置与最后一个新插入楼层的 y，用于前插后精确补偿
+    const oldOffset = this.scroller.currentOffset().yOffset;
+    try {
+      const data: Dict = await this.repo.loadThreadPage(this.threadId, targetPage, this.seeLz, this.sortType, null);
+      let prevPosts: Dict[] = this.extractPosts(data, targetPage);
+      // 网络偶发失败时自动重试，最多 3 次
+      let attempt = 0;
+      while (prevPosts.length === 0 && attempt < 3) {
+        attempt++;
+        if (attempt > 1) {
+          await new Promise<void>((resolve: () => void) => { setTimeout(() => { resolve(); }, 400 * attempt); });
+        }
+        const retryData: Dict = await this.repo.loadThreadPage(this.threadId, targetPage, this.seeLz, this.sortType, null);
+        if (!retryData) break;
+        prevPosts = this.extractPosts(retryData, targetPage);
+      }
+      if (prevPosts.length === 0) {
+        this.canLoadPrev = false;
+        promptAction.showToast({ message: '加载上一页失败，请稍后重试', duration: 1500 });
+        return;
+      }
+      const exist = new Set<number>(this.posts.map((p: Dict) => Number(p.id || p.pid || 0)));
+      const fresh = prevPosts.filter((p: Dict) => !exist.has(Number(p.id || p.pid || 0)));
+      if (fresh.length === 0) {
+        // 该页内容已全部加载过，直接前移到更早一页
+        this.prevLoadPage = targetPage - 1;
+        this.canLoadPrev = this.prevLoadPage >= 1;
+        this.loadingPrev = false;
+        promptAction.showToast({ message: '上一页已加载过', duration: 1200 });
+        return;
+      }
+      // 记住插入前「原有第一个楼层」的内容 y；插入后它的 y 会下移，下移量即新增高度
+      const firstOldPid = Number(this.posts.length > 0 ? (this.posts[0].id || this.posts[0].pid || 0) : 0);
+      const oldFirstY = this._postPosMap.get(firstOldPid);
+      this._prevAnchorY = oldFirstY ? oldFirstY.y : 0;
+      this.posts = [...fresh, ...this.posts];
+      this.prevLoadPage = targetPage - 1;
+      this.canLoadPrev = this.prevLoadPage >= 1;
+      // 用 _postPosMap 的真实测量值求新增高度（onAreaChange 已记录每层 y/h）
+      this.measureAddedHeight(firstOldPid, oldOffset);
+    } catch (e) {
+      console.error('TiebaLite: [PREV] load prev page error=' + String(e));
+    } finally {
+      this.loadingPrev = false;
+    }
+  }
+
+  /**
+   * 前插后测量新增内容实际占用的高度并补偿滚动位置。
+   * _postPosMap 在 onAreaChange 中记录了各楼层的内容 y，插入后原有楼层 y 全部下移，
+   * 「原有首个楼层的新 y - 旧 y」即为新增内容高度，滚动位置同步下移即可保持当前楼层不动。
+   */
+  private measureAddedHeight(firstOldPid: number, oldOffset: number): void {
+    if (firstOldPid <= 0 || this._prevAnchorY <= 0) {
+      setTimeout(() => { this.scroller.scrollTo({ xOffset: 0, yOffset: oldOffset, animation: { duration: 0 } }); }, 60);
+      return;
+    }
+    let tries = 0;
+    const compensate = (): void => {
+      tries++;
+      const newInfo = this._postPosMap.get(firstOldPid);
+      if (newInfo && newInfo.y > this._prevAnchorY) {
+        const added = newInfo.y - this._prevAnchorY;
+        this.scroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, oldOffset + added), animation: { duration: 0 } });
+        return;
+      }
+      if (tries < 10) {
+        setTimeout(compensate, 70);
+      }
+    };
+    setTimeout(compensate, 70);
+  }
+
+  private applyJumpInPage(): void {
+    const floor = this._pendingJumpFloor;
+    const pid = this._pendingJumpPid;
+    if (floor <= 0 && pid <= 0) return;
+    let attempts = 0;
+    const tryJump = (): void => {
+      attempts++;
+      let idx = -1;
+      if (pid > 0) {
+        idx = this.posts.findIndex((p: Dict) => {
+          const pidNum = Number(p.id || p.pid || p.post_id || 0);
+          return pidNum > 0 && pidNum === pid;
+        });
+      }
+      if (idx < 0 && floor > 0) {
+        idx = this.posts.findIndex((p: Dict) => {
+          const f = Number(p.floor || p.post_no || p.floor_id || 0);
+          return f > 0 && f === floor;
+        });
+      }
+      if (idx >= 0) {
+        const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
+        const y = screenH * 0.28;
+        this.scroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, idx * y), animation: { duration: 300, curve: Curve.EaseInOut } });
+        this._pendingJumpFloor = 0;
+        return;
+      }
+      if (attempts < 6) {
+        this._jumpTimer = setTimeout(() => { this._jumpTimer = -1; tryJump(); }, 120);
+      } else {
+        this._pendingJumpFloor = 0;
+      }
+    };
+    this._jumpTimer = setTimeout(() => { this._jumpTimer = -1; tryJump(); }, 260);
+  }
+
+  private scrollToFloorInPage(targetPid: number, targetFloor: number): void {
+    if (this.page !== 1 && this._pendingJumpFloor <= 0) return;
+    const floor = targetFloor > 0 ? targetFloor : this._pendingJumpFloor;
+    let attempts = 0;
+    const tryJump = (): void => {
+      attempts++;
+      let idx = -1;
+      if (targetPid > 0) {
+        idx = this.posts.findIndex((p: Dict) => {
+          const pidNum = Number(p.id || p.pid || p.post_id || 0);
+          return pidNum > 0 && pidNum === targetPid;
+        });
+      }
+      if (idx < 0 && floor > 0) {
+        idx = this.posts.findIndex((p: Dict) => {
+          const f = Number(p.floor || p.post_no || p.floor_id || 0);
+          return f > 0 && f === floor;
+        });
+      }
+      if (idx >= 0) {
+        const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
+        const y = screenH * 0.28;
+        this.scroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, idx * y), animation: { duration: 300, curve: Curve.EaseInOut } });
+        this._pendingJumpFloor = 0;
+        return;
+      }
+      if (attempts < 6) {
+        this._jumpTimer = setTimeout(() => { this._jumpTimer = -1; tryJump(); }, 120);
+      } else {
+        this._pendingJumpFloor = 0;
+      }
+    };
+    this._jumpTimer = setTimeout(() => { this._jumpTimer = -1; tryJump(); }, 260);
+  }
+
   private scheduleReplyScroll(delay: number): void {
     if (this._replyScrollTimer >= 0) {
       clearTimeout(this._replyScrollTimer);
@@ -2644,6 +2958,84 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     .border({ width: { bottom: fixed ? 1 : 0 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
   }
 
+  /** 记录当前滚动位置首个可见楼层的 pid，退出时用于判断是否偏离了收藏楼层 */
+  private updateCurrentVisiblePid(offsetY: number): void {
+    let bestPid = 0;
+    let bestDelta = Number.MAX_VALUE;
+    this._postPosMap.forEach((info: PostPosInfo, key: number) => {
+      const delta = info.y - offsetY;
+      if (delta >= -20 && delta < bestDelta) {
+        bestDelta = delta;
+        bestPid = key;
+      }
+    });
+    if (bestPid > 0) {
+      this.currentVisiblePid = bestPid;
+    }
+  }
+
+  /** 从收藏的帖子退出时，若当前楼层已偏离收藏楼层，询问是否改收藏到当前楼层 */
+  private askUpdateCollectFloor(): void {
+    if (!this.isCollected) {
+      NavigationHelper.markBack();
+      NavigationHelper.back();
+      return;
+    }
+    const markPid = this.collectMarkPid;
+    const curPid = this.currentVisiblePid;
+    // 未收藏到具体楼层（整帖收藏）或当前就是收藏楼层时，直接退出
+    if (markPid <= 0 || curPid <= 0 || markPid === curPid) {
+      NavigationHelper.markBack();
+      NavigationHelper.back();
+      return;
+    }
+    const curFloor = this.getFloorNoByPid(curPid);
+    const floorText = curFloor > 0 ? ('第 ' + curFloor + ' 楼') : '当前楼层';
+    AlertDialog.show({
+      title: '更新收藏楼层',
+      message: '你已浏览到' + floorText + '，是否将收藏位置更新到该楼层？',
+      primaryButton: {
+        value: '保持原收藏',
+        action: (): void => {
+          NavigationHelper.markBack();
+          NavigationHelper.back();
+        }
+      },
+      secondaryButton: {
+        value: '收藏到' + floorText,
+        action: (): void => {
+          this.updateCollectToFloor(curPid);
+          NavigationHelper.markBack();
+          NavigationHelper.back();
+        }
+      },
+      cancel: (): void => {
+        NavigationHelper.markBack();
+        NavigationHelper.back();
+      }
+    });
+  }
+
+  private getFloorNoByPid(pid: number): number {
+    for (const p of this.posts) {
+      if (Number(p.id || p.pid || 0) === pid) {
+        return Number(p.floor || p.post_no || 0);
+      }
+    }
+    return 0;
+  }
+
+  private async updateCollectToFloor(pid: number): Promise<void> {
+    try {
+      await ThreadStoreRepository.getInstance().addStore(this.threadId, pid);
+      this.persistCollectMarkPid(pid);
+      this.collectMarkPid = pid;
+      promptAction.showToast({ message: '已收藏到当前楼层', duration: 1200 });
+    } catch (e) {
+      promptAction.showToast({ message: '收藏更新失败', duration: 1500 });
+    }
+  }
+
   onBackPress(): boolean {
     if (this.showReply) {
       this.showReply = false;
@@ -2655,8 +3047,9 @@ Text(this.uploadingImages ? '上传中...' : '发送')
       this.replyUserId = 0;
       return true;
     }
-    NavigationHelper.markBack();
-    return false;
+    // 从收藏进入且已偏离收藏楼层时，询问是否更新收藏位置
+    this.askUpdateCollectFloor();
+    return true;
   }
 
   private handleBarTouch(event: TouchEvent): void {

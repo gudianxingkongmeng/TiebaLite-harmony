@@ -708,7 +708,7 @@ export default struct NotificationsPage {
   @Builder
   notifListContent(tab: number) {
     List({ scroller: this.scrollers[tab] }) {
-      ListItem() { Column() { Blank().height(38) } }
+      ListItem() { Column() { Blank().height(38 + this.topInset) } }
       if (tab === 0) {
         if (this.replies.length === 0) {
           ListItem() { Text('暂无回复').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).margin({ top: 80 }) }
@@ -847,7 +847,7 @@ export default struct NotificationsPage {
       .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+      .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
       .zIndex(2)
       .onAreaChange((_old: Area, newArea: Area) => {
@@ -1022,7 +1022,7 @@ export default struct NotificationsPage {
     .width('100%').padding({ left: 16, right: 16, top: 12, bottom: 12 })
     .onClick(() => {
       let threadId = getStr(item, 'thread_id', 'threadId', 'tid', 'thread_id');
-      let postId = getStr(item, 'post_id', 'postId', 'pid', 'post_id', 'floor_id', 'floorId', 'postId', 'subPostId');
+      let postId = getStr(item, 'post_id', 'postId', 'pid', 'floor_id', 'floorId');
       if (!threadId || threadId === '0') {
         const source = item.source as Dict;
         if (source) threadId = getStr(source, 'thread_id', 'threadId', 'tid');
@@ -1044,12 +1044,16 @@ export default struct NotificationsPage {
         threadId = getStr(ai, 'thread_id', 'threadId', 'tid');
       }
       if (threadId && threadId !== '0') {
-        const isFloorReply = !!item.quote || !!item.quote_pid || !!item.quotePid || !!item.re_floor || getStr(item, 'post_id', 'postId', 'pid') !== getStr(item, 'quote_pid', 'quotePid');
+        // 仅当确实带 quote/re_floor 字段时才视为楼中楼回复；
+        // 原判断用 post_id !== quote_pid，在无 quote_pid 时恒为 true，会把普通主题通知误判
+        const hasQuoteField = !!(item.quote || item.quote_pid || item.quotePid || item.re_floor ||
+          item.quote_thread_id || item.quotePostId);
+        const isFloorReply = hasQuoteField;
         if (isFloorReply) {
           NavigationHelper.navigate('pages/subposts/SubPostsPage', {
             threadId: threadId,
-            postId: '0',
-            subPostId: postId,
+            postId: postId,
+            subPostId: getStr(item, 'sub_post_id', 'subPostId', 'spid') || postId,
             forumName: this.getForumName(item)
           });
         } else {

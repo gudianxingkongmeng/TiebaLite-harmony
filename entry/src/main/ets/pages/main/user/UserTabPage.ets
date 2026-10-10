@@ -1,5 +1,6 @@
-import router from '@ohos.router';
+import { TopInsetHelper } from '../../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
+import router from '@ohos.router';
 import window from '@ohos.window';
 import display from '@ohos.display';
 import { NavigationHelper } from '../../../core/utils/NavigationHelper';
@@ -33,6 +34,7 @@ export default struct UserTabPage {
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @StorageLink('cardStyle') cardStyle: number = 0;
   @State topInset: number = 24;
+  @State bottomInset: number = 0;
 
   private darkModeOptions: string[] = ['跟随系统', '浅色模式', '深色模式'];
   private accountManager: AccountManager = AccountManager.getInstance();
@@ -50,6 +52,8 @@ export default struct UserTabPage {
   }
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
+    void TopInsetHelper.getBottom(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.bottomInset = v; }).catch(() => {});
     console.info('TiebaLite: UserTab aboutToAppear');
     this.initTopInset();
     this.refreshAccountState();
@@ -209,7 +213,7 @@ export default struct UserTabPage {
       Column() {
         Scroll() {
         Column() {
-          Blank().height(16)
+          Blank().height(24 + this.topInset)
           if (this.isLoggedIn && this.account) {
             Column() {
               Row() {
@@ -310,17 +314,16 @@ export default struct UserTabPage {
               .onClick(() => { this.doLogout(); })
           }
         }
-        .width('100%').padding({ bottom: 66 })
+        .width('100%').padding({ bottom: 66 + this.bottomInset + 24 })
       }
         .scrollBar(BarState.Off)
         .width('100%').height('100%').edgeEffect(EdgeEffect.Spring).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
         Column()
           .width('100%')
-          .height(48)
+          .height(24 + this.topInset)
           .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
           .position({ x: 0, y: 0 })
           .zIndex(5)
           .hitTestBehavior(HitTestMode.None)

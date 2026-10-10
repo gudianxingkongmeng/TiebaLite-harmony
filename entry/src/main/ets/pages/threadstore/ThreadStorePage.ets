@@ -36,6 +36,7 @@ struct ThreadStorePage {
   @State error: string = '';
   @State showMenu: boolean = false;
   @State menuThreadId: number = 0;
+  @State menuPostId: number = 0;
   @State uncollectedIds: number[] = [];
   @State @Watch('onRefreshStateChange') isRefreshing: boolean = false;
   @State pullDistance: number = 0;
@@ -47,7 +48,8 @@ struct ThreadStorePage {
 
   private repo: ThreadStoreRepository = ThreadStoreRepository.getInstance();
   private static _agreeCache: Map<number, Dict> = new Map();
-  private _enriching: boolean = false;
+  // 静态守卫：多次进入收藏页时各页面实例会同时触发回填，需要跨实例防重入
+  private static _enriching: boolean = false;
   private _busyStoreIds: Set<number> = new Set();
 
   aboutToAppear(): void {
@@ -95,14 +97,39 @@ struct ThreadStorePage {
     this.page = 0;
     this.hasMore = true;
     try {
-      const data: Dict = await this.repo.loadStores(0);
+      const data: Dict | null = await this.loadStoresWithRetry(0);
+      if (!data) {
+        this.error = '网络波动，请稍后重试';
+        return;
+      }
       this.threads = this.extractThreads(data);
-      void this.enrichAgree();
+      // 延后加载点赞数，避免阻塞列表首屏与触发风控
+      setTimeout(() => { void this.enrichAgree(); }, 600);
     } catch (e) {
-      this.error = (e as Dict)?.msg as string || (e as Dict)?.message as string || '加载失败';
+      const msg = (e as Dict)?.msg as string || (e as Dict)?.message as string || '加载失败';
+      this.error = msg.indexOf('格式') >= 0 ? '网络波动，请稍后重试' : msg;
     } finally {
       this.loading = false;
     }
+  }
+
+  /**
+   * HttpClient 已对空响应做过 3 次底层重试，这里只在页面层兜一层，
+   * 避免极端情况下用户看到空白页。重试次数刻意保持很小，防止请求风暴。
+   */
+  private async loadStoresWithRetry(page: number): Promise<Dict | null> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await new Promise<void>((resolve: () => void) => { setTimeout(() => { resolve(); }, 400); });
+      }
+      try {
+        return await this.repo.loadStores(page);
+      } catch (e) {
+        const err = e as Dict;
+        const msg = String(err?.msg || err?.message || '');
+      }
+    }
+    return null;
   }
 
   private onRefreshStateChange(): void {
@@ -119,35 +146,27 @@ struct ThreadStorePage {
     this.page = 0;
     this.hasMore = true;
     try {
-      const data: Dict = await this.repo.loadStores(0);
+      const data: Dict | null = await this.loadStoresWithRetry(0);
+      if (!data) {
+        promptAction.showToast({ message: '刷新失败，请稍后重试', duration: 1500 });
+        return;
+      }
       this.threads = this.extractThreads(data);
-      void this.enrichAgree();
+      // 延后加载点赞数，避免阻塞列表首屏与触发风控
+      setTimeout(() => { void this.enrichAgree(); }, 600);
     } catch (_e) {}
     this.isRefreshing = false;
   }
 
-  private applyAgree(tid: number, agree: Dict): void {
-    // 同步点赞数到本地缓存并触发 ThreadCard 刷新（ThreadCard 只在 aboutToAppear 读一次 agree）
-    const n = getNum(agree, 'agree_num', 'agreeNum', 'count', 'num');
-    if (n > 0) {
-      void PreferencesManager.getInstance().putString('liked_count_tid_' + tid, String(n)).catch(() => {});
-    }
-    const hasAgree = Number(agree.has_agree ?? agree.hasAgree ?? 0) === 1;
-    void PreferencesManager.getInstance().putString('liked_tid_' + tid, hasAgree ? '1' : '0').catch(() => {});
-    try { AppStorage.SetOrCreate('likedVersion', (AppStorage.Get<number>('likedVersion') ?? 0) + 1); } catch (_e) {}
-    this.threads = this.threads.map((t: Dict) => {
-      if (t.agree !== undefined) return t;
-      if (Number(t.id || t.tid || t.thread_id || 0) !== tid) return t;
-      const copy: Dict = {};
-      for (const k of Object.keys(t)) copy[k] = t[k];
-      copy['agree'] = agree;
-      return copy;
-    });
-  }
-
+  /**
+   * 从本地浏览历史中回填点赞数。
+   * 早期版本会为每条收藏并发请求 /c/f/pb/page 拉取最新点赞数，
+   * 但收藏条目多时会瞬间打出上百个请求，导致服务端返回空响应（empty response），
+   * 且点赞数本身只是列表卡片上的次要信息，因此改为纯本地回填，不再发起任何网络请求。
+   */
   private async enrichAgree(): Promise<void> {
-    if (this._enriching) return;
-    this._enriching = true;
+    if (ThreadStorePage._enriching) return;
+    ThreadStorePage._enriching = true;
     try {
       try {
         const histories = await DatabaseManager.getInstance().getThreadHistories(500);
@@ -159,55 +178,26 @@ struct ThreadStorePage {
           if (a && !ThreadStorePage._agreeCache.has(h.id)) ThreadStorePage._agreeCache.set(h.id, a);
         }
       } catch (_e) {}
-      const missing: Dict[] = [];
       this.threads = this.threads.map((t: Dict) => {
         if (t.agree !== undefined) return t;
         const tid = Number(t.id || t.tid || t.thread_id || 0);
-        if (tid > 0) {
-          const cached = ThreadStorePage._agreeCache.get(tid);
-          if (cached) {
-            const copy: Dict = {};
-            for (const k of Object.keys(t)) copy[k] = t[k];
-            copy['agree'] = cached;
-            // 同步点赞数缓存并触发 ThreadCard 刷新（组件只在创建时读一次 agree）
-            const cachedN = getNum(cached, 'agree_num', 'agreeNum', 'count', 'num');
-            if (cachedN > 0) {
-              void PreferencesManager.getInstance().putString('liked_count_tid_' + tid, String(cachedN)).catch(() => {});
-            }
-            void PreferencesManager.getInstance().putString('liked_tid_' + tid, Number(cached.has_agree ?? cached.hasAgree ?? 0) === 1 ? '1' : '0').catch(() => {});
-            try { AppStorage.SetOrCreate('likedVersion', (AppStorage.Get<number>('likedVersion') ?? 0) + 1); } catch (_e) {}
-            return copy;
-          }
-          missing.push(t);
+        if (tid <= 0) return t;
+        const cached = ThreadStorePage._agreeCache.get(tid);
+        if (!cached) return t;
+        const copy: Dict = {};
+        for (const k of Object.keys(t)) copy[k] = t[k];
+        copy['agree'] = cached;
+        // 同步点赞数缓存并触发 ThreadCard 刷新（组件只在创建时读一次 agree）
+        const cachedN = getNum(cached, 'agree_num', 'agreeNum', 'count', 'num');
+        if (cachedN > 0) {
+          void PreferencesManager.getInstance().putString('liked_count_tid_' + tid, String(cachedN)).catch(() => {});
         }
-        return t;
+        void PreferencesManager.getInstance().putString('liked_tid_' + tid, Number(cached.has_agree ?? cached.hasAgree ?? 0) === 1 ? '1' : '0').catch(() => {});
+        try { AppStorage.SetOrCreate('likedVersion', (AppStorage.Get<number>('likedVersion') ?? 0) + 1); } catch (_e) {}
+        return copy;
       });
-      let idx = 0;
-      const worker = async (): Promise<void> => {
-        while (idx < missing.length) {
-          const item = missing[idx];
-          idx++;
-          const tid = Number(item.id || item.tid || item.thread_id || 0);
-          if (tid <= 0) continue;
-          try {
-            const data: Dict = await PbPageRepository.getInstance().loadThreadPage(tid, 1, false, null);
-            const rawPosts = data.post_list || (data.data as Dict)?.post_list || [];
-            const firstPost = Array.isArray(rawPosts) && rawPosts.length > 0 ? rawPosts[0] as Dict : null;
-            const agree = firstPost?.agree as Dict | undefined;
-            if (agree) {
-              ThreadStorePage._agreeCache.set(tid, agree);
-              this.applyAgree(tid, agree);
-              void DatabaseManager.getInstance().mergeThreadHistoryData(tid, { agree: agree }).catch(() => {});
-            }
-          } catch (_e) {}
-        }
-      };
-      const n = Math.min(3, missing.length);
-      const workers: Promise<void>[] = [];
-      for (let i = 0; i < n; i++) workers.push(worker());
-      await Promise.all(workers);
     } finally {
-      this._enriching = false;
+      ThreadStorePage._enriching = false;
     }
   }
 
@@ -226,12 +216,11 @@ struct ThreadStorePage {
             .margin({ left: 12 })
           Blank()
         }
-        .padding(12)
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
         .width('100%')
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
         .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
         .position({ x: 0, y: 0 })
         .zIndex(2)
 
@@ -253,7 +242,7 @@ struct ThreadStorePage {
               List({ space: 0, scroller: this.scroller }) {
                 ListItem() {
                   Column() {
-                    Blank().height(46)
+                    Blank().height(46 + this.topInset)
                   }
                   .width('100%')
                 }
@@ -268,8 +257,17 @@ struct ThreadStorePage {
                       onCardClick: (): void => {
                         const innerThread = (thread.thread || thread.threadList || thread.thread_list || thread) as Dict;
                         const tid = getStr(innerThread, 'id', 'tid', 'threadId', 'thread_id') || getStr(thread, 'id', 'tid', 'threadId', 'thread_id') || '0';
+                        // 跳到用户收藏时标记的那一楼（mark_pid），对齐安卓原版；
+                        // 官方 app 收藏的记录可能只带 post_no（楼层号），一并传下去做回退定位
+                        const markPid = getStr(thread, 'mark_pid', 'markPid', 'mark_post_id') ||
+                          getStr(innerThread, 'mark_pid', 'markPid', 'mark_post_id') || '0';
+                        const floorNo = getStr(thread, 'post_no', 'postNo') ||
+                          getStr(innerThread, 'post_no', 'postNo') || '0';
                         NavigationHelper.navigate('pages/thread/ThreadPage', {
                           threadId: tid,
+                          postId: markPid !== '0' ? markPid : '',
+                          markPid: markPid !== '0' ? markPid : '',
+                          floorNo: floorNo !== '0' ? floorNo : '',
                           forumId: String(thread.forumId || innerThread.forumId || 0),
                           forumName: String(thread.forumName || innerThread.forumName || ''),
                           isCollected: '1'
@@ -292,6 +290,7 @@ struct ThreadStorePage {
                       GestureGroup(GestureMode.Exclusive,
                         LongPressGesture({ repeat: false }).onAction(() => {
                           this.menuThreadId = Number(getStr(thread, 'id', 'tid', 'threadId', 'thread_id') || '0');
+                          this.menuPostId = Number(getStr(thread, 'mark_pid', 'markPid', 'min_pid', 'minPid', 'pid') || '0');
                           this.showMenu = true;
                         })
                       )
@@ -302,8 +301,8 @@ struct ThreadStorePage {
                     // 左滑露出收藏/取消收藏（end=右缘向左滑出，对齐通话记录左滑删除效果）
                     end: (): void => {
                       const tid = Number(getStr(thread, 'id', 'tid', 'threadId', 'thread_id') || '0');
-                      // 优先用帖内最小楼层 id 作为首楼 pid（对齐帖子页 addStore 传真实 pid）
-                      const pid = Number(getStr(thread, 'min_pid', 'minPid', 'pid', 'post_id', 'first_post_id', 'firstPostId') || '0');
+                      // 优先用 mark_pid（用户收藏时标记的那一楼），回退到 min_pid（首楼）
+                      const pid = Number(getStr(thread, 'mark_pid', 'markPid', 'min_pid', 'minPid', 'pid', 'post_id', 'first_post_id', 'firstPostId') || '0');
                       this.deleteActionBuilder(tid, pid, this.uncollectedIds.indexOf(tid) < 0);
                     },
                     edgeEffect: SwipeEdgeEffect.Spring
@@ -356,7 +355,7 @@ struct ThreadStorePage {
                   if (this.uncollectedIds.indexOf(this.menuThreadId) < 0) {
                     void this.removeStore(this.menuThreadId);
                   } else {
-                    void this.reStore(this.menuThreadId, 0);
+                    void this.reStore(this.menuThreadId, this.menuPostId);
                   }
                 }
               })
@@ -405,13 +404,6 @@ struct ThreadStorePage {
           if (inner[key] === undefined && t[key] !== undefined) {
             inner[key] = t[key];
           }
-        }
-      }
-      if (idx === 0) {
-        console.info('TiebaLite: store inner keys=' + Object.keys(inner).join(',') + ' | has firstPostContent=' + (inner.firstPostContent !== undefined) + ' has videoInfo=' + (inner.videoInfo !== undefined) + ' has media=' + (inner.media !== undefined));
-        const fpc = inner.firstPostContent as object[];
-        if (Array.isArray(fpc) && fpc.length > 0) {
-          console.info('TiebaLite: fpc types=' + (fpc as Dict[]).map(c => String(c.type)).join(','));
         }
       }
       // extract media (images + video posters) from firstPostContent
@@ -536,7 +528,13 @@ struct ThreadStorePage {
   }
 
   private reStore(threadId: number, postId: number): Promise<void> {
-    return this.toggleStore(threadId, postId, false);
+    // pid 缺失时回退到首楼 id，避免服务端收到 pid=0 导致收藏归属错乱
+    let pid = postId;
+    if (!pid || pid <= 0) {
+      const t = this.threads.find((x: Dict) => Number(getStr(x, 'id', 'tid', 'threadId', 'thread_id') || '0') === threadId);
+      pid = t ? Number(getStr(t, 'min_pid', 'minPid', 'pid', 'post_id') || '0') : 0;
+    }
+    return this.toggleStore(threadId, pid, false);
   }
 
   private async loadMore(): Promise<void> {
@@ -544,7 +542,12 @@ struct ThreadStorePage {
     this.loadingMore = true;
     const nextPage = this.page + 1;
     try {
-      const data: Dict = await this.repo.loadStores(nextPage);
+      const data: Dict | null = await this.loadStoresWithRetry(nextPage);
+      if (!data) {
+        this.hasMore = true;
+        promptAction.showToast({ message: '加载更多失败，请重试', duration: 1500 });
+        return;
+      }
       const more: Dict[] = this.extractThreads(data);
       if (more.length === 0) { this.hasMore = false; return; }
       const existingIds = new Set(this.threads.map(t => getStr(t, 'id', 'tid', 'threadId', 'thread_id')));
@@ -553,9 +556,11 @@ struct ThreadStorePage {
       this.threads = [...this.threads, ...uniqueNew];
       this.page = nextPage;
       this.hasMore = more.length >= 50;
-      void this.enrichAgree();
+      // 延后加载点赞数，避免阻塞列表首屏与触发风控
+      setTimeout(() => { void this.enrichAgree(); }, 600);
     } catch (e) {
-      this.hasMore = false;
+      // 保留 hasMore，允许用户再次点击「加载更多」重试
+      this.hasMore = true;
     } finally {
       this.loadingMore = false;
     }

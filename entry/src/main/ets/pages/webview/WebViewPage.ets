@@ -1,12 +1,16 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import webview from '@ohos.web.webview';
 
 @Entry
 @Component
 struct WebViewPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('appFontFamily') appFontFamily: string = '';
@@ -17,6 +21,7 @@ struct WebViewPage {
   @State progress: number = 0;
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     const params = router.getParams() as Record<string, string>;
     this.url = params?.url || 'https://tieba.baidu.com';
     this.title = params?.title || '';
@@ -46,7 +51,12 @@ struct WebViewPage {
           LoadingProgress().width(20).height(20)
         }
       }
-      .padding(12).width('100%').backgroundColor(cardBg(this.isDark))
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       if (this.progress > 0 && this.progress < 100) {
         Row() {
@@ -57,19 +67,15 @@ struct WebViewPage {
 
       Web({ src: this.url, controller: this.controller })
         .width('100%').layoutWeight(1)
+        .margin({ top: 46 + this.topInset })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
         .javaScriptAccess(true)
         .domStorageAccess(true)
-        .onControllerAttached(() => {
-          console.info('TiebaLite: WebView controller attached, url=' + this.url);
-        })
-        .onPageBegin((event) => {
+        .onPageBegin(() => {
           this.loading = true;
-          console.info('TiebaLite: WebView page begin url=' + (event ? event.url : this.url));
         })
-        .onPageEnd((event) => {
+        .onPageEnd(() => {
           this.loading = false;
-          console.info('TiebaLite: WebView page end url=' + (event ? event.url : this.url));
         })
         .onErrorReceive((event) => {
           let errUrl: string = this.url;

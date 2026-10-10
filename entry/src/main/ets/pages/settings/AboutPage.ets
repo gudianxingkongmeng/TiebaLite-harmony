@@ -1,9 +1,10 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import pasteboard from '@ohos.pasteboard';
-import common from '@ohos.app.ability.common';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { Dict } from '../../core/types/Dict';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
@@ -14,12 +15,15 @@ const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 @Entry
 @Component
 struct AboutPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @State buildDate: string = '';
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     const d = new Date();
     const y = d.getFullYear();
@@ -47,10 +51,17 @@ struct AboutPage {
           Text('关于').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ left: 16 })
           Blank()
         }
-      .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+      .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+.position({ x: 0, y: 0 })
+.zIndex(2)
 
       Scroll() {
         Column() {
+
+        Blank().height(46 + this.topInset)
           Column() {
             Circle().width(72).height(72).fill(blendWithBg(this.primaryColor, 0.20, this.isDark))
             Text('TiebaLite').fontFamily(this.appFontFamily).fontSize(22).fontWeight(FontWeight.Bold).fontColor(textPrimary(this.isDark)).margin({ top: 12 })

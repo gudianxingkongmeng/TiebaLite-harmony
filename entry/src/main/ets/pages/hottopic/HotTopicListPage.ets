@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import HotTopicRepository from '../../core/repository/HotTopicRepository';
@@ -5,12 +7,14 @@ import NetworkImage from '../../components/Images';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
 @Component
 struct HotTopicListPage {
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
+  @State topInset: number = 24;
   @State topics: Dict[] = [];
   @State loading: boolean = true;
   @State error: string = '';
@@ -21,6 +25,7 @@ struct HotTopicListPage {
   private repo: HotTopicRepository = HotTopicRepository.getInstance();
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
     this.loadTopics();
   }
@@ -61,9 +66,13 @@ struct HotTopicListPage {
             .margin({ left: 12 })
           Blank()
         }
-        .padding(12)
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
       .width('100%')
-      .backgroundColor(cardBg(this.isDark))
+      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+      .position({ x: 0, y: 0 })
+      .zIndex(2)
 
       if (this.loading) {
         LoadingState({ message: '加载中...' })
@@ -76,6 +85,7 @@ struct HotTopicListPage {
       } else {
         Scroll() {
           Column() {
+            Blank().height(46 + this.topInset)
             ForEach(this.chunkTopics(this.topics), (pair: Dict[], rowIdx: number) => {
               Row() {
                 ForEach(pair, (topic: Dict, colIdx: number) => {

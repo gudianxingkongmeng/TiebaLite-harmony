@@ -1,3 +1,5 @@
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
@@ -20,6 +22,7 @@ import BackToTopButton from '../../components/BackToTopButton';
 @Entry
 @Component
 struct SearchPage {
+  @State topInset: number = 24;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('showSwiperDots') showSwiperDots: boolean = true;
   reduceEffects: boolean = false;
@@ -232,6 +235,7 @@ struct SearchPage {
   }
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     try { this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE); } catch (e) {}
     this.bgColor = pageBg(this.isDark);
     const params = router.getParams() as Record<string, string>;
@@ -685,6 +689,7 @@ onIsDarkChange(): void {
         }
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Start)
+      .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       Column() {
@@ -784,6 +789,7 @@ onIsDarkChange(): void {
       .position({ x: 0, y: 0 })
       .zIndex(2)
       .width('100%')
+      .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha(darkenColor(this.bgColor, this.headerTint / 100), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)

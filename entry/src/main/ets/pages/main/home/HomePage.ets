@@ -453,10 +453,10 @@ export default struct HomePage {
             .onClick(() => { NavigationHelper.navigate('pages/search/SearchPage'); })
           }
           .width('100%')
+          .padding({ top: this.topInset })
           .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(this.bgColor, this.headerTint / 100) : this.bgColor), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
           .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
           .position({ x: 0, y: 0 })
           .zIndex(2)
         }
@@ -520,7 +520,7 @@ export default struct HomePage {
   homeScrollContent() {
         Scroll(this.recentScroller) {
             Column() {
-              Blank().height(108)
+              Blank().height(108 + this.topInset)
               this.RecentForumsRow()
               if (this.followedForums.length > 0) {
                 if (this.getPinnedForums().length > 0) {

@@ -623,11 +623,10 @@ struct SubPostsPage {
             .margin({ left: 12 })
           Blank()
         }
-        .padding(12)
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
         .width('100%')
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
         .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
         .position({ x: 0, y: 0 })
         .zIndex(2)
 
@@ -638,7 +637,7 @@ struct SubPostsPage {
         } else {
           Scroll(this.fabScroller) {
             Column() {
-              Blank().height(46)
+              Blank().height(46 + this.topInset)
 
               if (this.parentPost) {
                 if (this.isParentPostBlocked()) {
@@ -1178,7 +1177,8 @@ struct SubPostsPage {
           LongPressGesture({ repeat: false, duration: 500 })
             .onAction((event?: GestureEvent) => {
               this.menuText = this.buildSubContent(sub);
-              this.menuPostId = Number(sub.id || 0);
+              // 楼中楼回复的 spid 不是楼层 pid，需取该楼层真实 pid
+              this.menuPostId = Number(sub.pid || sub.post_id || sub.postId || this.postId || 0);
               this.menuPostAuthorId = Number((sub.author as Dict)?.id || sub.author_id || 0);
               if (event && event.fingerList && event.fingerList.length > 0) {
                 this.menuX = event.fingerList[0].globalX;

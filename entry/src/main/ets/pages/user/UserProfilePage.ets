@@ -1,3 +1,6 @@
+import { getStr, getNum, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, primaryContainer, onPrimaryContainer, withAlpha } from '../../core/utils/DataHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import display from '@ohos.display';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -10,7 +13,6 @@ import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import AccountManager from '../../core/auth/AccountManager';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import BackToTopButton from '../../components/BackToTopButton';
@@ -19,6 +21,8 @@ import RefreshAnimation from '../../components/RefreshAnimation';
 @Entry
 @Component
 struct UserProfilePage {
+  @State topInset: number = 24;
+  @StorageLink('headerAlpha') headerAlpha: number = 25;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   reduceEffects: boolean = false;
   @StorageLink('fontScale') fontScale: number = 1.0;
@@ -59,6 +63,7 @@ struct UserProfilePage {
   private repo: UserProfileRepository = UserProfileRepository.getInstance();
 
   aboutToAppear(): void {
+    void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     const params = router.getParams() as Record<string, string>;
     this.uid = parseInt(params?.uid || '0');
     const account = AccountManager.getInstance().getCurrentAccountSync();
@@ -218,7 +223,12 @@ struct UserProfilePage {
           Text('用户资料').fontFamily(this.appFontFamily).fontSize(16).fontWeight(FontWeight.Bold).margin({ left: 16 })
           Blank()
         }
-        .padding(12).width('100%').backgroundColor(pageBg(this.isDark))
+        .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
+        .position({ x: 0, y: 0 })
+        .zIndex(2)
 
       if (this.loading) {
         LoadingState({ message: '加载中...' })
@@ -227,6 +237,7 @@ struct UserProfilePage {
       } else if (this.profile) {
         Scroll(this.pageScroller) {
           Column() {
+            Blank().height(46 + this.topInset)
             Column() {
               Avatar({ portrait: buildPortraitUrl(getStr(this.profile!, 'portrait', 'avatar', 'user_portrait', 'portrait_url')), avatarSize: 64, defaultName: getStr(this.profile!, 'name', 'nickname', 'userName', 'user_name', 'un', 'username') })
               Text(getStr(this.profile!, 'nickname', 'name', 'userName', 'user_name', 'un', 'username', 'name_show')).fontFamily(this.appFontFamily).fontSize(18).fontWeight(FontWeight.Bold).margin({ top: 8 })
