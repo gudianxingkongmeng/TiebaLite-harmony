@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import http from '@ohos.net.http';
@@ -14,6 +14,7 @@ import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, 
 import MediaSaver from '../../core/utils/MediaSaver';
 import { Dict } from '../../core/types/Dict';
 import { setDarkStatusBar } from '../../core/utils/SystemBarHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import ThreadImageFetcher from '../../core/utils/ThreadImageFetcher';
 
 interface PicItem {
@@ -32,6 +33,12 @@ struct PhotoViewPage {
   @State currentIndex: number = 0;
   @State totalAmount: number = 0;
   @State totalKnown: boolean = false;
+  // 计数分母：已知总数时用真实总数，否则退回已加载数量，保证「x/y」始终可见。
+  // 用 @State 而非 getter：ArkUI 不会追踪 getter 内部依赖的字段变化。
+  @State displayTotal: number = 1;
+  // 全屏沉浸式布局下需自行避让状态栏与手势条
+  @State topInset: number = 0;
+  @State bottomInset: number = 0;
   @State hasNext: boolean = false;
   @State hasPrev: boolean = false;
   @State showActions: boolean = true;
@@ -48,6 +55,7 @@ struct PhotoViewPage {
 
   aboutToAppear(): void {
     this._alive = true;
+    this.loadInsets();
     const params = router.getParams() as Record<string, Object>;
     if (params) {
       const urlsJson = params.urlsJson as string;
@@ -72,9 +80,26 @@ struct PhotoViewPage {
     });
     this.totalAmount = this.items.length;
     if (this.currentIndex >= this.items.length) this.currentIndex = Math.max(0, this.items.length - 1);
+    this.syncDisplayTotal();
     void this.initWindow();
     this.ensureCurrentImageCached();
     void setDarkStatusBar(getContext(this));
+  }
+
+  /** 同步计数分母：已知总数用真实值，否则退回已加载数量 */
+  private syncDisplayTotal(): void {
+    if (this.totalKnown) {
+      this.displayTotal = Math.max(this.totalAmount, this.items.length);
+    } else {
+      this.displayTotal = Math.max(this.items.length, 1);
+    }
+  }
+
+  /** 读取状态栏与手势区高度，避免顶部计数与系统图标重叠 */
+  private loadInsets(): void {
+    const ctx = getContext(this) as common.UIAbilityContext;
+    TopInsetHelper.get(ctx).then((top: number) => { this.topInset = top; }).catch(() => {});
+    TopInsetHelper.getBottom(ctx).then((bottom: number) => { this.bottomInset = bottom; }).catch(() => {});
   }
 
   private async initWindow(): Promise<void> {
@@ -84,10 +109,11 @@ struct PhotoViewPage {
     this._loadingWindow = true;
     try {
       const info = await ThreadImageFetcher.fetchWindow(this._threadId, this._forumId, this._forumName, anchor.picId, anchor.overallIndex, false);
-      if (!this._alive) return;
+      if (!this._alive || !info) return;
       if (info.amount > 0) {
         this.totalAmount = Math.max(info.amount, this.items.length);
         this.totalKnown = true;
+        this.syncDisplayTotal();
         this.mergeWindow(info.items, false);
       }
     } finally {
@@ -113,6 +139,10 @@ struct PhotoViewPage {
     } else {
       this.items = this.items.concat(add);
     }
+    if (this.totalKnown) {
+      this.totalAmount = Math.max(this.totalAmount, this.items.length);
+    }
+    this.syncDisplayTotal();
     this.recalcEdges();
     console.info('TiebaLite: [PHV] window ' + (isPrev ? 'prev' : 'next') + ' added=' + add.length + ' total=' + this.items.length);
   }
@@ -121,7 +151,13 @@ struct PhotoViewPage {
     if (this.items.length === 0) return;
     const last = this.items[this.items.length - 1];
     const first = this.items[0];
-    this.hasNext = last.overallIndex < this.totalAmount;
+    // 总数未知时（totalKnown=false）不能据此判定没有下一页，
+    // 否则首次进入时会因为 totalAmount 初始等于 items.length 而停止加载后续窗口。
+    if (this.totalKnown) {
+      this.hasNext = last.overallIndex < this.totalAmount;
+    } else {
+      this.hasNext = true;
+    }
     this.hasPrev = first.overallIndex > 1;
   }
 
@@ -140,9 +176,11 @@ struct PhotoViewPage {
     this._loadingWindow = true;
     try {
       const info = await ThreadImageFetcher.fetchWindow(this._threadId, this._forumId, this._forumName, anchor.picId, anchor.overallIndex, false);
-      if (!this._alive) return;
+      if (!this._alive || !info) return;
       if (info.amount > 0) {
         this.totalAmount = Math.max(info.amount, this.items.length);
+        this.totalKnown = true;
+        this.syncDisplayTotal();
         this.mergeWindow(info.items, false);
       }
     } finally {
@@ -156,9 +194,11 @@ struct PhotoViewPage {
     this._loadingWindow = true;
     try {
       const info = await ThreadImageFetcher.fetchWindow(this._threadId, this._forumId, this._forumName, anchor.picId, anchor.overallIndex, true);
-      if (!this._alive) return;
+      if (!this._alive || !info) return;
       if (info.amount > 0) {
         this.totalAmount = Math.max(info.amount, this.items.length);
+        this.totalKnown = true;
+        this.syncDisplayTotal();
         this.mergeWindow(info.items, true);
       }
     } finally {
@@ -168,6 +208,7 @@ struct PhotoViewPage {
 
   onPageShow(): void {
     void setDarkStatusBar(getContext(this));
+    this.loadInsets();
   }
 
   async downloadToFile(url: string, baseName: string): Promise<string> {
@@ -347,12 +388,16 @@ struct PhotoViewPage {
         Image($r('app.media.ic_arrow_back')).width(26).height(26).fillColor('#FFFFFF')
           .onClick(() => router.back())
         Blank()
-        if (this.totalKnown) {
-          Text(`${this.currentIndex + 1}/${this.totalAmount}`)
+        if (this.items.length > 0) {
+          // totalKnown 为 false（picPage 未返回总数）时，至少显示已加载数量，
+          // 避免计数整块消失让用户以为功能坏了
+          Text(`${this.currentIndex + 1}/${this.displayTotal}`)
             .fontFamily(this.appFontFamily).fontSize(16).fontColor('#FFFFFF')
         }
       }
-      .width('100%').padding(16).backgroundColor('#66000000')
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 16 + this.topInset, bottom: 16 })
+      .backgroundColor('#66000000')
       .position({ top: 0 })
 
       if (this.showActions) {
@@ -371,7 +416,9 @@ struct PhotoViewPage {
           .padding(16).margin({ left: 8 })
           .onClick(() => { void this.shareCurrentImage(); })
         }
-        .width('100%').backgroundColor('#66000000')
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 16, bottom: 16 + this.bottomInset })
+        .backgroundColor('#66000000')
         .position({ bottom: 0 })
       }
     }

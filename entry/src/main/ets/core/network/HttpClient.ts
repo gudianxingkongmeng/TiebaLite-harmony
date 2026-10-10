@@ -100,6 +100,34 @@ export class HttpClient {
   // 空响应（服务端限流/连接掐断）重试次数与基础间隔（毫秒）
   private static readonly MAX_RETRY: number = 3;
   private static readonly RETRY_DELAY: number = 300;
+  // 全局并发上限：贴吧服务端对短时间内的并发请求敏感，
+  // 图片采集、点赞数回填等场景会瞬间打出几十个请求，触发限流返回空 body。
+  // 用一个计数信号量把所有请求（含重试）统一限流，重试不会额外放大并发。
+  private static readonly MAX_CONCURRENT: number = 6;
+  private static _active: number = 0;
+  private static _waiting: (() => void)[] = [];
+
+  /** 获取并发许可；无可用许可时排队等待 */
+  private static acquire(): Promise<void> {
+    if (HttpClient._active < HttpClient.MAX_CONCURRENT) {
+      HttpClient._active++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve: () => void) => {
+      HttpClient._waiting.push(() => {
+        HttpClient._active++;
+        resolve();
+      });
+    });
+  }
+
+  /** 释放并发许可，并唤醒下一个等待者 */
+  private static release(): void {
+    HttpClient._active--;
+    const next = HttpClient._waiting.shift();
+    if (next) next();
+  }
+
   private static instance: HttpClient;
   private clients: Map<string, AxiosInstance> = new Map();
   private interceptors: Interceptor[] = [];
@@ -171,6 +199,7 @@ export class HttpClient {
     const qs = '?' + Object.entries(allParams).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
     const url = baseURL.replace(/\/$/, '') + path + qs;
     const doGet = (attempt: number): Promise<AxiosResponse<T>> => {
+      return HttpClient.acquire().then(() => {
       const httpRequest = http.createHttp();
       return new Promise<AxiosResponse<T>>((resolve, reject) => {
         httpRequest.request(url, {
@@ -197,17 +226,22 @@ export class HttpClient {
           // 服务端限流或连接被掐断时会返回空 body，result 为 undefined，属于可重试的偶发错误
           if (respData === undefined || respData === null) {
             if (attempt < HttpClient.MAX_RETRY) {
+              HttpClient.release();
               setTimeout(() => { doGet(attempt + 1).then(resolve).catch(reject); }, HttpClient.RETRY_DELAY * attempt);
               return;
             }
+            HttpClient.release();
             reject(new Error('网络响应为空'));
             return;
           }
+          HttpClient.release();
           resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
         }).catch((err) => {
           httpRequest.destroy();
+          HttpClient.release();
           reject(new Error(String(err)));
         });
+      });
       });
     };
     return doGet(1);
@@ -274,6 +308,7 @@ export class HttpClient {
     }
 
     const doPost = (attempt: number): Promise<AxiosResponse<T>> => {
+      return HttpClient.acquire().then(() => {
       const req = http.createHttp();
       return new Promise<AxiosResponse<T>>((resolve, reject) => {
         req.request(url, {
@@ -293,24 +328,39 @@ export class HttpClient {
           // 服务端限流或连接被掐断时会返回空 body，result 为 undefined，属于可重试的偶发错误
           if (respData === undefined || respData === null) {
             if (attempt < HttpClient.MAX_RETRY) {
+              HttpClient.release();
               setTimeout(() => { doPost(attempt + 1).then(resolve).catch(reject); }, HttpClient.RETRY_DELAY * attempt);
               return;
             }
+            HttpClient.release();
             reject(new Error('网络响应为空'));
             return;
           }
+          HttpClient.release();
           resolve({ data: respData, status: resp.responseCode, statusText: '' } as AxiosResponse<T>);
         }).catch((err) => {
           req.destroy();
           console.error('TiebaLite: POST error=' + String(err));
+          HttpClient.release();
           reject(new Error(String(err)));
         });
+      });
       });
     };
     return doPost(1);
   }
 
   async postUserLikeProtobuf(path: string, protobufData: Uint8Array, cmd: number): Promise<Uint8Array> {
+    // 该方法走 axios，不经过 http.createHttp，需自行纳入全局并发闸门
+    await HttpClient.acquire();
+    try {
+      return await HttpClient.doPostUserLikeProtobuf(path, protobufData, cmd);
+    } finally {
+      HttpClient.release();
+    }
+  }
+
+  private static async doPostUserLikeProtobuf(path: string, protobufData: Uint8Array, cmd: number): Promise<Uint8Array> {
     const device = DeviceFingerprint.getInstance();
     const url = API_BASE_URLS.PROTOBUF_TIEBA.replace(/\/$/, '') + path + '?cmd=' + cmd;
     const boundary: string = '-*_r1999';

@@ -31,13 +31,25 @@ export default class ThreadImageFetcher {
     return task;
   }
 
-  static fetchWindow(threadId: number, forumId: number, forumName: string, picId: string, picIndex: number, prev: boolean): Promise<PicPageInfo> {
-    return ThreadImageFetcher.repo.getPicPageInfo(forumId, forumName, threadId, picId, picIndex, prev)
-      .catch((e: Error) => {
-        console.warn('TiebaLite: [PHOTO] picPage window failed ' + String(e));
-        const empty: PicPageInfo = { amount: 0, items: [] };
-        return empty;
-      });
+  /**
+   * 获取图片窗口数据。
+   * picPage 属于可选增强：失败时不应让调用方丢失已知的图片总数，
+   * 因此这里对空响应重试，最终失败返回 null（由调用方决定如何降级），
+   * 避免把 amount 归零导致「x/y」计数消失。
+   */
+  static fetchWindow(threadId: number, forumId: number, forumName: string, picId: string, picIndex: number, prev: boolean): Promise<PicPageInfo | null> {
+    const run = async (attempt: number): Promise<PicPageInfo | null> => {
+      try {
+        const info = await ThreadImageFetcher.repo.getPicPageInfo(forumId, forumName, threadId, picId, picIndex, prev);
+        if (info && info.amount > 0) return info;
+      } catch (e) {
+        if (attempt >= 3) return null;
+      }
+      if (attempt >= 3) return null;
+      await new Promise<void>((resolve: () => void) => { setTimeout(() => { resolve(); }, 300 * attempt); });
+      return run(attempt + 1);
+    };
+    return run(1);
   }
 
   static getPicIdFromUrl(url: string): string {
@@ -78,7 +90,11 @@ export default class ThreadImageFetcher {
       }
       if (maxPage <= 0) maxPage = 10;
       maxPage = Math.min(maxPage, 300);
-      const BATCH = 5;
+      // 小并发（2）分批拉取。
+      // 完全串行太慢（300 页要等很久），完全并发又会瞬间打出几十个请求触发服务端限流，
+      // 返回空响应。这里用 2 并发 + 批次间隔，兼顾速度与稳定性。
+      // 真正的并发上限由 HttpClient 的全局闸门兜底，这里只是限制发起速度。
+      const BATCH = 2;
       let page = 2;
       while (page <= maxPage) {
         const end = Math.min(page + BATCH - 1, maxPage);
@@ -91,6 +107,9 @@ export default class ThreadImageFetcher {
           if (data) ThreadImageFetcher.collectPage(data, all, pidOrder, pidCounts);
         }
         if (onProgress) onProgress(all);
+        if (end < maxPage) {
+          await new Promise<void>((resolve: () => void) => { setTimeout(() => { resolve(); }, 120); });
+        }
         page = end + 1;
       }
       const res: ThreadImageCollectResult = { all: all, pidOrder: pidOrder, pidCounts: pidCounts };
