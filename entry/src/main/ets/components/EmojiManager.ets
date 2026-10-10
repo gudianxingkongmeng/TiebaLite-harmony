@@ -41,9 +41,14 @@ export function getAllEmoticons(): EmoticonInfo[] {
 }
 
 export function registerEmoji(name: string, id: string): void {
-  if (name && id && name !== id) {
-    emojiNameMap[name] = id;
-  }
+  if (!name || !id || name === id) return;
+  // 裸前缀（如 image_emoticon）不含编号，若写入映射会覆盖正确的完整 id，
+  // 导致同名表情后续全部解析成无效 URL。仅在 id 合法时注册。
+  if (isBareEmojiPrefix(id)) return;
+  // 已有正确映射时不被覆盖
+  const exist = emojiNameMap[name];
+  if (exist && !isBareEmojiPrefix(exist)) return;
+  emojiNameMap[name] = id;
 }
 
 export function getEmojiIdFromMap(name: string): string | undefined {
@@ -52,7 +57,13 @@ export function getEmojiIdFromMap(name: string): string | undefined {
 
 const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
 
-const inlineEmojiTypes: number[] = [2, 6, 7, 9, 10, 11, 12, 13];
+/**
+ * 内联表情类型。
+ * 参考 Android 版（zzc10086/TiebaLite）protobuf 定义：
+ *   2 / 11 = 表情，9 = 电话号，10 = 语音。
+ * 早期把 9/10/12/13 也当表情会导致电话号、语音等渲染成空白图片。
+ */
+const inlineEmojiTypes: number[] = [2, 11];
 
 export function isInlineEmojiType(t: number): boolean {
   return inlineEmojiTypes.indexOf(t) >= 0;
@@ -72,8 +83,11 @@ function stripHash(raw: string): string {
 }
 
 export function resolveEmojiId(rawId: string): string {
-  const id = rawId.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
+  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
   if (!id) return '';
+  // 贴吧部分表情只返回裸前缀（如 "image_emoticon"），编号需由名称反查。
+  // 对齐 Android 版 registerEmoticon 对 "image_emoticon" 的特判：默认为 1。
+  if (id === 'image_emoticon') return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon1.png';
   const hashNum = stripHash(id);
   if (hashNum) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + hashNum + '.png';
   if (/^\d+$/.test(id)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
@@ -95,6 +109,24 @@ export function isEmojiText(text: string): boolean {
   if (getEmojiIdFromMap(id)) return true;
   if (getSpacedEmojiId(id)) return true;
   return false;
+}
+
+/**
+ * 判断是否为「裸前缀」表情 id（缺少编号）。
+ * 贴吧部分回复的 content 里 text 只给 image_emoticon 这类前缀，
+ * 具体编号需由名称字段反查，否则拼出的 URL 不存在导致表情不显示。
+ */
+export function isBareEmojiPrefix(id: string): boolean {
+  const v = id.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  if (!v) return true;
+  // 带编号的完整 id：前缀后有数字
+  if (/^#?\d+$/.test(v)) return false;
+  if (knownPrefixes.some(p => {
+    const val = v.startsWith('#') ? v.substring(1) : v;
+    return val.startsWith(p) && val.length > p.length && /\d+$/.test(val.substring(p.length));
+  })) return false;
+  // 其余均视为裸前缀
+  return true;
 }
 
 export function isValidEmojiId(rawId: string): boolean {
@@ -132,7 +164,7 @@ export function richEditorToText(controller: RichEditorController): string {
 }
 
 export function getEmojiUrlForItem(item: Dict): string {
-  const directUrl = String(item.bsrc || item.src || item.icon || item.url || item.picUrl || item.thumbnail || item.c || '');
+  const directUrl = String(item.bsrc || item.src || item.icon || item.url || item.picUrl || item.thumbnail || '');
   if (directUrl.startsWith('http://') || directUrl.startsWith('https://') || directUrl.startsWith('//')) {
     if (directUrl.startsWith('https://')) return 'http://' + directUrl.substring(8);
     if (directUrl.startsWith('//')) return 'http:' + directUrl;
@@ -140,10 +172,15 @@ export function getEmojiUrlForItem(item: Dict): string {
   }
   const textId = String(item.text || '').trim();
   const name = String(item.c || '').trim();
-  if (textId && name && textId !== name) {
+  if (textId && name && textId !== name && !isBareEmojiPrefix(textId)) {
     registerEmoji(name, textId);
   }
-  const rawId = String(item.id || item.text || item.c || '').trim();
+  // text 为裸前缀时用名称反查完整编号，对齐贴吧实际返回结构
+  let rawId = String(item.text || '').trim();
+  if (!rawId || isBareEmojiPrefix(rawId)) {
+    rawId = getEmojiIdFromMap(name) || rawId;
+  }
+  if (!rawId) rawId = String(item.id || '').trim();
   if (!rawId) return '';
   return resolveEmojiId(rawId);
 }

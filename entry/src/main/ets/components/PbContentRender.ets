@@ -1,7 +1,7 @@
 import { Dict } from '../core/types/Dict';
 import { textPrimary, textSecondary, pageBg, cardBg, blendWithBg } from '../core/utils/DataHelper';
 import EmojiImage from './EmojiImage';
-import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText } from './EmojiManager';
+import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix } from './EmojiManager';
 import { PhotoUrlCache } from '../core/utils/ThreadImageFetcher';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import NetworkUtil from '../core/utils/NetworkUtil';
@@ -448,9 +448,9 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
   }
 
   private getType18EmojiUrl(item: Dict): string {
-    const text = String(item.text || item.c || '');
-    return text ? resolveEmojiIdFromMgr(text) : '';
-  }
+  const text = String(item.text || item.c || '');
+  return text ? resolveEmojiIdFromMgr(text) : '';
+}
 
   private getImgSrc(item: Dict): string {
     return String(item.originSrc || item.src || item.origin_src || item.cdn_src || item.c || item.text || item.imgSrc || item.imageSrc || item.originalSrc || item.httpsSrc || '');
@@ -488,17 +488,39 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
   }
 
   private getEmojiUrl(item: Dict): string {
-    const directUrl = String(item.bsrc || item.src || item.icon || item.url || item.picUrl || item.thumbnail || item.c || '');
+  const directUrl = String(item.bsrc || item.src || item.icon || item.url || item.picUrl || item.thumbnail || '');
     if (directUrl.startsWith('http://') || directUrl.startsWith('https://') || directUrl.startsWith('//')) return this.toHttps(directUrl);
+    // protobuf 的 Emoji 片段中 text 才是表情 id，c 是中文描述；
+    // 参考项目（Android 版）同样以 text 为 id 来源。
+    // 因此优先取 text，避免在缺少 id 字段时误用描述文字拼 URL。
     const textId = String(item.text || '').trim();
     const name = String(item.c || '').trim();
+    // 表情 item 结构为 { type, text, c }：
+    //   text 通常是表情 id（如 image_emoticon25），但部分回复里text 只是裸前缀
+    //   （如 image_emoticon），此时需用 c（名称，如「呵呵」）反查完整编号。
     if (textId && name && textId !== name) {
       registerEmoji(name, textId);
     }
-    const rawId = String(item.id || item.text || item.c || '').trim();
+    const rawId = this.resolveEmojiIdWithDesc(item);
     if (!rawId) return '';
-    const url = PbContentRender.resolveEmojiId(rawId);
-    return url;
+    return PbContentRender.resolveEmojiId(rawId);
+  }
+
+  /**
+   * 解析表情 id：text 为完整 id 时直接用；
+   * text 为裸前缀（无编号）时，用名称字段 c 反查映射表。
+   */
+  private resolveEmojiIdWithDesc(item: Dict): string {
+    const textId = String(item.text || '').trim();
+    const name = String(item.c || '').trim();
+    // text 完整（带编号）时直接使用
+    if (textId && !isBareEmojiPrefix(textId)) return textId;
+    // text 是裸前缀或缺失，必须用名称反查编号
+    if (name) {
+      const mapped = getEmojiIdFromMap(name);
+      if (mapped) return mapped;
+    }
+    return textId;
   }
 
   static resolveEmojiId(rawId: string): string {

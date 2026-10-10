@@ -32,8 +32,14 @@
 - [x] 网络空响应根因修复（`HttpClient` 使用 `HttpDataType.OBJECT` 时空 body 会静默变成 `undefined`，现改为识别空响应并重试 3 次，覆盖 GET/POST 全部接口）
 - [x] 收藏页点赞数改为纯本地回填（原先为每条收藏并发请求 `/c/f/pb/page`，会瞬间打出上百请求导致空响应；`ThreadCard` 本就从 `Preferences` 读取点赞数）
 - [x] 清理调试日志（移除 `[E1]`–`[E7]`、`[D*]`、`[JUMP]`、`[STORE]`、`[A14]`、WebView 生命周期等高频打印，保留 error 级真实故障上报）
+- [x] 表情不显示修复（贴吧部分回复的 content 中 `text` 只给裸前缀如 `image_emoticon`，编号需由名称字段 `c` 反查。新增 `isBareEmojiPrefix()`；`registerEmoji` 不再写入裸前缀以避免覆盖正确映射；表情类型收窄为 `[2, 11]`（按 protobuf 定义 9=电话号、10=语音，原先被误当表情渲染成空白））
+- [x] 搜索页状态栏玻璃（内容容器去掉 `padding top`，让固定顶栏能贴到 y=0 覆盖状态栏；内容占位补 `topInset`）
+- [x] 搜索框玻璃化与搜索按钮缩小（`SearchPage` 与 `ForumSearchPage`，输入框高度 36、按钮 32）
+- [x] 贴吧内搜索限定本吧（改用 `searchPost` 小程序端接口，`searchThread` 为 Web 端其 `kw` 对帖子搜索无效会返回全贴吧结果）
+- [x] 帖子页图片与投票卡片左右对齐（改用 `constraintSize({maxWidth})` 使 padding 生效，`width('100%')` 会让 margin/padding 失效并溢出容器；图片比例取 `bsize` 字段）
 
 ## 未完成
 - [ ] 热门页未登录只显示4个帖子（改为 protobuf 请求方式后仍不行，待排查）
 - [ ] 楼中楼回复内的图片无法显示缩略图（pb 接口返回的 `sub_post_list` 中该回复 `content` 为 `type=0` 纯文本，图片被压缩成字面量 `[图片]`，无任何图片 URL；官方安卓版能显示缩略图，推测使用了额外的接口或字段，需继续排查）
 - [ ] 图片查看页双击放大（已尝试多轮未达成，`PhotoViewPage` 保持原样回退。难点：Swiper 是父容器，图片上的手势优先级无法覆盖其滑动，导致「放大后拖动会切图」「不跟手」「不能切图」三者互相冲突。试过 `GestureGroup(Exclusive)`、`disableSwipe`、`hitTestBehavior` 均不能同时满足。后续需重构为：放大时用独立容器承载图片并接管全部手势，未放大时才启用 Swiper）
+- [ ] 帖子页回复导航条透明度与顶栏不一致（导航条在 `Scroll` 内跟随内容滚动，玻璃背后是正文；顶栏固定，背后是页面底色，故相同 alpha 下视觉深浅不同。曾尝试移出 Scroll 用 Stack 固定底部，因改动过大已回退。后续可选：① 保持现状仅做数值补偿；② 参考 Android 版 zzc10086/TiebaLite 帖子页回复栏的实现方式）
