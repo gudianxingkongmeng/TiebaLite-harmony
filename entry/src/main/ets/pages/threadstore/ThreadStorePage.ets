@@ -43,7 +43,6 @@ struct ThreadStorePage {
   @State scrollTop: number = 0;
   @State topInset: number = 24;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @State headerH: number = 0;
   private scroller: Scroller = new Scroller();
 
   private repo: ThreadStoreRepository = ThreadStoreRepository.getInstance();
@@ -235,12 +234,6 @@ struct ThreadStorePage {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
         .position({ x: 0, y: 0 })
         .zIndex(2)
-        .onAreaChange((_old: Area, newArea: Area) => {
-          const h = newArea.height as number;
-          if (h > 0 && Math.abs(h - this.headerH) > 1) {
-            this.headerH = h;
-          }
-        })
 
         if (this.loading) {
           LoadingState({ message: '加载中...' })
@@ -260,7 +253,7 @@ struct ThreadStorePage {
               List({ space: 0, scroller: this.scroller }) {
                 ListItem() {
                   Column() {
-                    Blank().height(this.headerH > 0 ? this.headerH : 46)
+                    Blank().height(46)
                   }
                   .width('100%')
                 }
@@ -380,6 +373,7 @@ struct ThreadStorePage {
       }
       .width('100%').height('100%')
       .justifyContent(FlexAlign.Start)
+      .backgroundColor(pageBg(this.isDark))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       BackToTopButton({
         scrollTop: $scrollTop,

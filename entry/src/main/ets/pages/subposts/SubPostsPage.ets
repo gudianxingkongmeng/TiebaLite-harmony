@@ -165,7 +165,6 @@ struct SubPostsPage {
   @State scrollTop: number = 0;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
   @State topInset: number = 24;
-  @State headerH: number = 0;
   @StorageLink('primaryColor') primaryColor: string = '#4477E0';
   @StorageLink('gripSide') @Watch('onGripSideChanged') gripSide: number = 0;
   @StorageLink('fabRadius') fabRadius: number = 60;
@@ -631,12 +630,6 @@ struct SubPostsPage {
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
         .position({ x: 0, y: 0 })
         .zIndex(2)
-        .onAreaChange((_old: Area, newArea: Area) => {
-          const h = newArea.height as number;
-          if (h > 0 && Math.abs(h - this.headerH) > 1) {
-            this.headerH = h;
-          }
-        })
 
         if (this.loading) {
           LoadingState({ message: '加载中...' })
@@ -645,6 +638,8 @@ struct SubPostsPage {
         } else {
           Scroll(this.fabScroller) {
             Column() {
+              Blank().height(46)
+
               if (this.parentPost) {
                 if (this.isParentPostBlocked()) {
                   Column() {
@@ -657,10 +652,9 @@ struct SubPostsPage {
                 }
               }
               Column() {
-                Blank().height(this.headerH > 0 ? this.headerH : 46)
                 Divider().height(4).color(this.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)').width('100%').strokeWidth(4)
               }
-              .width('100%').backgroundColor(pageBg(this.isDark)).padding({ left: 12, right: 12 })
+              .width('100%').backgroundColor(pageBg(this.isDark)).padding({ left: 12, right: 12, top: 8, bottom: 8 })
 
               ForEach(this.subPosts, (sub: Dict, index: number) => {
                 this.subPostItem(sub)
@@ -699,6 +693,7 @@ struct SubPostsPage {
       .width('100%')
       .height('100%')
       .justifyContent(FlexAlign.Start)
+      .backgroundColor(pageBg(this.isDark))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       if (this.showReply) {

@@ -461,7 +461,7 @@ export default struct HomePage {
           .zIndex(2)
         }
       }
-      .width('100%').height('100%').justifyContent(FlexAlign.Start).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
+      .width('100%').height('100%').justifyContent(FlexAlign.Start).backgroundColor(this.bgColor).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       if (this.showAccountMenu) {
         Column().width('100%').height('100%').onClick(() => { this.showAccountMenu = false; })
         Column() {

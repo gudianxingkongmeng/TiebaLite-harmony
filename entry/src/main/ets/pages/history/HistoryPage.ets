@@ -72,7 +72,6 @@ struct HistoryPage {
   @State pullRefreshing: boolean = false;
   @State topInset: number = 24;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @State headerH: number = 0;
   @State scrollTop: number = 0;
   private scroller: Scroller = new Scroller();
   private dataSource: HistoryDataSource = new HistoryDataSource();
@@ -195,12 +194,6 @@ struct HistoryPage {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
       .position({ x: 0, y: 0 })
       .zIndex(2)
-      .onAreaChange((_old: Area, newArea: Area) => {
-        const h = newArea.height as number;
-        if (h > 0 && Math.abs(h - this.headerH) > 1) {
-          this.headerH = h;
-        }
-      })
 
       if (this.loading) {
         Text('加载中...').fontFamily(this.appFontFamily).fontSize(16).fontColor(textTertiary(this.isDark))
@@ -218,7 +211,7 @@ struct HistoryPage {
           List({ scroller: this.scroller }) {
             ListItem() {
               Column() {
-                Blank().height(this.headerH > 0 ? this.headerH : 46)
+                    Blank().height(46)
               }
               .width('100%')
             }
@@ -273,6 +266,7 @@ struct HistoryPage {
       }
       }
       .width('100%').height('100%').justifyContent(FlexAlign.Start)
+      .backgroundColor(pageBg(this.isDark))
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
       BackToTopButton({
