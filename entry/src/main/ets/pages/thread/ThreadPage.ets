@@ -811,7 +811,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
       }
       .width('100%')
       .padding({ top: this.topInset })
-      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
       .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: this.showFixedBar ? 0 : 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
@@ -974,7 +974,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
               }
               .visibility(this.showFixedBar ? Visibility.Hidden : Visibility.Visible)
               // 与顶栏保持一致的玻璃质感：同色背景 + 背景模糊 + 顶部分隔线
-              .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+              .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
               .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
               .border({ width: { top: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
@@ -1102,7 +1102,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
 .width('100%')
         .layoutWeight(1)
         // 液态玻璃：与首页底部导航条完全同一套参数
-        .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
+        .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
         .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
         .borderRadius(24)

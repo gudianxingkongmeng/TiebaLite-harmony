@@ -799,7 +799,7 @@ onIsDarkChange(): void {
       // 内容用 padding top 避让。不能用 height 固定，否则收起时高度不跟随。
       .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backgroundColor(glassTopBarSurface(this.bgColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: this.isForumSearch ? blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') : dividerColor(this.isDark) })

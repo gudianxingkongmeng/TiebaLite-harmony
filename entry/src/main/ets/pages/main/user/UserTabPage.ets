@@ -322,7 +322,7 @@ export default struct UserTabPage {
         Column()
           .width('100%')
           .height(24 + this.topInset)
-          .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+          .backgroundColor(glassTopBarSurface(this.bgColor, this.isDark, this.headerAlpha))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
           .position({ x: 0, y: 0 })

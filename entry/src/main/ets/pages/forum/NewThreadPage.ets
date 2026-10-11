@@ -180,7 +180,7 @@ struct NewThreadPage {
           }
         }
         .padding({ left: 12, right: 12, top: 8 + this.topInset, bottom: 8 }).width('100%')
-        .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+        .backgroundColor(glassTopBarSurface(cardBg(this.isDark), this.isDark, this.headerAlpha))
         .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
         .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })

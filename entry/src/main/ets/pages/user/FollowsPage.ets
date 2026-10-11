@@ -237,7 +237,7 @@ struct FollowsPage {
         .width('100%')
       }
       .width('100%')
-      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
       .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .position({ x: 0, y: 0 })

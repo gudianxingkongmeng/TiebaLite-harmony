@@ -465,7 +465,7 @@ export default struct HomePage {
           }
           .width('100%')
           .padding({ top: this.topInset })
-          .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+          .backgroundColor(glassTopBarSurface(this.bgColor, this.isDark, this.headerAlpha))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
           .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })

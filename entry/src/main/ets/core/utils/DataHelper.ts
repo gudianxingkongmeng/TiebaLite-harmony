@@ -339,14 +339,17 @@ export function shadowColor(isDark: boolean): string {
 
     /**
      * 顶栏玻璃统一入口：所有页面顶栏共用，保证视觉一致。
-     * 底色比常规玻璃淡（fade=0.62），避免大面积玻璃贴近主题色。
+     * 底色取「页面背景色」而非主题色——顶栏与下方内容同色，玻璃只做模糊与通透，
+     * 不会出现顶栏偏蓝、内容偏灰的割裂感。
      * headerAlpha=0 时返回透明，保持"关闭玻璃"的既有行为。
      */
-    export function glassTopBarSurface(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+    export function glassTopBarSurface(pageBgColor: string, isDark: boolean, glassAlpha: number): string {
       if (glassAlpha <= 0) {
         return 'transparent';
       }
-      return glassTintSurface(primaryColor, isDark, glassAlpha, 0, 0.62);
+      // 与下方页面同色，仅按玻璃透明度决定不透明度
+      const a = (isDark ? 0.72 : 0.62) * (0.35 + 0.65 * (glassAlpha / 100));
+      return withAlpha(pageBgColor, a);
     }
 
     /** 顶栏的液态玻璃 backgroundEffect 参数（emphasis 稍高以突出通透感） */

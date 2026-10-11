@@ -6,7 +6,7 @@ import HomePage from '../pages/main/home/HomePage';
 import ExplorePage from '../pages/main/explore/ExplorePage';
 import NotificationsPage from '../pages/main/notifications/NotificationsPage';
 import UserTabPage from '../pages/main/user/UserTabPage';
-import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../core/utils/DataHelper';
+import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface } from '../core/utils/DataHelper';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import Window from '@ohos.window';
 import { NavigationHelper } from '../core/utils/NavigationHelper';
@@ -549,10 +549,9 @@ struct Index {
         .width('100%')
         .height(50)
         .onTouch((event: TouchEvent) => this.handleTabTouch(event))
-        // 液态玻璃：density=0 且 fade=0.5 —— 底色比常规玻璃淡一半，
-        // 避免大面积玻璃底色与主题色过于接近
+        // 液态玻璃：底色取页面背景色而非主题色，与页面内容同色
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
-          glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 0, 0.5))
+          glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
         .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
         .borderRadius(18)

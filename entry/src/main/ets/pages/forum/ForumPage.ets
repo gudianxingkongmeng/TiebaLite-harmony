@@ -987,7 +987,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
       .zIndex(2)
-      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
