@@ -500,16 +500,56 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
           }
         }
       }
+      // closeReplyWindow 会把 replyPostId 清零，先取出被回复楼层 id 供增量刷新使用
+      const repliedPid = this.replyPostId;
       await AddPostRepository.getInstance().replyToThread(this.forumId, this.forumName, this.threadId, content, this.replyPostId > 0 ? this.replyPostId : undefined, undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
       this.closeReplyWindow();
       this.repo.clearThreadCache();
-      await this.loadThread(this.page);
+      await this.refreshAfterReply(repliedPid);
     } catch (e) {
       console.error('TiebaLite: Reply failed:', e);
       promptAction.showToast({ message: '回复失败', duration: 2000 });
     } finally {
       this.uploadingImages = false;
     }
+  }
+
+  /**
+   * 发帖后的增量刷新：只重新拉取被回复楼层那一页，并把新回复合并进本地数据，
+   * 不再调用 loadThread 全量刷新，避免页面重载、闪烁与滚动位置丢失。
+   * 拉取失败时退回全量刷新，保证最终一致。
+   */
+  private async refreshAfterReply(repliedPid: number): Promise<void> {
+    const targetPid = repliedPid;
+    try {
+      if (targetPid > 0) {
+        const idx = this.posts.findIndex((p: Dict) => Number(p.id || p.pid || 0) === targetPid);
+        if (idx >= 0) {
+          const target: Dict = this.posts[idx];
+          const floorNo = Number(target.floor || target.floor_no || 0);
+          const floorPage = floorNo > 0 ? Math.max(1, Math.floor((floorNo - 1) / 30) + 1) : this.page;
+          const data = await this.repo.loadFloorPage(this.threadId, targetPid, this.forumId, floorPage);
+          const fresh = this.extractPosts(data, floorPage).find((p: Dict) => Number(p.id || p.pid || 0) === targetPid);
+          if (fresh) {
+            const merged: Dict[] = [];
+            for (let i = 0; i < this.posts.length; i++) {
+              merged.push(i === idx ? fresh : this.posts[i]);
+            }
+            this.posts = merged;
+            // 楼层高度变了，重建位置表（不触发滚动）
+            this._postPosMap.clear();
+            this.scheduleReplyScroll(60);
+            promptAction.showToast({ message: '回复成功', duration: 800 });
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('TiebaLite: incremental refresh failed, fallback to full reload: ' + String(e));
+    }
+    // 主贴回复或增量失败：静默全量刷新（silent 模式不显示 loading，避免闪屏）
+    await this.loadThread(this.page, true);
+    promptAction.showToast({ message: '回复成功', duration: 800 });
   }
 
   async loadThread(initialPage?: number, silent?: boolean): Promise<void> {
