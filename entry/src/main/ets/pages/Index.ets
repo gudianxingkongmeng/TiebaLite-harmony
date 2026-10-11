@@ -6,7 +6,7 @@ import HomePage from '../pages/main/home/HomePage';
 import ExplorePage from '../pages/main/explore/ExplorePage';
 import NotificationsPage from '../pages/main/notifications/NotificationsPage';
 import UserTabPage from '../pages/main/user/UserTabPage';
-import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr } from '../core/utils/DataHelper';
+import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../core/utils/DataHelper';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import Window from '@ohos.window';
 import { NavigationHelper } from '../core/utils/NavigationHelper';
@@ -549,12 +549,17 @@ struct Index {
         .width('100%')
         .height(62)
         .onTouch((event: TouchEvent) => this.handleTabTouch(event))
-        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        // 液态玻璃：与 FAB 同一套材质，靠 density=1 让底色实一档形成层级
+        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
+          glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
+        .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
         .borderRadius(24)
         .clip(true)
-        .border({ width: 1, color: blendWithBg(this.tertiaryColor, 0.35, this.isDark, '#1E1E1E') })
-        .shadow({ radius: 10, color: blendWithBg(this.primaryColor, 0.30, this.isDark, '#000000'), offsetY: 3 })
+        // 不对称描边：上/左更亮，模拟玻璃顶面受光
+        .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
+          color: liquidGlassEdge(this.isDark, 0.5) })
+        .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 3 })
         .onAreaChange((_old: Area, newArea: Area) => {
           const w = newArea.width as number;
           if (w > 0 && Math.abs(w - this.barWidth) > 0.5) {

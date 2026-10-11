@@ -281,8 +281,10 @@ export function shadowColor(isDark: boolean): string {
       return 30;
     }
     
-    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number): string {
-      const base = isDark ? 0.42 : 0.34;
+    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number, density: number = 0): string {
+      // density 用于同材质下的层级区分：操作条类传 1，底色略实一档
+      const extra = Math.max(0, Math.min(1, density)) * 0.12;
+      const base = (isDark ? 0.42 : 0.34) + extra;
       const a = base * (0.35 + 0.65 * (glassAlpha / 100));
       return withAlpha(primaryColor, a);
     }
@@ -313,19 +315,24 @@ export function shadowColor(isDark: boolean): string {
      */
     export function liquidGlassEffect(emphasis: number = 0, glassAlpha: number = 25): BackgroundEffectOptions {
       const e = Math.max(0, Math.min(1, emphasis));
+      // color 必须用字符串 RGBA。用数字会被当作 ARGB（0x0AFFFFFF = alpha 0x0A 的黑色），
+      // 叠加后整块变纯黑。
+      const tintAlpha = Math.round(10 + 8 * e); // 0x0A ~ 0x12
       return {
         radius: glassBlurLevel(glassAlpha) + Math.round(8 * e),
         saturation: 1.35 + 0.35 * e,
         brightness: 1.04 + 0.06 * e,
-        color: 0x0A + Math.round(0x08 * e)
+        color: '#' + tintAlpha.toString(16).padStart(2, '0') + 'FFFFFF'
       };
     }
 
     /** 液态玻璃的边缘高光描边颜色：顶部亮、底部暗，模拟透镜受光。 */
-    export function liquidGlassEdge(isDark: boolean, emphasis: number = 0): number {
-      const base = isDark ? 0x40FFFFFF : 0x66FFFFFF;
-      const add = Math.round(0x1A * Math.max(0, Math.min(1, emphasis)));
-      return base + add;
+    export function liquidGlassEdge(isDark: boolean, emphasis: number = 0): string {
+      const e = Math.max(0, Math.min(1, emphasis));
+      // 边缘高光：深色背景下用更亮的白，浅色背景下稍暗一点才看得见
+      const rgb = isDark ? '#FFFFFF' : '#F2F6FF';
+      const alpha = isDark ? 0.4 + 0.16 * e : 0.55 + 0.2 * e;
+      return withAlpha(rgb, alpha);
     }
     
 export function withAlpha(color: string, alpha: number): string {

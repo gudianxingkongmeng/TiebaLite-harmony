@@ -35,7 +35,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
-import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha } from '../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, liquidGlassEffect, liquidGlassEdge } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
 import PollCard from '../../components/PollCard';
@@ -1099,8 +1099,13 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
         .alignContent(Alignment.TopStart)
         .width('100%')
         .layoutWeight(1)
-        .backgroundColor(this.isDark ? 'rgba(30,30,30,0.75)' : 'rgba(255,255,255,0.65)')
-        .backdropBlur(40)
+        // 液态玻璃：与底部导航条同一套材质（density=1）
+        .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
+        .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
+        // 不对称描边：上/左更亮模拟受光
+        .border({ width: { top: 1.4, left: 0, right: 0, bottom: 0.8 },
+          color: liquidGlassEdge(this.isDark, 0.5) })
       }
 
       BackToTopButton({

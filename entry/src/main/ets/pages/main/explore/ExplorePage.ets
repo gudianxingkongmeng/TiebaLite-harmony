@@ -1272,9 +1272,8 @@ export default struct ExplorePage {
     .padding({ top: 8, bottom: 8, left: 12, right: 12 })
     .width(46).height(46)
     .borderRadius(23 * this.fabRadius / 100)
-    // 与 FAB 加号同一套液态玻璃语言，但底色更实、模糊更强、描边更亮，
-    // 视觉上比加号按钮更"重"，以体现这是展开的次级操作层。
-    .backgroundColor(blendWithBg(this.primaryColor, 0.22, this.isDark, '#1E1E1E'))
+    // 与加号完全同一套玻璃底色，只靠 emphasis 提升饱和/模糊/边缘来体现"更重"
+    .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
     .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
     .backgroundEffect(liquidGlassEffect(1, this.headerAlpha))
     .border({ width: { top: 1.6, left: 1.6, right: 1.2, bottom: 0.8 },
@@ -1292,15 +1291,14 @@ export default struct ExplorePage {
         .rotate({ angle: this.showFabMenu ? 135 : 0 })
         .animation({ duration: 200, curve: Curve.FastOutSlowIn })
     }
-    .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
+.width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     // 液态玻璃：模糊之上叠加色彩增强，提升通透感
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBlurLevel(this.headerAlpha))
     .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
-    .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+    // 只保留一条不对称描边：上/左更亮模拟受光，下/右更暗
     .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
       color: liquidGlassEdge(this.isDark, 0) })
-    .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }

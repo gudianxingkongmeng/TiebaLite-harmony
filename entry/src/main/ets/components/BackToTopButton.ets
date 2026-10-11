@@ -1,5 +1,5 @@
 import display from '@ohos.display';
-import { shadowColor, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow } from '../core/utils/DataHelper';
+import { shadowColor, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../core/utils/DataHelper';
 import { GripDetector } from '../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../core/utils/FabPositionManager';
 
@@ -162,7 +162,10 @@ export default struct BackToTopButton {
         .width(44).height(44).borderRadius(22 * this.fabRadius / 100)
         .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
         .backdropBlur(glassBlurLevel(this.headerAlpha))
-        .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+        .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
+        // 不对称描边：上/左更亮模拟受光
+        .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
+          color: liquidGlassEdge(this.isDark, 0) })
         .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 3 })
         .position({ bottom: 64, right: 16 })
         .translate({ x: (this.showScrollTop ? (this.fabLeft ? -(this.screenWidth - 76) : 0) : (this.fabLeft ? -(this.screenWidth - 76) - 60 : 60)) + this.fabDx, y: this.fabDy })
