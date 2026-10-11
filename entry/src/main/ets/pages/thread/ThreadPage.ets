@@ -56,10 +56,6 @@ class PostPosInfo {
   // 内容坐标系中的顶部偏移（= globalPosition.y + scrollOffset）
   y: number = 0;
   h: number = 0;
-  // 最近一次 onAreaChange 时的窗口坐标（globalPosition.y）。
-  // 滚动时 onAreaChange 不一定重新触发，但 globalPosition 会随滚动实时变化，
-  // 因此保留 Area 引用可在滚动时取到当前真实屏幕位置，避免用过期坐标计算。
-  area?: Area;
 }
 
 class EmojiItem {
@@ -239,6 +235,10 @@ struct ThreadPage {
   @State jumpTargetPage: number = 0;
   private replyPanelH: number = 180;
   private _replyScrollTimer: number = -1;
+  // 首次滚动用动画，之后的校正用瞬时定位，避免连续 scrollTo 重启动画互相抵消
+  private _replyScrollAnimated: boolean = false;
+  // 键盘是否已经触发过顶起定位；键盘收起后不再重算，避免把内容拉回底部
+  private _replyKbPositioned: boolean = false;
   private _replyBarTouchX: number = 0;
   private _replyBarTouchY: number = 0;
   private _replyBarMoved: boolean = false;
@@ -382,13 +382,15 @@ struct ThreadPage {
             if (hPx <= 0) {
               this.keyboardHeight = 0;
               this._lastKbHpx = 0;
-              this.scheduleReplyScroll(300);
+              // 键盘收起：回复面板落回屏幕底部，此时内容已就位，
+              // 不需要再把楼层往上顶（否则会把已顶起的内容拉回底部）。
               return;
             }
             const avoidHpx = readKbAvoidHpx();
             
             if (avoidHpx > 0) {
-              this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
+this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
+            this._replyKbPositioned = true;
             } else if (this._lastKbHpx > 0 && this.keyboardHeight > 0) {
               this.keyboardHeight = Math.max(0, this.keyboardHeight + (this._lastKbHpx - hPx) / this._density);
             } else {
@@ -434,7 +436,8 @@ struct ThreadPage {
           logKbInfo('kbDidHide', info);
           this._lastKbHpx = 0;
           this.keyboardHeight = 0;
-          this.scheduleReplyScroll(300);
+          // 键盘收起后不再重新定位：内容此时应保持在键盘弹出时顶起的位置，
+          // 否则会用「键盘高度=0」的基准把它拉回底部。
         });
         win.on('keyboardHeightChange', (h: number) => { applyKbDelta(h); });
         win.on('avoidAreaChange', () => {
@@ -1028,11 +1031,7 @@ struct ThreadPage {
                       const h = a.height as number;
                       info.y = gy + this.scroller.currentOffset().yOffset;
                       info.h = h;
-                      info.area = a;
                       this._postPosMap.set(key, info);
-                      if (this.showReply && key === this.replyPostId) {
-                        this.scheduleReplyScroll(350);
-                      }
                     }
                   })
                 })
@@ -1998,11 +1997,9 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               this.openReply();
               // 面板高度要等布局完成才准确，先用兜底值顶一次，随后在
               // onAreaChange / 键盘事件里再次校正，避免被回复楼层被面板挡住。
-              this.replyPanelH = 0;
+this._replyScrollAnimated = true;
+              this._replyKbPositioned = false;
               this.scrollToReplyTarget();
-              this.scheduleReplyScroll(120);
-              this.scheduleReplyScroll(320);
-              this.scheduleReplyScroll(500);
             }, 12)
         }
         .gesture(
@@ -2263,57 +2260,44 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     this.replyHint = '';
     this.showReply = true;
     this.openReply();
-    // 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
-    this.replyPanelH = 0;
+// 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
+    this._replyScrollAnimated = true;
+    this._replyKbPositioned = false;
     this.scrollToReplyTarget();
-    this.scheduleReplyScroll(150);
-    this.scheduleReplyScroll(350);
   }
-
-  private onFabDragStartXGuard(): void { }
 
   private scrollToReplyTarget(): void {
     if (!this.showReply) return;
-    const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
-    const panelH = this.replyPanelH > 40 ? this.replyPanelH : 180;
-    const panelTop = screenH - this.keyboardHeight - panelH;
+    // 键盘收起后面板已落回底部，内容保持在键盘弹出时的位置即可，
+    // 不再重新定位（否则会用「键盘高度=0」的基准把已顶起的内容拉回底部）。
+    if (this.keyboardHeight <= 0 && this._replyKbPositioned) {
+      return;
+    }
     const cur = this.scroller.currentOffset().yOffset;
 
-    // 主贴回复（replyPostId = 0）：没有具体楼层，直接滚到内容底部，
-    // 这样底部楼层能完整显示在回复面板上方。
+    // 主贴回复（replyPostId = 0）：没有具体楼层目标，直接滚到底。
     if (this.replyPostId <= 0) {
-      this.scroller.scrollTo({ xOffset: 0, yOffset: 100000, animation: { duration: 260, curve: Curve.EaseInOut } });
-      console.error('[RS] main-thread reply -> scroll to bottom, panelTop=' + panelTop.toFixed(1));
+      this._replyScrollAnimated = false;
+      this.scroller.scrollEdge(Edge.Bottom);
       return;
     }
 
     const info = this._postPosMap.get(this.replyPostId);
     if (!info) {
-      console.error('[RS] no info for pid=' + this.replyPostId + ' mapSize=' + this._postPosMap.size);
       return;
     }
-    const h = info.h > 0 ? info.h : 60;
-    // 优先用 Area 的实时 globalPosition（滚动时它随内容一起移动）。
-    let curScreenY: number = -1;
-    if (info.area) {
-      const gy = info.area.globalPosition?.y;
-      if (typeof gy === 'number' && isFinite(gy)) { curScreenY = gy; }
+    const panelH = this.replyPanelH > 40 ? this.replyPanelH : 180;
+    const winH = this.screenHeight > 0 ? this.screenHeight : 800;
+    // 面板顶边（窗口坐标）= 窗口高 - 键盘高 - 面板高
+    const desiredTop = Math.max(8, winH - this.keyboardHeight - panelH - 16 - info.h);
+    const targetScroll = Math.max(0, info.y - desiredTop);
+    // 已在目标位置附近就不再动，避免反复重启滚动动画互相抵消
+    if (Math.abs(cur - targetScroll) <= 8) {
+      return;
     }
-    const desiredTop = panelTop - 16 - h;
-    let targetScroll: number;
-    if (curScreenY >= 0) {
-      targetScroll = cur + (curScreenY - desiredTop);
-    } else {
-      targetScroll = info.y - desiredTop;
-    }
-    if (targetScroll < 0) targetScroll = 0;
-    console.error('[RS] pid=' + this.replyPostId + ' cur=' + cur.toFixed(1) +
-      ' curScreenY=' + curScreenY.toFixed(1) + ' infoY=' + info.y.toFixed(1) +
-      ' h=' + h.toFixed(1) + ' panelH=' + panelH + ' panelTop=' + panelTop.toFixed(1) +
-      ' kb=' + this.keyboardHeight.toFixed(1) + ' target=' + targetScroll.toFixed(1));
-    if (Math.abs(cur - targetScroll) > 3) {
-      this.scroller.scrollTo({ xOffset: 0, yOffset: targetScroll, animation: { duration: 260, curve: Curve.EaseInOut } });
-    }
+    const dur = this._replyScrollAnimated ? 0 : 260;
+    this._replyScrollAnimated = false;
+    this.scroller.scrollTo({ xOffset: 0, yOffset: targetScroll, animation: { duration: dur, curve: Curve.EaseInOut } });
   }
 
   /**
