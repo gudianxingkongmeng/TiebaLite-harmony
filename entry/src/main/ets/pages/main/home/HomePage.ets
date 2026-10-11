@@ -65,6 +65,7 @@ export default struct HomePage {
   @State screenWidth: number = 360;
   @State screenHeight: number = 780;
   @State topInset: number = 24;
+  @State bottomInset: number = 0;
   @Prop @Watch('onActiveChanged') active: boolean = true;
 
   private api: ITiebaApi = TiebaApi.getInstance();
@@ -155,9 +156,13 @@ export default struct HomePage {
       const ctx = getContext(this) as common.UIAbilityContext;
       window.getLastWindow(ctx).then((win: window.Window) => {
         const avoidArea = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        const density = display.getDefaultDisplaySync().densityPixels;
         if (avoidArea.topRect.height > 0) {
-          const density = display.getDefaultDisplaySync().densityPixels;
           this.topInset = Math.max(20, Math.round(avoidArea.topRect.height / density));
+        }
+        // 底部安全区（手势条/虚拟键），用于给底部导航栏留出滚动空间
+        if (avoidArea.bottomRect.height > 0) {
+          this.bottomInset = Math.round(avoidArea.bottomRect.height / density);
         }
       }).catch(() => { });
     } catch (e) {
@@ -817,12 +822,15 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
                 }
             }
             .width('100%')
-            .padding({ bottom: 66 })
+            // 底部让出「导航栏 62 + 间距 10 + 系统安全区」，
+            // 保证最后一行贴吧能滚到导航栏上方
+            .padding({ bottom: 72 + this.bottomInset })
             .backgroundColor(blendWithBg(this.primaryColor, 0.04, this.isDark, '#1E1E1E'))
           }
             .scrollBar(BarState.Off)
           .width('100%').layoutWeight(1)
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+          // 不能 expandSafeArea(BOTTOM)：否则 Scroll 会延伸进系统导航条区域，
+          // 抵消掉 padding bottom，导致最后一行贴吧被底部导航栏遮住且无法滚上来。
           .backgroundColor(this.bgColor)
           .edgeEffect(EdgeEffect.None)
           .onReachEnd(() => {

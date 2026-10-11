@@ -53,8 +53,13 @@ class ImageUploadResult {
 }
 
 class PostPosInfo {
+  // 内容坐标系中的顶部偏移（= globalPosition.y + scrollOffset）
   y: number = 0;
   h: number = 0;
+  // 最近一次 onAreaChange 时的窗口坐标（globalPosition.y）。
+  // 滚动时 onAreaChange 不一定重新触发，但 globalPosition 会随滚动实时变化，
+  // 因此保留 Area 引用可在滚动时取到当前真实屏幕位置，避免用过期坐标计算。
+  area?: Area;
 }
 
 class EmojiItem {
@@ -1010,11 +1015,12 @@ struct ThreadPage {
                   .onAreaChange((_o: Area, a: Area) => {
                     const key = Number(post.id || post.pid || 0);
                     if (key > 0) {
+                      const info = this._postPosMap.get(key) || new PostPosInfo();
                       const gy = a.globalPosition.y as number;
                       const h = a.height as number;
-                      const info = new PostPosInfo();
                       info.y = gy + this.scroller.currentOffset().yOffset;
                       info.h = h;
+                      info.area = a;
                       this._postPosMap.set(key, info);
                       if (this.showReply && key === this.replyPostId) {
                         this.scheduleReplyScroll(350);
@@ -2229,17 +2235,29 @@ Text(this.uploadingImages ? '上传中...' : '发送')
   private scrollToReplyTarget(): void {
     if (!this.showReply || this.replyPostId <= 0) return;
     const info = this._postPosMap.get(this.replyPostId);
-    if (!info || info.h <= 0) return;
+    if (!info) return;
     const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
-    // 回复面板实际顶边：窗口底 - 键盘高度 - 面板高度。
-    // 键盘未弹出时 keyboardHeight 为 0，面板落在窗口底部，此时上方可用区域更小，
-    // 需要把被回复楼层顶到更靠上的位置，否则会被面板挡住看不到。
     const panelH = this.replyPanelH > 40 ? this.replyPanelH : 180;
     const panelTop = screenH - this.keyboardHeight - panelH;
-    // 面板顶边再留一点余量，确保楼层标题完整可见
-    const targetScreenY = panelTop - 24 - info.h;
-    const targetScroll = Math.max(0, info.y - targetScreenY);
+    const h = info.h > 0 ? info.h : 60;
+    // 优先用 Area 的实时 globalPosition（滚动时它随内容一起移动）。
+    // 楼层当前在屏幕上的实际顶部坐标；若拿不到则回退到内容坐标换算。
+    let curScreenY: number = -1;
+    if (info.area) {
+      const gy = info.area.globalPosition?.y;
+      if (typeof gy === 'number' && isFinite(gy)) { curScreenY = gy; }
+    }
     const cur = this.scroller.currentOffset().yOffset;
+    let targetScroll: number;
+    if (curScreenY >= 0) {
+      // 需要的位移：把楼层顶部移到目标屏幕位置
+      const desiredTop = panelTop - 16 - h;
+      targetScroll = cur + (curScreenY - desiredTop);
+    } else {
+      const desiredTop = panelTop - 16 - h;
+      targetScroll = info.y - desiredTop;
+    }
+    if (targetScroll < 0) targetScroll = 0;
     if (Math.abs(cur - targetScroll) > 3) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: targetScroll, animation: { duration: 260, curve: Curve.EaseInOut } });
     }
