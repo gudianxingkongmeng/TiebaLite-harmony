@@ -1,7 +1,7 @@
 ﻿import { Dict } from '../core/types/Dict';
 import { textPrimary, textSecondary, pageBg, cardBg, blendWithBg } from '../core/utils/DataHelper';
 import EmojiImage from './EmojiImage';
-import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix } from './EmojiManager';
+import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix, splitEmojiText } from './EmojiManager';
 import { PhotoUrlCache } from '../core/utils/ThreadImageFetcher';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import NetworkUtil from '../core/utils/NetworkUtil';
@@ -18,6 +18,7 @@ interface ContentGroup {
 interface UrlSeg {
   text: string;
   isUrl: boolean;
+  isEmoji: boolean;
 }
 
 @Component
@@ -84,19 +85,27 @@ export default struct PbContentRender {
     if (!text) return out;
     const cleaned = text.replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
     const re = /(https?:\/\/[^\s\u4e00-\u9fff]+)/g;
-    const trail: string = '。，、；：！？…()（）[]【】{}"\'';
+    const trail: string = '，。！？、；：）】》」』"\'.,!?;:)]}';
     let last = 0;
     let m: RegExpExecArray | null = null;
     while ((m = re.exec(cleaned)) !== null) {
-      if (m.index > last) out.push({ text: cleaned.substring(last, m.index), isUrl: false });
+      if (m.index > last) out.push({ text: cleaned.substring(last, m.index), isUrl: false, isEmoji: false });
       let u = m[0];
       while (u.length > 1 && trail.indexOf(u[u.length - 1]) >= 0) u = u.substring(0, u.length - 1);
-      if (u.length > 0) out.push({ text: u, isUrl: true });
+      if (u.length > 0) out.push({ text: u, isUrl: true, isEmoji: false });
       last = m.index + m[0].length;
     }
-    if (last < cleaned.length) out.push({ text: cleaned.substring(last), isUrl: false });
-    if (out.length === 0) out.push({ text: cleaned, isUrl: false });
-    return out;
+    if (last < cleaned.length) out.push({ text: cleaned.substring(last), isUrl: false, isEmoji: false });
+    if (out.length === 0) out.push({ text: cleaned, isUrl: false, isEmoji: false });
+    // 再按表情标记细分纯文本段，使「文字+表情混排」也能渲染成图片
+    const merged: UrlSeg[] = [];
+    for (const seg of out) {
+      if (seg.isUrl) { merged.push(seg); continue; }
+      for (const es of splitEmojiText(seg.text)) {
+        merged.push({ text: es.text, isUrl: false, isEmoji: es.isEmoji });
+      }
+    }
+    return merged.length > 0 ? merged : out;
   }
 
   private openUrl(url: string): void {
@@ -193,7 +202,11 @@ export default struct PbContentRender {
                     .verticalAlign(ImageSpanAlignment.CENTER)
 } else if (String(item.text || item.c || '')) {
                   ForEach(this.splitUrlText(String(item.text || item.c || '')), (seg: UrlSeg) => {
-                    if (seg.isUrl) {
+                    if (seg.isEmoji) {
+                      ImageSpan(this.getEmojiUrlFromText(seg.text).replace('https://', 'http://'))
+                        .width(20).height(20).objectFit(ImageFit.Contain)
+                        .verticalAlign(ImageSpanAlignment.CENTER)
+                    } else if (seg.isUrl) {
                       ImageSpan($r('app.media.ic_link'))
                         .width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
                         .objectFit(ImageFit.Contain).verticalAlign(ImageSpanAlignment.CENTER)
@@ -206,11 +219,15 @@ export default struct PbContentRender {
                         .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
                         .fontColor(textPrimary(this.isDark))
                     }
-                  }, (seg: UrlSeg) => seg.text + (seg.isUrl ? '#u' : '#t'))
+                  }, (seg: UrlSeg) => seg.text + (seg.isUrl ? '#u' : (seg.isEmoji ? '#e' : '#t')))
                 }
               } else if (Number(item.type) === 40 && (item.c || item.text)) {
                 ForEach(this.splitUrlText(String(item.c || item.text || '')), (seg: UrlSeg) => {
-                  if (seg.isUrl) {
+                  if (seg.isEmoji) {
+                    ImageSpan(this.getEmojiUrlFromText(seg.text).replace('https://', 'http://'))
+                      .width(20).height(20).objectFit(ImageFit.Contain)
+                      .verticalAlign(ImageSpanAlignment.CENTER)
+                  } else if (seg.isUrl) {
                     ImageSpan($r('app.media.ic_link'))
                       .width(Math.round(14 * this.fontScale)).height(Math.round(14 * this.fontScale))
                       .objectFit(ImageFit.Contain).verticalAlign(ImageSpanAlignment.CENTER)
@@ -223,7 +240,7 @@ export default struct PbContentRender {
                       .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))
                       .fontColor(textPrimary(this.isDark))
                   }
-                }, (seg: UrlSeg) => seg.text + (seg.isUrl ? '#u' : '#t'))
+                }, (seg: UrlSeg) => seg.text + (seg.isUrl ? '#u' : (seg.isEmoji ? '#e' : '#t')))
               } else if (Number(item.type) === 4 && (item.text || item.c)) {
                 Span(String(item.text || item.c || ''))
                   .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale))

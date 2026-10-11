@@ -25,7 +25,7 @@ import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import BackToTopButton from '../../components/BackToTopButton';
 import EmojiImage from '../../components/EmojiImage';
-import { registerEmoji, richEditorToText, isEmojiText, resolveEmojiId } from '../../components/EmojiManager';
+import { registerEmoji, richEditorToText, isEmojiText, resolveEmojiId, splitEmojiText, EmojiSeg } from '../../components/EmojiManager';
 import { EmoticonInfo, getAllEmoticons } from '../../components/EmojiManager';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
@@ -1035,13 +1035,18 @@ struct SubPostsPage {
           Text() {
             ForEach(sub.content as Dict[], (item: Dict) => {
               if (Number(item.type) === 0) {
-                if (String(item.text || item.c || '') && isEmojiText(String(item.text || item.c || '')) && resolveEmojiId(String(item.text || item.c || ''))) {
-                  ImageSpan(resolveEmojiId(String(item.text || item.c || '')).replace('https://', 'http://'))
-                    .width(20).height(20).objectFit(ImageFit.Contain)
-                    .verticalAlign(ImageSpanAlignment.CENTER)
-                } else if (String(item.text || item.c || '')) {
-                  Span(this.cleanAtReference(String(item.text || item.c || '')))
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                if (String(item.text || item.c || '')) {
+                  // 表情可能与文字混排在同一段 text 里，按段拆开渲染
+                  ForEach(splitEmojiText(String(item.text || item.c || '')), (seg: EmojiSeg) => {
+                    if (seg.isEmoji) {
+                      ImageSpan(resolveEmojiId(seg.text).replace('https://', 'http://'))
+                        .width(20).height(20).objectFit(ImageFit.Contain)
+                        .verticalAlign(ImageSpanAlignment.CENTER)
+                    } else {
+                      Span(this.cleanAtReference(seg.text))
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    }
+                  }, (seg: EmojiSeg) => seg.text + (seg.isEmoji ? '#e' : '#t'))
                 }
               } else if (Number(item.type) === 2 || Number(item.type) === 6 || Number(item.type) === 7 || Number(item.type) === 9 || Number(item.type) === 10 || Number(item.type) === 11 || Number(item.type) === 12 || Number(item.type) === 13) {
                 if (getEmojiUrl(item)) {

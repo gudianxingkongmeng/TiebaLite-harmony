@@ -43,7 +43,7 @@ import { pollDataToDict } from '../../proto/PollProto';
 import { uploadChunked } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
 import MD5 from '../../core/encryption/MD5';
-import { richEditorToText, getAllEmoticons, EmoticonInfo } from '../../components/EmojiManager';
+import { richEditorToText, getAllEmoticons, EmoticonInfo, splitEmojiText, EmojiSeg } from '../../components/EmojiManager';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
 
 class ImageUploadResult {
@@ -2097,8 +2097,18 @@ this._replyScrollAnimated = true;
               if ((sub.content as Dict[]) && (sub.content as Dict[]).length > 0) {
                 ForEach(sub.content as Dict[], (item: Dict) => {
                   if (Number(item.type) === 0 && String(item.text || '').length > 0) {
-                    Span(String(item.text))
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    // 贴吧会把表情塞在 type 0 的 text 里（整段就是表情，或与文字混排）。
+                    // 直接 Span(item.text) 会把 #2 原样打印出来，按段拆开渲染。
+                    ForEach(splitEmojiText(String(item.text)), (seg: EmojiSeg) => {
+                      if (seg.isEmoji) {
+                        ImageSpan(PbContentRender.resolveEmojiId(seg.text).replace('https://', 'http://'))
+                          .width(20).height(20).objectFit(ImageFit.Contain)
+                          .verticalAlign(ImageSpanAlignment.CENTER)
+                      } else {
+                        Span(seg.text)
+                          .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                      }
+                    }, (seg: EmojiSeg) => seg.text + (seg.isEmoji ? '#e' : '#t'))
                   } else if ((Number(item.type) === 2 || Number(item.type) === 6 || Number(item.type) === 7 ||
                               Number(item.type) === 9 || Number(item.type) === 10 || Number(item.type) === 11 ||
                               Number(item.type) === 12 || Number(item.type) === 13)) {

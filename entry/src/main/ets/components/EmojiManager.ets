@@ -184,3 +184,37 @@ export function getEmojiUrlForItem(item: Dict): string {
   if (!rawId) return '';
   return resolveEmojiId(rawId);
 }
+
+export interface EmojiSeg {
+  text: string;
+  isEmoji: boolean;
+}
+
+/**
+ * 把一段文本切成「普通文本 / 表情」若干段。
+ *
+ * 之前各渲染器只在「整段文本恰好就是一个表情」时才渲染图片，
+ * 一旦表情和文字混在一起（如「哈哈#2」，或贴吧把表情塞在 type 0 的 text 里），
+ * 就走 else 分支原样输出，用户看到字面的 #2。
+ *
+ * 这里显式匹配表情标记，并且必须能解析出真实 URL 才认定为表情，
+ * 避免把正文里的普通数字误当成表情。
+ */
+export function splitEmojiText(text: string): EmojiSeg[] {
+  const out: EmojiSeg[] = [];
+  if (!text) return out;
+  const tokenRe = /[#＃]\s*emot(?:ion|icon)\s*[:：]?\s*\d+|[#＃]\s*\d+|(?:image_emoticon|image_emotion|shoubai_emoji|tsj_emoji|tb_emoji|new_emoticon|tieba_emoji|emotion_|emoticon_|emoji_|bai_emoji)\d*/gi;
+  let last = 0;
+  let m: RegExpExecArray | null = null;
+  while ((m = tokenRe.exec(text)) !== null) {
+    const tok = m[0];
+    const url = resolveEmojiId(tok);
+    // 解析不出真实图片地址就当普通文本，避免把正文数字误判成表情
+    if (!url) continue;
+    if (m.index > last) out.push({ text: text.substring(last, m.index), isEmoji: false });
+    out.push({ text: tok, isEmoji: true });
+    last = m.index + tok.length;
+  }
+  if (last < text.length) out.push({ text: text.substring(last), isEmoji: false });
+  return out;
+}
