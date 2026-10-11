@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import display from '@ohos.display';
@@ -17,7 +17,7 @@ import RefreshAnimation from '../../../components/RefreshAnimation';
 import BackToTopButton from '../../../components/BackToTopButton';
 import { Dict } from '../../../core/types/Dict';
 import ITiebaApi, { ApiCallback } from '../../../core/api/ITiebaApi';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../../core/utils/DataHelper';
 
 const TAB_NAMES: string[] = ['回复', '@ 我', '赞'];
 
@@ -844,8 +844,9 @@ export default struct NotificationsPage {
           .position({ left: this.tabIndicatorOffset, bottom: 0 })
       }
       .width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
@@ -1084,4 +1085,3 @@ export default struct NotificationsPage {
     return month + '-' + day + ' ' + d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
   }
 }
-

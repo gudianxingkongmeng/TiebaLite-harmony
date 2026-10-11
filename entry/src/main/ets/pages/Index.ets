@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { TopInsetHelper } from '../core/utils/TopInsetHelper';
 import { AppRouter } from '../components/PbContentRender';
@@ -520,24 +520,24 @@ struct Index {
             ForEach(this.tabs, (tab: string, index: number) => {
               Column() {
                 Image(this.iconResources[index])
-                  .width(24).height(24)
+                  .width(21).height(21)
                   .fillColor(index === this.currentTab ? textAccent(this.primaryColor, this.isDark) : textSecondary(this.isDark))
                 if (this.showNavLabels) {
                   Text(tab)
-                    .fontFamily(this.appFontFamily).fontSize(11)
+                    .fontFamily(this.appFontFamily).fontSize(10)
                     .fontColor(index === this.currentTab ? textAccent(this.primaryColor, this.isDark) : textSecondary(this.isDark))
-                    .margin({ top: 2 })
+                    .margin({ top: 1 })
                 }
                 if (index === this.currentTab) {
                   Column()
                     .width(this.indicatorWidth)
-                    .height(3)
+                    .height(2.5)
                     .backgroundColor(this.primaryColor)
                     .borderRadius(2)
-                    .margin({ top: 4 })
+                    .margin({ top: 3 })
                 }              }
               .layoutWeight(1)
-              .padding({ top: 10, bottom: 10 })
+              .padding({ top: 6, bottom: 6 })
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
             })
@@ -547,14 +547,15 @@ struct Index {
           .hitTestBehavior(HitTestMode.None)
         }
         .width('100%')
-        .height(62)
+        .height(50)
         .onTouch((event: TouchEvent) => this.handleTabTouch(event))
-        // 液态玻璃：与 FAB 同一套材质，靠 density=1 让底色实一档形成层级
+        // 液态玻璃：density=0 且 fade=0.5 —— 底色比常规玻璃淡一半，
+        // 避免大面积玻璃底色与主题色过于接近
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
-          glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
+          glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 0, 0.5))
         .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
-        .borderRadius(24)
+        .borderRadius(18)
         .clip(true)
         // 不对称描边：上/左更亮，模拟玻璃顶面受光
         .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
@@ -569,9 +570,9 @@ struct Index {
         })
         Blank()
       }
-      .width('100%')
-      .padding({ left: 32, right: 32 })
-      .position({ bottom: 10 + this.bottomInset })
+.width('100%')
+        .padding({ left: 40, right: 40 })
+        .position({ bottom: 8 + this.bottomInset })
 
       if (this.showClipLinkDialog) {
         Column() {

@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
 import AddPostRepository from '../../core/repository/AddPostRepository';
 import { textPrimary, textSecondary, textTertiary, pageBg, cardBg, blendWithBg } from '../../core/utils/DataHelper';

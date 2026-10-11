@@ -1,4 +1,4 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -8,7 +8,7 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import { Dict } from '../../core/types/Dict';
 import { TiebaApi } from '../../core/api/TiebaApi';
-import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, withAlpha } from '../../core/utils/DataHelper';
+import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
@@ -237,8 +237,9 @@ struct FollowsPage {
         .width('100%')
       }
       .width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .position({ x: 0, y: 0 })
       .zIndex(3)
         if (this.currentTab === 0) {

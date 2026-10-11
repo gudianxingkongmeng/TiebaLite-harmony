@@ -1,4 +1,4 @@
-import { TopInsetHelper } from '../../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import window from '@ohos.window';
@@ -8,7 +8,7 @@ import AccountManager, { Account } from '../../../core/auth/AccountManager';
 import Avatar from '../../../components/Avatar';
 import UserProfileRepository from '../../../core/repository/UserProfileRepository';
 import { Dict } from '../../../core/types/Dict';
-import { getStr, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, darkenColor, withAlpha } from '../../../core/utils/DataHelper';
+import { getStr, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, darkenColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../../core/utils/DataHelper';
 import ThemeProvider from '../../../core/theme/ThemeProvider';
 import { DarkMode } from '../../../core/theme/ThemeConfig';
 import DeviceFingerprint from '../../../core/device/DeviceFingerprint';
@@ -322,8 +322,9 @@ export default struct UserTabPage {
         Column()
           .width('100%')
           .height(24 + this.topInset)
-          .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+          .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
           .position({ x: 0, y: 0 })
           .zIndex(5)
           .hitTestBehavior(HitTestMode.None)

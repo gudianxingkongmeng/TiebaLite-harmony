@@ -1,4 +1,4 @@
-import { Dict } from '../core/types/Dict';
+﻿import { Dict } from '../core/types/Dict';
 import Avatar from './Avatar';
 import ThreadImageGrid from './ThreadImageGrid';
 import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, blendWithBg, darkenColor, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';

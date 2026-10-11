@@ -1,8 +1,8 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import webview from '@ohos.web.webview';
 
@@ -52,11 +52,14 @@ struct WebViewPage {
         }
       }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-.position({ x: 0, y: 0 })
-.zIndex(2)
+
+.position({ x: 0, y: 0 })
+
+.zIndex(2)
 
       if (this.progress > 0 && this.progress < 100) {
         Row() {
@@ -131,4 +134,3 @@ struct WebViewPage {
     }
   }
 }
-

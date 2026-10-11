@@ -1,4 +1,4 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';

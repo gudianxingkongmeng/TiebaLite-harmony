@@ -35,7 +35,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
-import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, liquidGlassEffect, liquidGlassEdge } from '../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
 import PollCard from '../../components/PollCard';
@@ -811,8 +811,9 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
       }
       .width('100%')
       .padding({ top: this.topInset })
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: this.showFixedBar ? 0 : 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .position({ x: 0, y: 0 })
       .zIndex(2)
@@ -973,8 +974,9 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
               }
               .visibility(this.showFixedBar ? Visibility.Hidden : Visibility.Visible)
               // 与顶栏保持一致的玻璃质感：同色背景 + 背景模糊 + 顶部分隔线
-              .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-              .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+              .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+              .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
               .border({ width: { top: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
               if (this.canLoadPrev && !this.jumpHintFloor) {
@@ -1097,15 +1099,16 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
             }
         }
         .alignContent(Alignment.TopStart)
-        .width('100%')
+.width('100%')
         .layoutWeight(1)
-        // 液态玻璃：与底部导航条同一套材质（density=1）
+        // 液态玻璃：与首页底部导航条完全同一套参数
         .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
         .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
-        // 不对称描边：上/左更亮模拟受光
-        .border({ width: { top: 1.4, left: 0, right: 0, bottom: 0.8 },
-          color: liquidGlassEdge(this.isDark, 0.5) })
+        .borderRadius(24)
+        // 不对称描边：仅上边缘更亮（左右与页面齐平，不显示侧边高光）
+        .border({ width: { top: 1.4, bottom: 0.8 }, color: liquidGlassEdge(this.isDark, 0.5) })
+        .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 3 })
       }
 
       BackToTopButton({

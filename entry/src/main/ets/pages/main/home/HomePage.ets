@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import { NavigationHelper } from '../../../core/utils/NavigationHelper';
@@ -20,7 +20,7 @@ import PullToRefresh from '../../../components/PullToRefresh';
 import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect } from '../../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
@@ -465,8 +465,9 @@ export default struct HomePage {
           }
           .width('100%')
           .padding({ top: this.topInset })
-          .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(this.bgColor, this.headerTint / 100) : this.bgColor), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))
+          .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
           .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
           .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
           .position({ x: 0, y: 0 })
           .zIndex(2)
@@ -1219,4 +1220,3 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
     saveRecentForumGlobal(forum);
   }
 }
-

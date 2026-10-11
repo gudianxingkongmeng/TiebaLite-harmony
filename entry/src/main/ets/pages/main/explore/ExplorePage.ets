@@ -20,8 +20,7 @@ import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
-import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, 
-textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../../../core/utils/DataHelper';
+import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../../core/utils/DataHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -1047,8 +1046,9 @@ export default struct ExplorePage {
             }
           })
         }
-        .width('100%').backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(this.bgColor, this.headerTint / 100) : this.bgColor), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100))))
+        .width('100%').backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
         .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
         .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
         .padding({ top: this.topInset })
         .position({ x: 0, y: 0 })
@@ -1576,4 +1576,3 @@ export default struct ExplorePage {
     return [];
   }
 }
-

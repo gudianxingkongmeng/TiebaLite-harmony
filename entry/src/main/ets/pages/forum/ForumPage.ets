@@ -15,7 +15,7 @@ import Avatar from '../../components/Avatar';
 import GearLoading from '../../components/GearLoading';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
@@ -987,8 +987,9 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
       .zIndex(2)
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : (this.cardStyle === 1 ? withAlpha((this.cardStyle === 1 ? darkenColor(pageBg(this.isDark), this.headerTint / 100) : pageBg(this.isDark)), (this.headerAlpha / 100) * (this.headerAlpha / 100)) : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100))))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 

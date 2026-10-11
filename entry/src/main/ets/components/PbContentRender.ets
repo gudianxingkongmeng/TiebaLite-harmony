@@ -1,4 +1,4 @@
-import { Dict } from '../core/types/Dict';
+﻿import { Dict } from '../core/types/Dict';
 import { textPrimary, textSecondary, pageBg, cardBg, blendWithBg } from '../core/utils/DataHelper';
 import EmojiImage from './EmojiImage';
 import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix } from './EmojiManager';

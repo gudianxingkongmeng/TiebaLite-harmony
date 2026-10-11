@@ -1,4 +1,4 @@
-import { textPrimary, textSecondary, textTertiary } from '../core/utils/DataHelper';
+﻿import { textPrimary, textSecondary, textTertiary } from '../core/utils/DataHelper';
 import GearLoading from './GearLoading';
 
 @Component

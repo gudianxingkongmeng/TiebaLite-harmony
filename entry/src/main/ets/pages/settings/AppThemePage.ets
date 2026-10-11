@@ -1,8 +1,8 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { pageBg, textPrimary, textTertiary, textAccent, dividerColor, surfaceVariant, withAlpha } from '../../core/utils/DataHelper';
+import { pageBg, textPrimary, textTertiary, textAccent, dividerColor, surfaceVariant, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import ThemeProvider from '../../core/theme/ThemeProvider';
 import { BUILTIN_THEMES, ThemeDefinition, RECOMMENDED_COLORS } from '../../core/theme/ThemeColors';
 import { VARIANTS, VariantDef, generateVariantScheme, ColorTriple } from '../../core/theme/ThemeVariant';
@@ -87,11 +87,14 @@ struct AppThemePage {
           Blank()
         }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(this.bg, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-.position({ x: 0, y: 0 })
-.zIndex(2)
+
+.position({ x: 0, y: 0 })
+
+.zIndex(2)
 
       Scroll() {
         Column() {

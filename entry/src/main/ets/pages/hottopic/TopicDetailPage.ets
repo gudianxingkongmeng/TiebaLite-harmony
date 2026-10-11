@@ -1,4 +1,4 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -10,7 +10,7 @@ import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
+import { getStr, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
@@ -95,11 +95,14 @@ struct TopicDetailPage {
         }
         .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
       .width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(cardBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-.position({ x: 0, y: 0 })
-.zIndex(2)
+
+.position({ x: 0, y: 0 })
+
+.zIndex(2)
 
       if (this.loading) {
         LoadingState({ message: '加载中...' })

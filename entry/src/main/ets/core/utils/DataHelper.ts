@@ -281,10 +281,12 @@ export function shadowColor(isDark: boolean): string {
       return 30;
     }
     
-    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number, density: number = 0): string {
+    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number,
+      density: number = 0, fade: number = 1): string {
       // density 用于同材质下的层级区分：操作条类传 1，底色略实一档
       const extra = Math.max(0, Math.min(1, density)) * 0.12;
-      const base = (isDark ? 0.42 : 0.34) + extra;
+      // fade 额外衰减：导航条等大面积玻璃需要更淡，避免底色贴近主题色
+      const base = ((isDark ? 0.42 : 0.34) + extra) * Math.max(0, Math.min(1, fade));
       const a = base * (0.35 + 0.65 * (glassAlpha / 100));
       return withAlpha(primaryColor, a);
     }
@@ -333,6 +335,26 @@ export function shadowColor(isDark: boolean): string {
       const rgb = isDark ? '#FFFFFF' : '#F2F6FF';
       const alpha = isDark ? 0.4 + 0.16 * e : 0.55 + 0.2 * e;
       return withAlpha(rgb, alpha);
+    }
+
+    /**
+     * 顶栏玻璃统一入口：所有页面顶栏共用，保证视觉一致。
+     * 底色比常规玻璃淡（fade=0.62），避免大面积玻璃贴近主题色。
+     * headerAlpha=0 时返回透明，保持"关闭玻璃"的既有行为。
+     */
+    export function glassTopBarSurface(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+      if (glassAlpha <= 0) {
+        return 'transparent';
+      }
+      return glassTintSurface(primaryColor, isDark, glassAlpha, 0, 0.62);
+    }
+
+    /** 顶栏的液态玻璃 backgroundEffect 参数（emphasis 稍高以突出通透感） */
+    export function glassTopBarEffect(glassAlpha: number): BackgroundEffectOptions {
+      if (glassAlpha <= 0) {
+        return { radius: 0, saturation: 1, brightness: 1 };
+      }
+      return liquidGlassEffect(0.55, glassAlpha);
     }
     
 export function withAlpha(color: string, alpha: number): string {

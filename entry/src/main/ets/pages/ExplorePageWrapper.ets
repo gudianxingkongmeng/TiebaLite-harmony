@@ -1,4 +1,4 @@
-import ExplorePage from './main/explore/ExplorePage';
+﻿import ExplorePage from './main/explore/ExplorePage';
 import { setPageStatusBar } from '../core/utils/SystemBarHelper';
 import { pageBg } from '../core/utils/DataHelper';
 

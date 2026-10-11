@@ -19,7 +19,7 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer } from '../../core/utils/DataHelper';
+import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
@@ -623,8 +623,9 @@ struct SubPostsPage {
         }
         .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset })
         .width('100%')
-        .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-        .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+        .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
         .position({ x: 0, y: 0 })
         .zIndex(2)
 

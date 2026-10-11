@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import { NavigationHelper } from '../core/utils/NavigationHelper';
 import { Dict } from '../core/types/Dict';
 import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';

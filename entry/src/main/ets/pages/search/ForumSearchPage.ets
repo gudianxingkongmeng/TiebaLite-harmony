@@ -1,4 +1,4 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
@@ -8,7 +8,7 @@ import SearchRepository from '../../core/repository/SearchRepository';
 import PbPageRepository from '../../core/repository/PbPageRepository';
 import ThreadCard from '../../components/ThreadCard';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 
@@ -282,9 +282,9 @@ struct ForumSearchPage {
       .width('100%')
       .padding({ top: this.topInset })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
-        withAlpha(this.bgColor, (this.headerAlpha / 100) * (this.headerAlpha / 100)))
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
       .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
       if (this.showSuggestions) {
@@ -466,4 +466,3 @@ struct ForumSearchPage {
     }
   }
 }
-

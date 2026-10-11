@@ -1,8 +1,8 @@
-import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
 import DatabaseManager from '../../core/storage/DatabaseManager';
 import BlockRepository from '../../core/repository/BlockRepository';
 import { textAccent } from '../../core/utils/DataHelper';
@@ -120,8 +120,9 @@ struct BlockSettingsPage {
           Blank()
         }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
-      .backgroundColor(this.headerAlpha === 0 ? Color.Transparent : withAlpha(pageBg(this.isDark), (this.headerAlpha / 100) * (this.headerAlpha / 100)))
-      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .backgroundColor(glassTopBarSurface(this.primaryColor, this.isDark, this.headerAlpha))
+      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
 .position({ x: 0, y: 0 })
 .zIndex(2)

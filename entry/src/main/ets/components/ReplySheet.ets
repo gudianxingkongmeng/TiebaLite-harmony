@@ -1,4 +1,4 @@
-import { Dict } from '../core/types/Dict';
+﻿import { Dict } from '../core/types/Dict';
 import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';
 import AddPostRepository from '../core/repository/AddPostRepository';
 

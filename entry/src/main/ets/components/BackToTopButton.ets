@@ -1,4 +1,4 @@
-import display from '@ohos.display';
+﻿import display from '@ohos.display';
 import { shadowColor, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../core/utils/DataHelper';
 import { GripDetector } from '../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../core/utils/FabPositionManager';
