@@ -2320,10 +2320,10 @@ this._replyScrollAnimated = true;
     this.replyHint = '';
     this.showReply = true;
     this.openReply();
-// 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
+    // 主贴回复不需要定位楼层，回复框是底部浮层，保持当前阅读位置。
+    // 不要在这里调 scrollToReplyTarget()。
     this._replyScrollAnimated = true;
     this._replyKbPositioned = false;
-    this.scrollToReplyTarget();
   }
 
   private scrollToReplyTarget(): void {
@@ -2335,10 +2335,13 @@ this._replyScrollAnimated = true;
     }
     const cur = this.scroller.currentOffset().yOffset;
 
-    // 主贴回复（replyPostId = 0）：没有具体楼层目标，直接滚到底。
+    // 主贴回复（replyPostId = 0）：没有具体楼层目标。
+    // 回复框本身是固定在底部的浮层，显示它不需要滚动任何内容。
+    // 之前这里直接 scrollEdge(Edge.Bottom)，导致在中间楼层点主贴回复时
+    // 整个列表被甩到最底部——既打断了阅读，也让用户找不到刚回复的内容。
+    // 保持当前阅读位置不动即可。
     if (this.replyPostId <= 0) {
       this._replyScrollAnimated = false;
-      this.scroller.scrollEdge(Edge.Bottom);
       return;
     }
 
