@@ -515,6 +515,15 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
   }
 
   /**
+   * 楼层位置表已在每个 post 的 onAreaChange 中自动维护，
+   * 这里仅清掉过期项，等下一次布局时自然回填。
+   * 刻意不做任何滚动操作——发帖后必须停在原处。
+   */
+  private rebuildPostPosMap(): void {
+    this._postPosMap.clear();
+  }
+
+  /**
    * 发帖后的增量刷新：只重新拉取被回复楼层那一页，并把新回复合并进本地数据，
    * 不再调用 loadThread 全量刷新，避免页面重载、闪烁与滚动位置丢失。
    * 拉取失败时退回全量刷新，保证最终一致。
@@ -536,9 +545,12 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
               merged.push(i === idx ? fresh : this.posts[i]);
             }
             this.posts = merged;
-            // 楼层高度变了，重建位置表（不触发滚动）
+            // 楼层高度变了，需要重建位置表供后续跳转使用。
+            // 不能调 scheduleReplyScroll：那会走到 scrollToReplyTarget，
+            // 而此时 replyPostId 已被 closeReplyWindow 清零，会命中
+            // 「主贴回复 → 滚到底部」分支把页面直接跳到最底。
             this._postPosMap.clear();
-            this.scheduleReplyScroll(60);
+            this.rebuildPostPosMap();
             promptAction.showToast({ message: '回复成功', duration: 800 });
             return;
           }
