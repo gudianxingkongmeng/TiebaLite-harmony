@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import pasteboard from '@ohos.pasteboard';
@@ -351,15 +351,13 @@ struct SubPostsPage {
           try {
             const winH = win.getWindowProperties().windowRect.height;
             const avoidHpx = readKbAvoidHpx();
-            const kbCorr = 30;
-            let off = winH / this._density - topPx / this._density - this.kbExtra;
+            
+            let off = winH / this._density - topPx / this._density + this.kbExtra;
             if (avoidHpx > 0) {
-              off = avoidHpx / this._density - this.kbExtra - kbCorr;
-            } else {
-              off -= kbCorr;
+              off = avoidHpx / this._density + this.kbExtra;
             }
             this.keyboardHeight = Math.max(0, off);
-            console.info('TiebaLite: sub kb exact topPx=' + topPx + ' win=' + winH + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' corr=' + kbCorr + ' offset=' + this.keyboardHeight.toFixed(1));
+            console.info('TiebaLite: sub kb exact topPx=' + topPx + ' win=' + winH + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
             this.scheduleReplyScroll(300);
           } catch (_e) {}
         };
@@ -372,16 +370,16 @@ struct SubPostsPage {
               return;
             }
             const avoidHpx = readKbAvoidHpx();
-            const kbCorr = 30;
+            
             if (avoidHpx > 0) {
-              this.keyboardHeight = Math.max(0, avoidHpx / this._density - this.kbExtra - kbCorr);
+              this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
             } else if (this._lastKbHpx > 0 && this.keyboardHeight > 0) {
               this.keyboardHeight = Math.max(0, this.keyboardHeight + (this._lastKbHpx - hPx) / this._density);
             } else {
-              this.keyboardHeight = Math.max(0, hPx / this._density - this._winGapVp - this.kbExtra - kbCorr);
+              this.keyboardHeight = Math.max(0, hPx / this._density - this._winGapVp + this.kbExtra);
             }
             this._lastKbHpx = hPx;
-            console.info('TiebaLite: sub kb delta hPx=' + hPx + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
+            console.info('TiebaLite: sub kb delta hPx=' + hPx + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
             this.scheduleReplyScroll(300);
           } catch (_e) {}
         };
@@ -1201,7 +1199,7 @@ struct SubPostsPage {
     AppStorage.SetOrCreate('replyKbExtraV2', v);
     PreferencesManager.getInstance().putInt('replyKbExtraV2', v).catch(() => {});
     if (this._lastKbHpx > 0) {
-      this.keyboardHeight = Math.max(0, this._lastKbHpx / this._density - this._winGapVp - this.kbExtra - 30);
+      this.keyboardHeight = Math.max(0, this._lastKbHpx / this._density - this._winGapVp + this.kbExtra + 8);
     }
     promptAction.showToast({ message: '键盘补偿: ' + v + 'vp', duration: 800 });
   }

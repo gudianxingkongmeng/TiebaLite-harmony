@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import Window from '@ohos.window';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import display from '@ohos.display';
@@ -352,15 +352,15 @@ struct ThreadPage {
           try {
             const winH = win.getWindowProperties().windowRect.height;
             const avoidHpx = readKbAvoidHpx();
-            const kbCorr = 30;
-            let off = winH / this._density - topPx / this._density - this.kbExtra;
+            // 面板要完全落在键盘上方，故偏移量取「键盘实际高度 + 额外余量」，
+            // 之前的 -kbCorr 会让面板比键盘矮 30vp，导致表情/图片/发送按钮被键盘压住。
+            
+            let off = winH / this._density - topPx / this._density + this.kbExtra;
             if (avoidHpx > 0) {
-              off = avoidHpx / this._density - this.kbExtra - kbCorr;
-            } else {
-              off -= kbCorr;
+              off = avoidHpx / this._density + this.kbExtra;
             }
             this.keyboardHeight = Math.max(0, off);
-            console.info('TiebaLite: kb exact topPx=' + topPx + ' win=' + winH + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' corr=' + kbCorr + ' offset=' + this.keyboardHeight.toFixed(1));
+            console.info('TiebaLite: kb exact topPx=' + topPx + ' win=' + winH + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
             this.scheduleReplyScroll(300);
           } catch (_e) {}
         };
@@ -373,16 +373,16 @@ struct ThreadPage {
               return;
             }
             const avoidHpx = readKbAvoidHpx();
-            const kbCorr = 30;
+            
             if (avoidHpx > 0) {
-              this.keyboardHeight = Math.max(0, avoidHpx / this._density - this.kbExtra - kbCorr);
+              this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
             } else if (this._lastKbHpx > 0 && this.keyboardHeight > 0) {
               this.keyboardHeight = Math.max(0, this.keyboardHeight + (this._lastKbHpx - hPx) / this._density);
             } else {
-              this.keyboardHeight = Math.max(0, hPx / this._density - this._winGapVp - this.kbExtra - kbCorr);
+              this.keyboardHeight = Math.max(0, hPx / this._density - this._winGapVp + this.kbExtra);
             }
             this._lastKbHpx = hPx;
-            console.info('TiebaLite: kb delta hPx=' + hPx + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
+            console.info('TiebaLite: kb delta hPx=' + hPx + ' avoidPx=' + avoidHpx + ' extra=' + this.kbExtra + ' extra=' + this.kbExtra + ' offset=' + this.keyboardHeight.toFixed(1));
             this.scheduleReplyScroll(300);
           } catch (_e) {}
         };
@@ -651,7 +651,7 @@ struct ThreadPage {
     AppStorage.SetOrCreate('replyKbExtraV2', v);
     PreferencesManager.getInstance().putInt('replyKbExtraV2', v).catch(() => {});
     if (this._lastKbHpx > 0) {
-      this.keyboardHeight = Math.max(0, this._lastKbHpx / this._density - this._winGapVp - this.kbExtra - 30);
+      this.keyboardHeight = Math.max(0, this._lastKbHpx / this._density - this._winGapVp + this.kbExtra + 8);
     }
     promptAction.showToast({ message: '键盘补偿: ' + v + 'vp', duration: 800 });
   }
@@ -1297,10 +1297,6 @@ struct ThreadPage {
         .position({ bottom: 0 })
       } else if (this.showReply) {
         Column() {
-          Column()
-            .width('100%').layoutWeight(1)
-            .backgroundColor('#33000000')
-            .onClick(() => { this.closeReplyWindow(); })
           Column() {
             Row() {
               Text(this.replyHint || '回复本帖').fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontWeight(FontWeight.Medium).fontColor(textPrimary(this.isDark))
@@ -1310,8 +1306,9 @@ struct ThreadPage {
             RichEditor({ controller: this.richController })
               .placeholder('空空如也', { font: { size: 16 }, fontColor: textTertiary(this.isDark) })
               .width('100%').height(this.replyEditorH)
-              .backgroundColor(cardBg(this.isDark)).borderRadius(12)
-              .border({ width: 1, color: this.primaryColor })
+              .backgroundColor(blendWithBg(this.primaryColor, 0.10, this.isDark, '#252525')).borderRadius(12)
+              .backdropBlur(20)
+              .border({ width: 1, color: blendWithBg(this.primaryColor, 0.18, this.isDark, '#2A2A2A') })
               .padding({ left: 12, right: 12, top: 10, bottom: 10 })
               .onReady(() => { this.richController.setTypingStyle({ fontSize: 16, fontColor: textPrimary(this.isDark) }); })
               .onIMEInputComplete(() => { this.replyContent = richEditorToText(this.richController); this.updateReplyEditorH(); })
@@ -1390,7 +1387,10 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               }
               .width('100%')
             }
-          }.padding({ left: 16, right: 16, top: 4, bottom: 0 }).width('100%').backgroundColor(blendWithBg(this.primaryColor, 0.18, this.isDark, '#1E1E1E'))
+          }.padding({ left: 16, right: 16, top: 4, bottom: 0 }).width('100%')
+            .backgroundColor(blendWithBg(this.primaryColor, 0.18, this.isDark, '#1E1E1E'))
+            .backdropBlur(35)
+            .border({ width: { top: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#2A2A2A') })
             .onAreaChange((_o: Area, a: Area) => {
               const h = a.height as number;
               if (h > 40) {
@@ -1399,7 +1399,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               }
             })
         }
-        .width('100%').height('100%')
+        .width('100%')
         .position({ bottom: this.keyboardHeight > 0 ? this.keyboardHeight : -this._winGapVp })
       }
 
@@ -1967,7 +1967,12 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               this.replyHint = name ? '回复 ' + name : '';
               this.showReply = true;
               this.openReply();
+              // 面板高度要等布局完成才准确，先用兜底值顶一次，随后在
+              // onAreaChange / 键盘事件里再次校正，避免被回复楼层被面板挡住。
+              this.replyPanelH = 0;
               this.scrollToReplyTarget();
+              this.scheduleReplyScroll(120);
+              this.scheduleReplyScroll(320);
             }, 12)
         }
         .gesture(
@@ -2226,8 +2231,13 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     const info = this._postPosMap.get(this.replyPostId);
     if (!info || info.h <= 0) return;
     const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
-    const panelTop = screenH - this.keyboardHeight - this.replyPanelH;
-    const targetScreenY = panelTop - 16 - info.h;
+    // 回复面板实际顶边：窗口底 - 键盘高度 - 面板高度。
+    // 键盘未弹出时 keyboardHeight 为 0，面板落在窗口底部，此时上方可用区域更小，
+    // 需要把被回复楼层顶到更靠上的位置，否则会被面板挡住看不到。
+    const panelH = this.replyPanelH > 40 ? this.replyPanelH : 180;
+    const panelTop = screenH - this.keyboardHeight - panelH;
+    // 面板顶边再留一点余量，确保楼层标题完整可见
+    const targetScreenY = panelTop - 24 - info.h;
     const targetScroll = Math.max(0, info.y - targetScreenY);
     const cur = this.scroller.currentOffset().yOffset;
     if (Math.abs(cur - targetScroll) > 3) {
