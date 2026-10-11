@@ -822,9 +822,9 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
                 }
             }
             .width('100%')
-            // 底部让出「导航栏 62 + 间距 10 + 系统安全区」，
-            // 保证最后一行贴吧能滚到导航栏上方
-            .padding({ bottom: 72 + this.bottomInset })
+            // 底部让出「导航栏 62 + 间距 10 + 系统安全区」并多留一行，
+            // 保证最后一行贴吧能完全滚到导航栏上方
+            .padding({ bottom: 104 + this.bottomInset })
             .backgroundColor(blendWithBg(this.primaryColor, 0.04, this.isDark, '#1E1E1E'))
           }
             .scrollBar(BarState.Off)

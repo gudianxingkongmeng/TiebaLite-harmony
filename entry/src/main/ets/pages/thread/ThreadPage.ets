@@ -1117,6 +1117,11 @@ struct ThreadPage {
                     this.replyHint = '';
                     this.showReply = true;
                     this.openReply();
+                    // 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
+                    this.replyPanelH = 0;
+                    this.scrollToReplyTarget();
+                    this.scheduleReplyScroll(150);
+                    this.scheduleReplyScroll(350);
                   }, 12)
                 if (!this.showMenu) {
                   Column() {
@@ -1979,6 +1984,7 @@ Text(this.uploadingImages ? '上传中...' : '发送')
               this.scrollToReplyTarget();
               this.scheduleReplyScroll(120);
               this.scheduleReplyScroll(320);
+              this.scheduleReplyScroll(500);
             }, 12)
         }
         .gesture(
@@ -2233,31 +2239,44 @@ Text(this.uploadingImages ? '上传中...' : '发送')
   }
 
   private scrollToReplyTarget(): void {
-    if (!this.showReply || this.replyPostId <= 0) return;
-    const info = this._postPosMap.get(this.replyPostId);
-    if (!info) return;
+    if (!this.showReply) return;
     const screenH = this.screenHeight > 0 ? this.screenHeight : 800;
     const panelH = this.replyPanelH > 40 ? this.replyPanelH : 180;
     const panelTop = screenH - this.keyboardHeight - panelH;
+    const cur = this.scroller.currentOffset().yOffset;
+
+    // 主贴回复（replyPostId = 0）：没有具体楼层，直接滚到内容底部，
+    // 这样底部楼层能完整显示在回复面板上方。
+    if (this.replyPostId <= 0) {
+      this.scroller.scrollTo({ xOffset: 0, yOffset: 100000, animation: { duration: 260, curve: Curve.EaseInOut } });
+      console.error('[RS] main-thread reply -> scroll to bottom, panelTop=' + panelTop.toFixed(1));
+      return;
+    }
+
+    const info = this._postPosMap.get(this.replyPostId);
+    if (!info) {
+      console.error('[RS] no info for pid=' + this.replyPostId + ' mapSize=' + this._postPosMap.size);
+      return;
+    }
     const h = info.h > 0 ? info.h : 60;
     // 优先用 Area 的实时 globalPosition（滚动时它随内容一起移动）。
-    // 楼层当前在屏幕上的实际顶部坐标；若拿不到则回退到内容坐标换算。
     let curScreenY: number = -1;
     if (info.area) {
       const gy = info.area.globalPosition?.y;
       if (typeof gy === 'number' && isFinite(gy)) { curScreenY = gy; }
     }
-    const cur = this.scroller.currentOffset().yOffset;
+    const desiredTop = panelTop - 16 - h;
     let targetScroll: number;
     if (curScreenY >= 0) {
-      // 需要的位移：把楼层顶部移到目标屏幕位置
-      const desiredTop = panelTop - 16 - h;
       targetScroll = cur + (curScreenY - desiredTop);
     } else {
-      const desiredTop = panelTop - 16 - h;
       targetScroll = info.y - desiredTop;
     }
     if (targetScroll < 0) targetScroll = 0;
+    console.error('[RS] pid=' + this.replyPostId + ' cur=' + cur.toFixed(1) +
+      ' curScreenY=' + curScreenY.toFixed(1) + ' infoY=' + info.y.toFixed(1) +
+      ' h=' + h.toFixed(1) + ' panelH=' + panelH + ' panelTop=' + panelTop.toFixed(1) +
+      ' kb=' + this.keyboardHeight.toFixed(1) + ' target=' + targetScroll.toFixed(1));
     if (Math.abs(cur - targetScroll) > 3) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: targetScroll, animation: { duration: 260, curve: Curve.EaseInOut } });
     }
