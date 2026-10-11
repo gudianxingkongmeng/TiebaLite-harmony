@@ -617,7 +617,13 @@ export default struct ExplorePage {
   }
 
   private clampFabDx(v: number): number {
-    return Math.max(64 - this.getWinWidth(), Math.min(8, v));
+    // 拖动范围按「当前停靠侧的可达范围」计算，两侧对称：
+    // 左侧停靠时可向右拖到屏幕中部，右侧停靠时可向左拖到屏幕中部。
+    const winW = this.getWinWidth();
+    if (this.fabLeft) {
+      return Math.max(-64, Math.min(winW - 84, v));
+    }
+    return Math.max(84 - winW, Math.min(64, v));
   }
 
   private clampFabDy(v: number): number {
@@ -1209,14 +1215,15 @@ export default struct ExplorePage {
             this.FabMenuRow($r('app.media.ic_refresh'), 'Refresh', (): void => { this.fabRefresh(); })
             this.FabMenuRow($r('app.media.ic_arrow_up'), '回到顶部', (): void => { this.fabScrollToTop(); })
           }
-          .padding(12).borderRadius(16).backgroundColor(cardBg(this.isDark))
-          .shadow({ radius: 8, color: shadowColor(this.isDark), offsetY: 2 })
+          // 不加不透明底板：玻璃质感由每个 FabMenuRow 自身提供，
+          // 外层再叠 cardBg 底板会形成一条不透明长条。
+          .alignItems(HorizontalAlign.End)
           .margin({ bottom: 8 })
         }
 
         this.FabButton()
       }
-      .alignItems(HorizontalAlign.Center).width(46)
+      .alignItems(HorizontalAlign.Center)
       .position({ right: 16, bottom: 80 })
       .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 80 : 80)) + this.fabDx, y: this.fabDy })
       .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
@@ -1262,8 +1269,16 @@ export default struct ExplorePage {
     Row() {
       Image(iconRes).width(18).height(18).fillColor(textPrimary(this.isDark))
     }
-    .padding({ top: 6, bottom: 6, left: 4, right: 4 })
-    .borderRadius(8)
+    .padding({ top: 8, bottom: 8, left: 12, right: 12 })
+    .width(46).height(46)
+    .borderRadius(23 * this.fabRadius / 100)
+    // 与 FAB 加号同一套液态玻璃语言，但底色更实、模糊更强、描边更亮，
+    // 视觉上比加号按钮更"重"，以体现这是展开的次级操作层。
+    .backgroundColor(blendWithBg(this.primaryColor, 0.22, this.isDark, '#1E1E1E'))
+    .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+    .border({ width: 1.2, color: glassTintBorder(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)) })
+    .shadow({ radius: 12, color: glassTintShadow(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)), offsetY: 5 })
+    .margin({ bottom: 8 })
     .onClick(() => { action(); })
   }
 

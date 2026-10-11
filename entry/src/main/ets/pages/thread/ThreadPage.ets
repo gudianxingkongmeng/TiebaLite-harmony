@@ -194,6 +194,7 @@ struct ThreadPage {
   @State screenWidth: number = 360;
   @State screenHeight: number = 800;
   @State topInset: number = 24;
+  @State bottomInset: number = 0;
   @State isThreadAuthor: boolean = false;
   private contentAboveHeight: number = 0;
   @State barWidth: number = 0;
@@ -238,14 +239,21 @@ struct ThreadPage {
   @State jumpTargetPage: number = 0;
   private replyPanelH: number = 180;
   private _replyScrollTimer: number = -1;
+  private _replyBarTouchX: number = 0;
+  private _replyBarTouchY: number = 0;
+  private _replyBarMoved: boolean = false;
 
   private initTopInset(): void {
     try {
       Window.getLastWindow(getContext(this)).then((win: Window.Window) => {
         const avoidArea = win.getWindowAvoidArea(Window.AvoidAreaType.TYPE_SYSTEM);
+        const density = display.getDefaultDisplaySync().densityPixels;
         if (avoidArea.topRect.height > 0) {
-          const density = display.getDefaultDisplaySync().densityPixels;
           this.topInset = Math.max(20, Math.round(avoidArea.topRect.height / density));
+        }
+        // 底部安全区（手势条），用于给底部固定回复栏留出滚动空间
+        if (avoidArea.bottomRect.height > 0) {
+          this.bottomInset = Math.round(avoidArea.bottomRect.height / density);
         }
       }).catch(() => { });
     } catch (e) {
@@ -1046,6 +1054,9 @@ struct ThreadPage {
                     .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark))
                     .width('100%').textAlign(TextAlign.Center).padding({ left: 24, right: 24, top: 16, bottom: 6 })
                 }
+                // 底部让出「固定回复栏 44 + 间距 + 系统安全区」，
+                // 保证最后一条回复能完整滚到回复导航条上方
+                Blank().height(52 + this.bottomInset)
               }
               .width('100%')
               .padding({ left: 8, right: 8, bottom: 4 })
@@ -1055,9 +1066,10 @@ struct ThreadPage {
             .scrollBar(BarState.Off)
         .width('100%')
         .layoutWeight(1)
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          // 不能 expandSafeArea(BOTTOM)：否则 Scroll 会延伸进系统导航条区域，
+          // 底部回复栏浮在上面，最后一条回复滚不到它上方。
           .backgroundColor(pageBg(this.isDark))
-          .edgeEffect(this.reduceEffects ? EdgeEffect.None : EdgeEffect.Spring)
+          .edgeEffect(EdgeEffect.None)
           .onReachEnd(() => {
             if (this.hasMore && !this.loadingMore) {
               void this.loadMore();
@@ -1110,19 +1122,25 @@ struct ThreadPage {
                 Text(' 说点什么...').fontFamily(this.appFontFamily).fontSize(16 * this.fontScale).fontColor(textSecondary(this.isDark))
               }
               .padding({ left: 16 }).layoutWeight(1)
-                .onClick(() => {
-                    if (!AccountManager.getInstance().isLoggedIn()) { NavigationHelper.navigate('pages/login/LoginPage'); return; }
-                    this.replyPostId = 0;
-                    this.replyUserId = 0;
-                    this.replyHint = '';
-                    this.showReply = true;
-                    this.openReply();
-                    // 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
-                    this.replyPanelH = 0;
-                    this.scrollToReplyTarget();
-                    this.scheduleReplyScroll(150);
-                    this.scheduleReplyScroll(350);
-                  }, 12)
+                // 用 onTouch 自行判定：手指按下后位移超过阈值即视为滑动/回弹，
+                // 不触发回复窗口。否则快速拖动列表时的惯性回弹会被 onClick 捕获，
+                // 把「说点什么...」栏当成点击，弹出回复面板遮住内容。
+                .onTouch((e: TouchEvent): void => {
+                  const t = e.touches && e.touches.length > 0 ? e.touches[0] : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : undefined);
+                  if (!t) { return; }
+                  if (e.type === TouchType.Down) {
+                    this._replyBarTouchX = t.x;
+                    this._replyBarTouchY = t.y;
+                    this._replyBarMoved = false;
+                  } else if (e.type === TouchType.Move) {
+                    if (Math.abs(t.x - this._replyBarTouchX) > 8 || Math.abs(t.y - this._replyBarTouchY) > 8) {
+                      this._replyBarMoved = true;
+                    }
+                  } else if (e.type === TouchType.Up) {
+                    if (this._replyBarMoved) { this._replyBarMoved = false; return; }
+                    this.openMainThreadReply();
+                  }
+                })
                 if (!this.showMenu) {
                   Column() {
                     if (this.isCollected) {
@@ -2237,6 +2255,22 @@ Text(this.uploadingImages ? '上传中...' : '发送')
       });
     }
   }
+
+  private openMainThreadReply(): void {
+    if (!AccountManager.getInstance().isLoggedIn()) { NavigationHelper.navigate('pages/login/LoginPage'); return; }
+    this.replyPostId = 0;
+    this.replyUserId = 0;
+    this.replyHint = '';
+    this.showReply = true;
+    this.openReply();
+    // 主贴回复：滚到底部，让最下面的楼层完整显示在回复面板上方
+    this.replyPanelH = 0;
+    this.scrollToReplyTarget();
+    this.scheduleReplyScroll(150);
+    this.scheduleReplyScroll(350);
+  }
+
+  private onFabDragStartXGuard(): void { }
 
   private scrollToReplyTarget(): void {
     if (!this.showReply) return;

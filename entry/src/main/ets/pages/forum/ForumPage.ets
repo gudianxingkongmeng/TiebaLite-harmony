@@ -638,7 +638,13 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
   }
 
   private clampFabDx(v: number): number {
-    return Math.max(64 - this.getWinWidth(), Math.min(8, v));
+    // 拖动范围按「当前停靠侧的可达范围」计算，两侧对称：
+    // 左侧停靠时可向右拖到屏幕中部，右侧停靠时可向左拖到屏幕中部。
+    const winW = this.getWinWidth();
+    if (this.fabLeft) {
+      return Math.max(-64, Math.min(winW - 84, v));
+    }
+    return Math.max(84 - winW, Math.min(64, v));
   }
 
   private clampFabDy(v: number): number {
@@ -1041,9 +1047,12 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
         if (this.showFabMenu) { this.FabMenuItems() }
         this.FabButton()
       }
-      .alignItems(this.fabLeft ? HorizontalAlign.Start : HorizontalAlign.End)
-      .position({ bottom: 32, right: 16 })
-      .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 84) : 0) : (this.fabLeft ? -(this.getWinWidth() - 84) - 96 : 96)) + this.fabDx, y: this.fabDy })
+      .alignItems(HorizontalAlign.Center)
+      .width(46)
+      .position({ right: 16, bottom: 32 })
+      // 位置完全由 translate 控制：fabLeft 时向左偏移到左边缘，否则停在右边缘，
+      // fabDx 为拖动中的临时位移。这样左右两侧都能沿 X 轴自由拖动。
+      .translate({ x: (this.fabVisible ? (this.fabLeft ? -(this.getWinWidth() - 78) : 0) : (this.fabLeft ? -(this.getWinWidth() - 78) - 96 : 96)) + this.fabDx, y: this.fabDy })
       .hitTestBehavior(this.fabVisible ? HitTestMode.Default : HitTestMode.None)
       .gesture(
         PanGesture({ fingers: 1, distance: 2 })
@@ -1684,7 +1693,8 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       this.FabMenuRow($r('app.media.ic_arrow_up'), 'Scroll Top', (): void => { this.showFabMenu = false; this.scroller.scrollEdge(Edge.Top); })
     }
     .transition(TransitionEffect.opacity(0).combine(TransitionEffect.translate({ y: 20 })))
-    .padding({ bottom: 4 })
+    .alignItems(HorizontalAlign.End)
+    .margin({ bottom: 4 })
   }
 
   @Builder
@@ -1693,9 +1703,14 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       Image(iconRes).width(Math.round(18 * this.fontScale)).height(Math.round(18 * this.fontScale)).fillColor(textPrimary(this.isDark))
     }
     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-    .backgroundColor(blendWithBg(this.primaryColor, 0.12, this.isDark, '#1E1E1E'))
-    .borderRadius(20)
-    .shadow({ radius: 4, color: shadowColor(this.isDark), offsetY: 2 })
+    .width(46).height(46)
+    // 与 FAB 加号同一套液态玻璃语言，但底色更实、模糊更强、描边更亮，
+    // 视觉上比加号按钮更"重"，以体现这是展开的次级操作层。
+    .backgroundColor(blendWithBg(this.primaryColor, 0.22, this.isDark, '#1E1E1E'))
+    .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+    .borderRadius(23 * this.fabRadius / 100)
+    .border({ width: 1.2, color: glassTintBorder(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)) })
+    .shadow({ radius: 12, color: glassTintShadow(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)), offsetY: 5 })
     .margin({ bottom: 8 })
     .onClick(() => { action(); })
   }
