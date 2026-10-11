@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import display from '@ohos.display';
@@ -21,7 +21,7 @@ import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
 import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, 
-textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow } from '../../../core/utils/DataHelper';
+textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge } from '../../../core/utils/DataHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -1276,24 +1276,31 @@ export default struct ExplorePage {
     // 视觉上比加号按钮更"重"，以体现这是展开的次级操作层。
     .backgroundColor(blendWithBg(this.primaryColor, 0.22, this.isDark, '#1E1E1E'))
     .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
-    .border({ width: 1.2, color: glassTintBorder(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)) })
+    .backgroundEffect(liquidGlassEffect(1, this.headerAlpha))
+    .border({ width: { top: 1.6, left: 1.6, right: 1.2, bottom: 0.8 },
+      color: liquidGlassEdge(this.isDark, 1) })
     .shadow({ radius: 12, color: glassTintShadow(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)), offsetY: 5 })
     .margin({ bottom: 8 })
     .onClick(() => { action(); })
   }
 
-  @Builder
+@Builder
   FabButton() {
     Stack() {
-Text('+')
-              .fontFamily(this.appFontFamily).fontSize(25).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
+      Text('+')
+        .fontFamily(this.appFontFamily).fontSize(25).fontColor(onPrimaryContainer(this.isDark)).fontWeight(FontWeight.Lighter)
         .rotate({ angle: this.showFabMenu ? 135 : 0 })
         .animation({ duration: 200, curve: Curve.FastOutSlowIn })
     }
     .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
+    // 液态玻璃：模糊之上叠加色彩增强，提升通透感
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBlurLevel(this.headerAlpha))
+    .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
     .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+    .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
+      color: liquidGlassEdge(this.isDark, 0) })
+    .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }

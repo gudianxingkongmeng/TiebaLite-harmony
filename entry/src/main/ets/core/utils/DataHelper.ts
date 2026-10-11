@@ -302,6 +302,31 @@ export function shadowColor(isDark: boolean): string {
     export function glassBlurLevel(glassAlpha: number): number {
       return glassAlpha > 0 ? Math.max(6, Math.round(35 * (glassAlpha / 100))) : 0;
     }
+
+    /**
+     * 液态玻璃增强参数：在 backdropBlur 之上叠加色彩调整，
+     * 让毛玻璃往"通透的液态玻璃"观感靠拢。
+     * - saturation：提升背景色彩饱和度，产生通透感
+     * - brightness：轻微提亮，模拟玻璃厚度带来的聚光
+     * - color：叠加一层极淡的白色高光
+     * 重度（emphasis）用于让展开的操作条比主按钮更"重"。
+     */
+    export function liquidGlassEffect(emphasis: number = 0, glassAlpha: number = 25): BackgroundEffectOptions {
+      const e = Math.max(0, Math.min(1, emphasis));
+      return {
+        radius: glassBlurLevel(glassAlpha) + Math.round(8 * e),
+        saturation: 1.35 + 0.35 * e,
+        brightness: 1.04 + 0.06 * e,
+        color: 0x0A + Math.round(0x08 * e)
+      };
+    }
+
+    /** 液态玻璃的边缘高光描边颜色：顶部亮、底部暗，模拟透镜受光。 */
+    export function liquidGlassEdge(isDark: boolean, emphasis: number = 0): number {
+      const base = isDark ? 0x40FFFFFF : 0x66FFFFFF;
+      const add = Math.round(0x1A * Math.max(0, Math.min(1, emphasis)));
+      return base + add;
+    }
     
 export function withAlpha(color: string, alpha: number): string {
   if (color.startsWith('#')) {
