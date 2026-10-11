@@ -25,7 +25,7 @@ import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import BackToTopButton from '../../components/BackToTopButton';
 import EmojiImage from '../../components/EmojiImage';
-import { registerEmoji, getEmojiIdFromMap, richEditorToText } from '../../components/EmojiManager';
+import { registerEmoji, richEditorToText, isEmojiText, resolveEmojiId } from '../../components/EmojiManager';
 import { EmoticonInfo, getAllEmoticons } from '../../components/EmojiManager';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
@@ -60,38 +60,7 @@ function getEmojiUrl(item: Dict): string {
   }
   const rawId = String(item.id || item.text || item.c || '').trim();
   if (!rawId) return '';
-  return getEmojiUrlById(rawId);
-}
-
-function getSpacedEmojiId(rawId: string): string {
-  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-  const m = id.match(/^#?\s*emot(?:ion|icon)\s*[:：]?\s*(\d+)$/);
-  return m ? 'image_emoticon' + m[1] : '';
-}
-
-function getEmojiUrlById(rawId: string): string {
-  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-  if (!id) return '';
-  const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
-  if (/^\d+$/.test(id)) return 'https://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
-  const spaced = getSpacedEmojiId(id);
-  if (spaced) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
-  if (knownPrefixes.some(p => id.startsWith(p))) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
-  const mapped = getEmojiIdFromMap(id);
-  if (mapped) return 'https://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
-  const encoded = encodeURIComponent(id);
-  return 'https://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
-}
-
-function isEmojiText(text: string): boolean {
-  const id = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-  if (!id) return false;
-  const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
-  if (knownPrefixes.some(p => id.startsWith(p))) return true;
-  if (/^\d+$/.test(id)) return true;
-  if (getEmojiIdFromMap(id)) return true;
-  if (getSpacedEmojiId(id)) return true;
-  return false;
+  return resolveEmojiId(rawId);
 }
 
 class EmojiItem {
@@ -811,7 +780,11 @@ struct SubPostsPage {
             this.MenuItem('复制', () => { this.copyToClipboard(this.menuText); this.menuShow = false; })
             Divider().height(0.75).color(dividerColor(this.isDark))
             if (AccountManager.getInstance().getCurrentAccountSync()?.uid === this.menuPostAuthorId && this.menuPostAuthorId > 0) {
-              this.MenuItem('删除', () => { void this.deletePost(this.menuPostId); this.menuShow = false; })
+              this.MenuItem('删除', () => {
+      // id 取不到时宁可不删，也不要拿父楼层 id 去删
+      if (this.menuPostId > 0) { void this.deletePost(this.menuPostId); }
+      this.menuShow = false;
+    })
               Divider().height(0.75).color(dividerColor(this.isDark))
             }
             this.MenuItem('举报', () => { this.reportPost(this.menuPostId); this.menuShow = false; })
@@ -1062,8 +1035,8 @@ struct SubPostsPage {
           Text() {
             ForEach(sub.content as Dict[], (item: Dict) => {
               if (Number(item.type) === 0) {
-                if (String(item.text || item.c || '') && isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
-                  ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
+                if (String(item.text || item.c || '') && isEmojiText(String(item.text || item.c || '')) && resolveEmojiId(String(item.text || item.c || ''))) {
+                  ImageSpan(resolveEmojiId(String(item.text || item.c || '')).replace('https://', 'http://'))
                     .width(20).height(20).objectFit(ImageFit.Contain)
                     .verticalAlign(ImageSpanAlignment.CENTER)
                 } else if (String(item.text || item.c || '')) {
@@ -1097,8 +1070,8 @@ struct SubPostsPage {
                     }
                   })
               } else if (item.text || item.c) {
-                  if (isEmojiText(String(item.text || item.c || '')) && getEmojiUrlById(String(item.text || item.c || ''))) {
-                    ImageSpan(getEmojiUrlById(String(item.text || item.c || '')).replace('https://', 'http://'))
+                  if (isEmojiText(String(item.text || item.c || '')) && resolveEmojiId(String(item.text || item.c || ''))) {
+                    ImageSpan(resolveEmojiId(String(item.text || item.c || '')).replace('https://', 'http://'))
                       .width(20).height(20).objectFit(ImageFit.Contain)
                       .verticalAlign(ImageSpanAlignment.CENTER)
                   } else {
@@ -1149,8 +1122,10 @@ struct SubPostsPage {
           LongPressGesture({ repeat: false, duration: 500 })
             .onAction((event?: GestureEvent) => {
               this.menuText = this.buildSubContent(sub);
-              // 楼中楼回复的 spid 不是楼层 pid，需取该楼层真实 pid
-              this.menuPostId = Number(sub.pid || sub.post_id || sub.postId || this.postId || 0);
+              // 楼中楼回复自身的 id 在 sub.id；sub.pid 是所属楼层的 pid。
+              // 取错会变成删/收藏父楼层（表现为「删除失败」或误删主贴）。
+              // 与 L544/L1023/L1113/L1373 保持一致，只认 sub.id。
+              this.menuPostId = Number(sub.id || 0);
               this.menuPostAuthorId = Number((sub.author as Dict)?.id || sub.author_id || 0);
               if (event && event.fingerList && event.fingerList.length > 0) {
                 this.menuX = event.fingerList[0].globalX;
