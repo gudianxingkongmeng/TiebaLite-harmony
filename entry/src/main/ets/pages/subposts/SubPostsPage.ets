@@ -191,7 +191,6 @@ struct SubPostsPage {
   @State replyHint: string = '';
   @State subPostId: number = 0;
   @State replyUserId: number = 0;
-  @State replyPortrait: string = '';
   @State showRiskWarning: boolean = false;
   @State riskNeverAgainChecked: boolean = false;
   @State agreeToRisk: boolean = false;
@@ -220,7 +219,6 @@ struct SubPostsPage {
   private lzId: number = 0;
   private floorOwnerId: number = 0;
   private _userMap: Map<number, Dict> = new Map();
-  private _pendingSub: Dict | null = null;
   private _scrollToSubPostId: number = 0;
   private _win: window.Window | null = null;
   private _density: number = 1;
@@ -469,7 +467,6 @@ struct SubPostsPage {
     this.replyHint = '';
     this.subPostId = 0;
     this.replyUserId = 0;
-    this.replyPortrait = '';
     this.selectedImageUris = [];
     this.imageUploadResults = [];
     try { inputMethod.getController().stopInputSession(); } catch (_e) {}
@@ -501,41 +498,19 @@ struct SubPostsPage {
           }
         }
       }
-      let contentToSend: string = content;
-      if (this.subPostId > 0 && this.replyPortrait.length > 0) {
-        const replyName = this.replyHint.replace('回复 ', '');
-        contentToSend = '回复 #(reply, ' + this.replyPortrait + ', ' + replyName + ') :' + content;
-      }
-      await this.addRepo.replyToThread(this.forumId, this.forumName, this.threadId, contentToSend, this.postId > 0 ? this.postId : undefined, this.subPostId > 0 ? this.subPostId : undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
-      const account = AccountManager.getInstance().getCurrentAccountSync();
-      const myName = account?.nickname || '';
-      const author: Dict = { id: account?.uid || 0, name: myName, nameShow: myName, portrait: account?.portrait || '' };
-      const contentItems: Dict[] = [];
-      if (this.replyContent.length > 0) {
-        contentItems.push({ type: 0, text: this.replyContent });
-      }
-      for (const img of this.imageUploadResults) {
-        contentItems.push({ type: 1, originSrc: 'https://tieba.baidu.com/tb/editor/images/client/image_placeholder.png', cdn_src: img.picId, width: img.width, height: img.height });
-      }
-      const agree: Dict = { agreeNum: 0, hasAgree: 0 };
-      const newSub: Dict = {
-        id: 0,
-        author: author,
-        content: contentItems,
-        time: Math.floor(Date.now() / 1000),
-        agree: agree
-      };
-      if (this.subPostId > 0 && this.replyUserId > 0) {
-        const quote: Dict = { authorName: this.replyHint.replace('回复 ', '') };
-        newSub['quote'] = quote;
-      }
-      if (this.selectedImageUris.length === 0) {
-        this.subPosts = [...this.subPosts, newSub];
-        this._pendingSub = newSub;
-      }
+      // 不要手动拼「回复 #(reply, portrait, name) :」前缀：
+      // 已经把 replyUserId 传给服务端，服务端会自己生成回复归属标记。
+      // 两边都加会让回复正文出现两份回复信息（一条不带 xxx、一条带 xxx）。
+      // 与 ThreadPage.sendReply 保持一致，只传原文 + replyUserId。
+      await this.addRepo.replyToThread(this.forumId, this.forumName, this.threadId, content, this.postId > 0 ? this.postId : undefined, this.subPostId > 0 ? this.subPostId : undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
+      // 不要在这里本地插入一条：服务端已经真实产生回复，
+      // 本地再插一条会和服务端那条重复（表现为「发了两遍」），
+      // 且本地条目的表情会被原样显示成 #3 之类的原始标记。
+      // 直接重新拉取该楼层的楼中楼列表，由服务端返回正确的富文本内容。
       this.closeReplyWindow();
       this.uploadingImages = false;
-      void this.loadSubPosts();
+      // 静默刷新：不切 loading 态、不闪屏，保持当前滚动位置
+      void this.loadSubPosts(true);
       promptAction.showToast({ message: '回复已发送', duration: 1500 });
     } catch (e) {
       this.uploadingImages = false;
@@ -544,24 +519,21 @@ struct SubPostsPage {
     }
   }
 
-  async loadSubPosts(): Promise<void> {
-    this.loading = true;
-    this.error = '';
-    this.page = 1;
+  /**
+   * 拉取该楼层的楼中楼列表。
+   * silent=true 用于发帖后的刷新：不切换 loading 态、不清空列表，
+   * 避免整页闪一下并丢失滚动位置。
+   */
+  async loadSubPosts(silent?: boolean): Promise<void> {
+    if (!silent) {
+      this.loading = true;
+      this.error = '';
+      this.page = 1;
+    }
     try {
       const data: Dict = await this.repo.loadFloorPage(this.threadId, this.postId, this.forumId, this.page, this._scrollToSubPostId > 0 ? this._scrollToSubPostId : undefined);
       this.parentPost = this.extractParentPost(data);
       this.subPosts = this.extractSubPosts(data);
-      const pending: Dict | null = this._pendingSub;
-      if (pending) {
-        const pendingText = this.buildSubContent(pending);
-        const found = this.subPosts.some((s: Dict) => this.buildSubContent(s) === pendingText);
-        if (found) {
-          this._pendingSub = null;
-        } else {
-          this.subPosts = [...this.subPosts, pending];
-        }
-      }
       this.hasMore = this.checkHasMore(data);
       this.scrollToTargetSubPost();
       const rawUserList = data.user_list || (data.data as Dict)?.user_list || [];
@@ -587,7 +559,10 @@ struct SubPostsPage {
         this.forumName = getStr(data, 'forum_name', 'forumName', 'fname') || '';
       }
     } catch (e) {
-      this.error = (e as Dict)?.msg as string || (e as Dict)?.message as string || '加载失败';
+      // 静默刷新失败时保留现有列表，不要把正在阅读的页面换成错误态
+      if (!silent) {
+        this.error = (e as Dict)?.msg as string || (e as Dict)?.message as string || '加载失败';
+      }
     } finally {
       this.loading = false;
     }
@@ -959,7 +934,6 @@ struct SubPostsPage {
           this.replyHint = '回复 ' + this.getAuthorName(post.author as Dict);
           this.subPostId = Number(post.id || post.pid || 0);
           this.replyUserId = Number((post.author as Dict)?.id || post.author_id || 0);
-          this.replyPortrait = String((post.author as Dict)?.portrait || '');
           this.showReply = true;
         }, 12)
         .gesture(
@@ -1169,7 +1143,6 @@ struct SubPostsPage {
           this.replyHint = '回复 ' + this.getAuthorName(sub.author as Dict);
           this.subPostId = Number(sub.id || sub.pid || 0);
           this.replyUserId = Number((sub.author as Dict)?.id || sub.author_id || 0);
-          this.replyPortrait = String((sub.author as Dict)?.portrait || '');
           this.showReply = true;
         }, 12)
         .gesture(
