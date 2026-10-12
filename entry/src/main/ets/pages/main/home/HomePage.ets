@@ -893,7 +893,9 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
           Button('登录').fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor('#FFFFFF').backgroundColor('#4477E0').borderRadius(22).height(44).layoutWeight(1)
             .onClick(() => { NavigationHelper.navigate('pages/login/LoginPage'); })
           Button('随便看看').fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor('#4477E0').backgroundColor(blendWithBg(this.primaryColor, 0.12, this.isDark, '#1E1E1E')).borderRadius(22).height(44).layoutWeight(1).margin({ left: 12 })
-            .onClick(() => { NavigationHelper.navigate('pages/ExplorePageWrapper', { initialTab: 2 }); })
+            // 落到推荐页（index 1）：未登录时推荐接口同样能返回内容，
+            // 且这样内容与选项卡横线一致，不会出现「横线在推荐、内容是热门」
+            .onClick(() => { NavigationHelper.navigate('pages/ExplorePageWrapper', { initialTab: 1 }); })
         }
         .width('80%').margin({ top: 24 })
       }

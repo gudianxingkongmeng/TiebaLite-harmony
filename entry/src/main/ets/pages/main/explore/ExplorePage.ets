@@ -164,7 +164,14 @@ export default struct ExplorePage {
     try {
       const params = router.getParams() as Record<string, Object>;
       if (params && params.initialTab !== undefined) {
-        this.selectedTab = Number(params.initialTab);
+        const tab = Number(params.initialTab);
+        if (!isNaN(tab) && tab >= 0 && tab <= 2) {
+          // selectedTab 与 tabProgress 必须一起设置：
+          // tabProgress 才是画选项卡横线的状态，只改 selectedTab 会让
+          // 内容和横线停在不同标签上（内容是热门、横线却留在推荐）
+          this.selectedTab = tab;
+          this.tabProgress = tab;
+        }
       }
     } catch (e) {}
     this.screenWidth = 360;
