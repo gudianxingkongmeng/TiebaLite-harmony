@@ -839,7 +839,11 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
         }
   @Builder
   RecentForumsRow() {
-    if (this.showRecentForums && this.getRecentForums().length > 0 && !this.loading) {
+    // 未登录时不显示最近访问：这类本地行为记录没有账号归属，
+    // 在未登录状态下展示意义不大，也避免访客误以为已保存。
+    // 用 @State 的 isLoggedIn 而非直接查 AccountManager，前者才会随登录态变化触发重绘。
+    if (this.showRecentForums && this.isLoggedIn &&
+      this.getRecentForums().length > 0 && !this.loading) {
       Row() {
         Image($r('app.media.ic_footprint')).width(Math.round(16 * this.fontScale)).height(Math.round(16 * this.fontScale)).fillColor(textPrimary(this.isDark)).margin({ left: 16 })
         Text('最近')
