@@ -1,4 +1,4 @@
-import router from '@ohos.router';
+﻿import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import http from '@ohos.net.http';
@@ -62,10 +62,6 @@ struct PhotoViewPage {
   private _fingerStartX: number = 0;
   private _fingerStartY: number = 0;
   private _pinchBaseScale: number = 1;
-  private _pinchBaseOffX: number = 0;
-  private _pinchBaseOffY: number = 0;
-  private _pinchCenterX: number = 0;
-  private _pinchCenterY: number = 0;
   private _threadId: number = 0;
   private _forumId: number = 0;
   private _forumName: string = '';
@@ -417,62 +413,29 @@ struct PhotoViewPage {
 
   /** 双击放大的目标倍数 */
   private static readonly DBL_TAP_SCALE: number = 2.5;
-  /** 两次点击间隔上限（ms），超过则视为两次独立单击 */
-  private static readonly DBL_TAP_INTERVAL: number = 300;
   private _lastTapTime: number = 0;
   private _lastTapX: number = 0;
   private _lastTapY: number = 0;
 
   /**
-   * 统一处理单击/双击。
-   *
-   * 没有用 TapGesture({count:2})：它和同一组件上的 onClick / Swiper 内部手势
-   * 存在识别冲突，第一次点击常被消费掉，双击凑不齐。改为只挂一个单击手势，
-   * 自己在时间窗内判定第二次点击，行为完全可控。
+   * 以点击点为中心缩放 / 还原。
+   * onClick 的 event.x/y 是组件内坐标；组件铺满容器且图片 Contain 居中，
+   * 所以组件中心即图片中心。要让被点中的像素缩放后不动，可得 offset = t * (1 - s)。
    */
-  private onTap(event: GestureEvent): void {
-    const now = Date.now();
-    const lx = event.offsetX;
-    const ly = event.offsetY;
-    if (now - this._lastTapTime <= PhotoViewPage.DBL_TAP_INTERVAL) {
-      this._lastTapTime = 0;
-      this.doZoomToggle(lx, ly);
-      return;
-    }
-    this._lastTapTime = now;
-    this._lastTapX = lx;
-    this._lastTapY = ly;
-    this.showActions = !this.showActions;
-  }
-
-  /**
-   * 以指定点为中心缩放。
-   * localX/localY 为组件内坐标；组件铺满容器且图片以 Contain 居中，
-   * 所以组件中心即图片中心。
-   * 令缩放前后被点中的那个像素保持不动，可得 offset = t * (1 - s)，
-   * 其中 t 是该点相对中心的偏移。
-   */
-  private zoomToPoint(newScale: number, localX: number, localY: number): void {
-    const cx = this.viewW / 2;
-    const cy = this.viewH / 2;
-    const tx = localX - cx;
-    const ty = localY - cy;
-    this.zoomScale = newScale;
-    this.offsetX = tx * (1 - newScale);
-    this.offsetY = ty * (1 - newScale);
-    this.clampOffsets();
-  }
-
-  /** 双击：未放大则放大到指定倍数，已放大则还原 */
-  private doZoomToggle(localX: number, localY: number): void {
+  private toggleZoomAt(localX: number, localY: number): void {
     if (this.isZoomed) {
       this.resetZoom();
       return;
     }
-    // 点击位置在可用范围内时以点击点为中心，否则退化为居中放大
     if (localX > 0 && localY > 0 && this.viewW > 0 && this.viewH > 0) {
-      this.zoomToPoint(PhotoViewPage.DBL_TAP_SCALE, localX, localY);
+      const tx = localX - this.viewW / 2;
+      const ty = localY - this.viewH / 2;
+      this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
+      this.offsetX = tx * (1 - PhotoViewPage.DBL_TAP_SCALE);
+      this.offsetY = ty * (1 - PhotoViewPage.DBL_TAP_SCALE);
+      this.clampOffsets();
     } else {
+      // 拿不到点击位置时退化为居中放大
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
       this.clampOffsets();
     }
@@ -506,41 +469,40 @@ struct PhotoViewPage {
                   if (event.height && event.height > 0) this.curImgH = event.height;
                 }
               })
-              // 注意：这里绝不能再挂 .onClick。它本质是一个 count:1 的点击识别器，
-              // 会和下面的 TapGesture 抢同一次点击，导致单击/双击都判定不了。
-              // 单击切换操作栏的行为已由 onTap 承担。
-              // 缩放与平移在未放大时交给下方覆盖层处理，
-              // 这里只保留「起手缩放」的双指手势（双指与 Swiper 单指横滑不冲突）。
-              // 缩放/平移不挂在这张图上：未放大时覆盖层已带同样的变换，挂这里会叠加。
+              // 单击切换操作栏；300ms 内的第二次点击视为双击，切换缩放。
+              // 刻意复用已有的 onClick，而不是新增 TapGesture —— 之前反复尝试过
+              // count:2 / 单击手势 / priorityGesture，都会和 Swiper 抢手势，
+              // 结果连原有的捏合和平移也一起失效。onClick 已经能稳定收到点击。
+              .onClick((event: ClickEvent): void => {
+                const now = Date.now();
+                const cx = Number(event.x || 0);
+                const cy = Number(event.y || 0);
+                // 两次点击位置接近才算双击，避免滑动中的误触
+                if (now - this._lastTapTime <= 300 &&
+                  Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
+                  this._lastTapTime = 0;
+                  this.toggleZoomAt(cx, cy);
+                  return;
+                }
+                this._lastTapTime = now;
+                this._lastTapX = cx;
+                this._lastTapY = cy;
+                this.showActions = !this.showActions;
+              })
+              .translate({ x: this.offsetX, y: this.offsetY })
+              // 列表态只负责「起手缩放」：双指与 Swiper 的单指横滑不冲突。
+              // 单指平移不能挂在这里，否则会被 Swiper 抢走。
+              // 平移由下面的覆盖层在放大后独占处理。
               .gesture(
                 PinchGesture({ distance: 1 })
-                  .onActionStart((event: GestureEvent): void => {
-                  this._pinchBaseScale = this.zoomScale;
-                  this._pinchBaseOffX = this.offsetX;
-                  this._pinchBaseOffY = this.offsetY;
-                  this._pinchCenterX = event.pinchCenterX;
-                  this._pinchCenterY = event.pinchCenterY;
-                  })
+                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
                   .onActionUpdate((event: GestureEvent): void => {
-                  // 围绕双指中心缩放，而不是固定以图片中心缩放
-                  const base = this._pinchBaseScale > 0 ? this._pinchBaseScale : 1;
-                  const s = Math.max(1, Math.min(5, base * event.scale));
-                  const k = 1 - s / base;
-                  const tx = event.pinchCenterX - this.viewW / 2;
-                  const ty = event.pinchCenterY - this.viewH / 2;
-                  this.zoomScale = s;
-                  this.offsetX = this._pinchBaseOffX + tx * k;
-                  this.offsetY = this._pinchBaseOffY + ty * k;
-                  this.clampOffsets();
+                    this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                    this.clampOffsets();
                   })
                   .onActionEnd((): void => {
                     if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
                   })
-              )
-              // 单击手势：单击切换操作栏，双击由此自行判定（见 onTap）
-              .gesture(
-                TapGesture({ fingers: 1, count: 1 })
-                  .onAction((event: GestureEvent): void => { this.onTap(event); })
               )
             if (this.isGifUrl(item.url)) {
               Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
@@ -615,33 +577,30 @@ struct PhotoViewPage {
           .gesture(
             // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
             PinchGesture({ distance: 1 })
-              .onActionStart((event: GestureEvent): void => {
-              this._pinchBaseScale = this.zoomScale;
-              this._pinchBaseOffX = this.offsetX;
-              this._pinchBaseOffY = this.offsetY;
-              this._pinchCenterX = event.pinchCenterX;
-              this._pinchCenterY = event.pinchCenterY;
-              })
+              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
               .onActionUpdate((event: GestureEvent): void => {
-              // 围绕双指中心缩放，而不是固定以图片中心缩放
-              const base = this._pinchBaseScale > 0 ? this._pinchBaseScale : 1;
-              const s = Math.max(1, Math.min(5, base * event.scale));
-              const k = 1 - s / base;
-              const tx = event.pinchCenterX - this.viewW / 2;
-              const ty = event.pinchCenterY - this.viewH / 2;
-              this.zoomScale = s;
-              this.offsetX = this._pinchBaseOffX + tx * k;
-              this.offsetY = this._pinchBaseOffY + ty * k;
-              this.clampOffsets();
+                this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                this.clampOffsets();
               })
               .onActionEnd((): void => {
                 if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
               })
           )
-              .gesture(
-                TapGesture({ fingers: 1, count: 1 })
-                  .onAction((event: GestureEvent): void => { this.onTap(event); })
-              )
+              .onClick((event: ClickEvent): void => {
+                const now = Date.now();
+                const cx = Number(event.x || 0);
+                const cy = Number(event.y || 0);
+                if (now - this._lastTapTime <= 300 &&
+                  Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
+                  this._lastTapTime = 0;
+                  this.toggleZoomAt(cx, cy);
+                  return;
+                }
+                this._lastTapTime = now;
+                this._lastTapX = cx;
+                this._lastTapY = cy;
+                this.showActions = !this.showActions;
+              })
       }
       .width('100%').height('100%')
       .backgroundColor('#000000')
