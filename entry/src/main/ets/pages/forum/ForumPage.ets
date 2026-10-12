@@ -40,7 +40,6 @@ struct ForumPage {
   @StorageLink('isDarkTheme') @Watch('onIsDarkChange') isDark: boolean = false;
   @StorageLink('cardStyle') cardStyle: number = 0;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @StorageLink('headerTint') headerTint: number = 8;
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @StorageProp('hideOnScroll') hideOnScroll: boolean = true;
   @State forumName: string = '';

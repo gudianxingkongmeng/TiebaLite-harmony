@@ -30,7 +30,6 @@ export default struct HomePage {
   @StorageLink('fontScale') fontScale: number = 1.0;
   @StorageLink('cardStyle') cardStyle: number = 0;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @StorageLink('headerTint') headerTint: number = 8;
   @StorageLink('isDarkTheme') @Watch('onColorChanged') isDark: boolean = false;
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @StorageLink('searchBoxRound') searchBoxRound: number = 100;

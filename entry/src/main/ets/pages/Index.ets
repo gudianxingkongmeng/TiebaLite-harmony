@@ -233,9 +233,8 @@ struct Index {
       const cs = await prefs.getInt('card_style', 0);
       const sb = await prefs.getBoolean('sign_badge', false);
       const pt = await prefs.getInt('page_transition_style', 0);
-      const ha = await prefs.getInt('header_alpha', 25);
-      const ht = await prefs.getInt('header_tint', 8);
-      const sbr = await prefs.getInt('search_box_round', 100);
+    const ha = await prefs.getInt('header_alpha', 25);
+    const sbr = await prefs.getInt('search_box_round', 100);
       AppStorage.SetOrCreate('navStyle', ns);
       AppStorage.SetOrCreate('showNavLabels', snl);
       AppStorage.SetOrCreate('showThreadPreview', stp);
@@ -244,9 +243,8 @@ struct Index {
       AppStorage.SetOrCreate('cardStyle', cs);
       AppStorage.SetOrCreate('signBadge', sb);
       AppStorage.SetOrCreate('pageTransitionStyle', pt);
-      AppStorage.SetOrCreate('headerAlpha', Math.max(0, Math.min(ha, 100)));
-      AppStorage.SetOrCreate('headerTint', Math.max(0, Math.min(ht, 100)));
-      AppStorage.SetOrCreate('searchBoxRound', Math.max(0, Math.min(sbr, 100)));
+    AppStorage.SetOrCreate('headerAlpha', Math.max(0, Math.min(ha, 100)));
+    AppStorage.SetOrCreate('searchBoxRound', Math.max(0, Math.min(sbr, 100)));
       const ilm = await prefs.getInt('image_load_mode', 0);
       AppStorage.SetOrCreate('imageLoadMode', Math.max(0, Math.min(ilm, 2)));
       NetworkUtil.publishWifiState();

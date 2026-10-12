@@ -23,7 +23,6 @@ struct ForumSearchPage {
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @StorageLink('searchBoxRound') searchBoxRound: number = 100;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @StorageLink('headerTint') headerTint: number = 8;
   @StorageLink('cardStyle') cardStyle: number = 0;
   @State bgColor: string = pageBg(AppStorage.Get<boolean>('isDarkTheme') ?? false);
   @State keyword: string = '';

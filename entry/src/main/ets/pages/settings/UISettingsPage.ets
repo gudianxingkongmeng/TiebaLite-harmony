@@ -24,7 +24,6 @@ struct UISettingsPage {
   @State hideOnScroll: boolean = true;
   @State pageTransitionStyle: number = 0;
   @State headerAlpha: number = 25;
-  @State headerTint: number = 8;
   @State searchBoxRound: number = 100;
 
   private prefs: PreferencesManager = PreferencesManager.getInstance();
@@ -51,7 +50,6 @@ struct UISettingsPage {
     this.hideOnScroll = await this.prefs.getBoolean('ui_hide_on_scroll', true);
     this.pageTransitionStyle = Math.max(0, Math.min(await this.prefs.getInt('page_transition_style', 0), this.pageTransitions.length - 1));
     this.headerAlpha = Math.max(0, Math.min(await this.prefs.getInt('header_alpha', 25), 100));
-    this.headerTint = Math.max(0, Math.min(await this.prefs.getInt('header_tint', 8), 100));
     this.searchBoxRound = Math.max(0, Math.min(await this.prefs.getInt('search_box_round', 100), 100));
   }
   onIsDarkChange(): void {
@@ -251,27 +249,6 @@ struct UISettingsPage {
                     const v = Math.max(0, Math.min(Math.round(value), 100));
                     void this.prefs.putInt('header_alpha', v);
                     AppStorage.SetOrCreate('headerAlpha', v);
-                  }
-                })
-            }
-            .width('100%').height(56).padding({ left: 16, right: 16 })
-
-            Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
-
-            Row() {
-              Text('顶栏背景加深').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
-              Blank()
-              Text(this.headerTint + '%')
-                .fontFamily(this.appFontFamily).fontSize(13).fontColor(textTertiary(this.isDark)).margin({ right: 8 })
-              Slider({ value: this.headerTint, min: 0, max: 100, step: 1 })
-                .width(140)
-                .showSteps(true)
-                .onChange((value: number, mode: SliderChangeMode) => {
-                  this.headerTint = Math.round(value);
-                  if (mode === SliderChangeMode.End) {
-                    const v = Math.max(0, Math.min(Math.round(value), 100));
-                    void this.prefs.putInt('header_tint', v);
-                    AppStorage.SetOrCreate('headerTint', v);
                   }
                 })
             }

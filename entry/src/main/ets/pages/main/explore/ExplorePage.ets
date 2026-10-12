@@ -58,7 +58,6 @@ export default struct ExplorePage {
   @StorageLink('fontScale') fontScale: number = 1.0;
   @StorageLink('cardStyle') cardStyle: number = 0;
   @StorageLink('headerAlpha') headerAlpha: number = 25;
-  @StorageLink('headerTint') headerTint: number = 8;
   @StorageLink('isDarkTheme') @Watch('onColorChanged') isDark: boolean = false;
   @StorageLink('appFontFamily') appFontFamily: string = '';
   @StorageLink('searchBoxRound') searchBoxRound: number = 100;
@@ -1004,7 +1003,7 @@ export default struct ExplorePage {
           .width('85%').height(this.searchBarVisible ? 44 : 0)
           .clip(true)
           .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
-          .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
+.backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
           .backdropBlur(glassBackdropBlur(this.headerAlpha))
           .border({ width: 1, color: dividerColor(this.isDark) })
           .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
@@ -1296,7 +1295,7 @@ export default struct ExplorePage {
     }
 .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     // 液态玻璃：模糊之上叠加色彩增强，提升通透感
-    .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
+    .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBackdropBlur(this.headerAlpha))
     .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
     // 只保留一条不对称描边：上/左更亮模拟受光，下/右更暗
