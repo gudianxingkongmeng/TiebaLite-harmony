@@ -23,6 +23,12 @@ interface PicItem {
   picId: string;
 }
 
+/** Image.onComplete 回传的原始图片信息（SDK 里是内联对象，这里用接口复刻） */
+interface ImageCompleteInfo {
+  width?: number;
+  height?: number;
+}
+
 @Entry
 @Component
 struct PhotoViewPage {
@@ -45,6 +51,15 @@ struct PhotoViewPage {
   @State zoomScale: number = 1;
   @State offsetX: number = 0;
   @State offsetY: number = 0;
+  // 当前图片的原始像素尺寸，用于计算放大后可平移的范围
+  @State curImgW: number = 0;
+  @State curImgH: number = 0;
+  // 可视区域尺寸（objectFit(Contain) 下的基准容器尺寸）
+  @State viewW: number = 0;
+  @State viewH: number = 0;
+  private _panStartX: number = 0;
+  private _panStartY: number = 0;
+  private _pinchBaseScale: number = 1;
   private _threadId: number = 0;
   private _forumId: number = 0;
   private _forumName: string = '';
@@ -346,6 +361,54 @@ struct PhotoViewPage {
     return false;
   }
 
+  /**
+   * 图片在 objectFit(Contain) 下的实际绘制尺寸。
+   * 缩放后可平移的范围由它决定：绘制尺寸超出容器的部分，就是边缘之外多出来的余量。
+   */
+  private contentSize(): number[] {
+    const iw = this.curImgW;
+    const ih = this.curImgH;
+    const vw = this.viewW;
+    const vh = this.viewH;
+    if (iw <= 0 || ih <= 0 || vw <= 0 || vh <= 0) return [vw, vh];
+    const fit = Math.min(vw / iw, vh / ih);
+    return [iw * fit, ih * fit];
+  }
+
+  /** 横向最大平移距离：放大后图片超出容器宽度的部分的一半 */
+  private maxOffsetX(): number {
+    if (this.viewW <= 0) return 0;
+    return Math.max(0, (this.contentSize()[0] * this.zoomScale - this.viewW) / 2);
+  }
+
+  /** 纵向最大平移距离 */
+  private maxOffsetY(): number {
+    if (this.viewH <= 0) return 0;
+    return Math.max(0, (this.contentSize()[1] * this.zoomScale - this.viewH) / 2);
+  }
+
+  /** 把平移量夹在图片边缘内，不允许拖出图片外 */
+  private clampOffsets(): void {
+    const mx = this.maxOffsetX();
+    const my = this.maxOffsetY();
+    const nx = Math.max(-mx, Math.min(mx, this.offsetX));
+    const ny = Math.max(-my, Math.min(my, this.offsetY));
+    if (nx !== this.offsetX) this.offsetX = nx;
+    if (ny !== this.offsetY) this.offsetY = ny;
+  }
+
+  /** 复位缩放与位移（切图、缩回 1 倍时用） */
+  private resetZoom(): void {
+    this.zoomScale = 1;
+    this.offsetX = 0;
+    this.offsetY = 0;
+    this._pinchBaseScale = 1;
+  }
+
+  private get isZoomed(): boolean {
+    return this.zoomScale > 1.001;
+  }
+
   build() {
     Stack() {
       Swiper() {
@@ -354,23 +417,67 @@ struct PhotoViewPage {
             Image(item.url)
               .width('100%').height('100%')
               .objectFit(ImageFit.Contain)
+              .onComplete((event?: ImageCompleteInfo): void => {
+                // 记录原始像素尺寸，放大后据此限制平移范围
+                if (index === this.currentIndex && event) {
+                  if (event.width && event.width > 0) this.curImgW = event.width;
+                  if (event.height && event.height > 0) this.curImgH = event.height;
+                }
+              })
               .onClick(() => { this.showActions = !this.showActions; })
+              // 缩放和平移都作用在图片自身，而不是外层容器，
+              // 否则顶栏和指示器会跟着一起缩放。
+              .scale({ x: this.zoomScale, y: this.zoomScale })
+              .translate({ x: this.offsetX, y: this.offsetY })
               .gesture(
                 PinchGesture({ distance: 1 })
-                  .onActionUpdate((event: GestureEvent) => {
-                    this.zoomScale = event.scale;
+                  .onActionStart((): void => {
+                    this._pinchBaseScale = this.zoomScale;
                   })
-                  .onActionEnd(() => {
-                    this.zoomScale = this.zoomScale < 1 ? 1 : this.zoomScale;
+                  .onActionUpdate((event: GestureEvent): void => {
+                    const s = this._pinchBaseScale * event.scale;
+                    this.zoomScale = Math.max(1, Math.min(5, s));
+                    this.clampOffsets();
+                  })
+                  .onActionEnd((): void => {
+                    // 缩回 1 倍时归位，避免残留位移
+                    if (this.zoomScale <= 1.001) {
+                      this.resetZoom();
+                    } else {
+                      this.clampOffsets();
+                    }
                   })
               )
+              .gesture(
+                // 放大后靠 hitTestBehavior 抢占触摸：Default 时图片吃掉拖拽用于平移，
+                // Transparent 时不拦截，让 Swiper 继续左右滑动切图。
+                PanGesture({ fingers: 1, direction: PanDirection.All })
+                  .onActionStart((): void => {
+                    this._panStartX = this.offsetX;
+                    this._panStartY = this.offsetY;
+                  })
+                  .onActionUpdate((event: GestureEvent): void => {
+                    if (!this.isZoomed) return;
+                    this.offsetX = this._panStartX + event.offsetX;
+                    this.offsetY = this._panStartY + event.offsetY;
+                    this.clampOffsets();
+                  })
+              )
+              .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.Transparent)
             if (this.isGifUrl(item.url)) {
               Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
                 .padding({ left: 5, right: 5, top: 2, bottom: 2 })
                 .backgroundColor('#CC000000').borderRadius(4)
                 .position({ top: 8, left: 8 })
             }
-          }.width('100%').height('100%')
+          }
+          .width('100%').height('100%')
+          .onAreaChange((_old: Area, newArea: Area): void => {
+            const w = newArea.width as number;
+            const h = newArea.height as number;
+            if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
+            if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
+          })
         })
       }
       .index(this.currentIndex)
@@ -378,8 +485,14 @@ struct PhotoViewPage {
       .indicator(this.showSwiperDots)
       .width('100%').height('100%')
       .backgroundColor('#000000')
-      .onChange((idx: number) => {
-        this.currentIndex = idx; this.zoomScale = 1; this.offsetX = 0; this.offsetY = 0;
+      // 放大后关闭左右滑动，避免拖动看图时误触发切图；
+      // 缩回 1 倍时恢复，可继续滑动切换图片。
+      .disableSwipe(this.isZoomed)
+      .onChange((idx: number): void => {
+        this.currentIndex = idx;
+        this.resetZoom();
+        this.curImgW = 0;
+        this.curImgH = 0;
         this.ensureCurrentImageCached();
         this.maybeLoadWindows();
       })
@@ -423,8 +536,8 @@ struct PhotoViewPage {
       }
     }
     .width('100%').height('100%').expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-    .scale({ x: this.zoomScale, y: this.zoomScale })
-    
+    // 缩放只作用于图片本身，这里不能再加 scale，
+    // 否则顶栏、指示器和整层容器会跟着一起缩放。
   }
 
   onBackPress(): boolean {
