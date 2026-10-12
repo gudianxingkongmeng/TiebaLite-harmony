@@ -8,8 +8,6 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "@ohos/protobufjs": "^1.0.0",
-    "long": "^5.2.0",
     "@ohos/axios": "^2.2.0"
   },
   "devDependencies": {},
