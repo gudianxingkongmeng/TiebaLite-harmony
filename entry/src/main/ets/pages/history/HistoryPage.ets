@@ -12,7 +12,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import BackToTopButton from '../../components/BackToTopButton';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, pageBg, textPrimary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 class HistoryDataSource implements IDataSource {
@@ -303,3 +303,4 @@ struct HistoryPage {
     }
   }
 }
+

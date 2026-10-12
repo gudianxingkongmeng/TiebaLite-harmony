@@ -10,9 +10,7 @@ import { systemShare } from '@kit.ShareKit';
 import { fileUri } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
-import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
 import MediaSaver from '../../core/utils/MediaSaver';
-import { Dict } from '../../core/types/Dict';
 import { setDarkStatusBar } from '../../core/utils/SystemBarHelper';
 import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import ThreadImageFetcher from '../../core/utils/ThreadImageFetcher';
@@ -418,18 +416,15 @@ struct PhotoViewPage {
   private _lastTapY: number = 0;
 
   /**
-   * 以点击点为中心缩放 / 还原。
-   * onClick 的 event.x/y 是组件内坐标；组件铺满容器且图片 Contain 居中，
-   * 所以组件中心即图片中心。要让被点中的像素缩放后不动，可得 offset = t * (1 - s)。
-   */
-  /**
    * 统一的点击处理：单击切换操作栏，300ms 内位置接近的第二次点击视为双击。
    * 被 onClick 和 PanGesture 的兜底分支共用。
    */
   private handleTapAt(cx: number, cy: number): void {
     const now = Date.now();
-    if (now - this._lastTapTime <= 300 &&
-      Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
+    const gap = now - this._lastTapTime;
+    const isDouble = gap <= 300 &&
+      Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60;
+    if (isDouble) {
       this._lastTapTime = 0;
       this.toggleZoomAt(cx, cy);
       return;
@@ -440,12 +435,17 @@ struct PhotoViewPage {
     this.showActions = !this.showActions;
   }
 
+  /**
+   * 以点击点为中心缩放 / 还原。
+   * onClick 的 event.x/y 是组件内坐标；组件铺满容器且图片 Contain 居中，
+   * 所以组件中心即图片中心。要让被点中的像素缩放后不动，可得 offset = t * (1 - s)。
+   *
+   * 这里直接比较 zoomScale，不走 isZoomed getter：实测日志中该 getter 在本组件里
+   * 打出的是 undefined，导致还原分支永远进不去——放大后只能"再放大一次"。
+   */
   private toggleZoomAt(localX: number, localY: number): void {
-    console.info('[PV] dblTap x=' + localX + ' y=' + localY +
-      ' viewW=' + this.viewW + ' viewH=' + this.viewH +
-      ' imgW=' + this.curImgW + ' imgH=' + this.curImgH +
-      ' zoom=' + this.zoomScale);
-    if (this.isZoomed) {
+    const zoomed: boolean = this.zoomScale > 1.001;
+    if (zoomed) {
       this.resetZoom();
       return;
     }
@@ -455,10 +455,7 @@ struct PhotoViewPage {
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
       this.offsetX = tx * (1 - PhotoViewPage.DBL_TAP_SCALE);
       this.offsetY = ty * (1 - PhotoViewPage.DBL_TAP_SCALE);
-      console.info('[PV] before clamp offX=' + this.offsetX + ' offY=' + this.offsetY +
-        ' maxX=' + this.maxOffsetX() + ' maxY=' + this.maxOffsetY());
       this.clampOffsets();
-      console.info('[PV] after clamp zoom=' + this.zoomScale + ' offX=' + this.offsetX + ' offY=' + this.offsetY);
     } else {
       // 拿不到点击位置时退化为居中放大
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
@@ -510,10 +507,9 @@ struct PhotoViewPage {
               // 平移由下面的覆盖层在放大后独占处理。
               .gesture(
                 PinchGesture({ distance: 1 })
-                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; console.info('[PV] pinchStart base=' + this.zoomScale); })
+                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale;; })
                   .onActionUpdate((event: GestureEvent): void => {
                     this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                    console.info('[PV] pinchUpdate scale=' + event.scale + ' -> zoom=' + this.zoomScale);
                     this.clampOffsets();
                   })
                   .onActionEnd((): void => {
@@ -544,7 +540,6 @@ struct PhotoViewPage {
       // 放大后停掉翻页，避免拖动看图时误触发切图；缩回 1 倍自动恢复
       .disableSwipe(this.isZoomed)
       .onChange((idx: number): void => {
-        console.info('[PV] swiper onChange idx=' + idx + ' zoom=' + this.zoomScale);
         this.currentIndex = idx;
         this.resetZoom();
         this.curImgW = 0;
@@ -609,10 +604,9 @@ struct PhotoViewPage {
           .gesture(
             // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
             PinchGesture({ distance: 1 })
-              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; console.info('[PV] pinchStart base=' + this.zoomScale); })
+              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale;; })
               .onActionUpdate((event: GestureEvent): void => {
                 this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                console.info('[PV] pinchUpdate scale=' + event.scale + ' -> zoom=' + this.zoomScale);
                 this.clampOffsets();
               })
               .onActionEnd((): void => {
@@ -713,4 +707,5 @@ struct PhotoViewPage {
     }
   }
 }
+
 

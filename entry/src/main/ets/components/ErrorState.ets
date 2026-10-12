@@ -1,4 +1,4 @@
-﻿import { textPrimary, textSecondary, textTertiary } from '../core/utils/DataHelper';
+import { textSecondary } from '../core/utils/DataHelper';
 
 @Component
 export default struct ErrorState {
@@ -34,3 +34,4 @@ export default struct ErrorState {
     .alignItems(HorizontalAlign.Center)
   }
 }
+

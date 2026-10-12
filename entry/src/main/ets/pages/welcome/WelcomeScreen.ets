@@ -1,8 +1,8 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
-import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../../core/utils/DataHelper';
+import { pageBg, textPrimary, textSecondary, dividerColor } from '../../core/utils/DataHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 
 @Entry
@@ -80,3 +80,4 @@ struct WelcomeScreen {
     
   }
 }
+

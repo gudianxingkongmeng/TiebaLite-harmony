@@ -1,4 +1,4 @@
-﻿import { blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';
+import { textSecondary } from '../core/utils/DataHelper';
 
 @Component
 export default struct Avatar {
@@ -43,3 +43,4 @@ export default struct Avatar {
     }
   }
 }
+

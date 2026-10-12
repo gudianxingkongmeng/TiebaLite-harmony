@@ -19,14 +19,14 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, KEYBOARD_IME_EXTRA_VP, primaryContainer, onPrimaryContainer, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, blendWithBg, blendWithWhite, darkenColor, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import BackToTopButton from '../../components/BackToTopButton';
 import EmojiImage from '../../components/EmojiImage';
 import { registerEmoji, richEditorToText, isEmojiText, resolveEmojiId, splitEmojiText, EmojiSeg } from '../../components/EmojiManager';
-import { EmoticonInfo, getAllEmoticons } from '../../components/EmojiManager';
+import { getAllEmoticons } from '../../components/EmojiManager';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
@@ -1357,14 +1357,6 @@ struct SubPostsPage {
     return 0;
   }
 
-  private getQuoteName(sub: Dict): string {
-    const q = sub.quote as Dict;
-    if (q) {
-      const n = String(q.author_name || q.authorName || '');
-      if (n.length > 0) return n;
-    }
-    return '';
-  }
 
   private cleanAtReference(text: string): string {
     return text.replace(/@[^:：\s].*?(?=[：:]|$)/g, '');
@@ -1636,3 +1628,4 @@ struct SubPostsPage {
     }
   }
 }
+

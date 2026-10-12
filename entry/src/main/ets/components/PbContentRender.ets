@@ -1,7 +1,7 @@
-﻿import { Dict } from '../core/types/Dict';
-import { textPrimary, textSecondary, pageBg, cardBg, blendWithBg } from '../core/utils/DataHelper';
+import { Dict } from '../core/types/Dict';
+import { textPrimary, textSecondary, blendWithBg } from '../core/utils/DataHelper';
 import EmojiImage from './EmojiImage';
-import { registerEmoji, getEmojiIdFromMap, isInlineEmojiType, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix, splitEmojiText } from './EmojiManager';
+import { registerEmoji, getEmojiIdFromMap, resolveEmojiId as resolveEmojiIdFromMgr, isEmojiText, isBareEmojiPrefix, splitEmojiText } from './EmojiManager';
 import { PhotoUrlCache } from '../core/utils/ThreadImageFetcher';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import NetworkUtil from '../core/utils/NetworkUtil';
@@ -29,6 +29,11 @@ export default struct PbContentRender {
   @StorageLink('imageLoadMode') imageLoadMode: number = 0;
   @StorageLink('netIsWifi') netIsWifi: boolean = true;
   @Prop @Watch('onContentsChange') contents: Dict[] = [];
+
+  onContentsChange(): void {
+    this.refreshFirstVideo();
+  }
+
   @Prop allImageUrls: string[] = [];
   @Prop allImageStartIndex: number = 0;
   @Prop threadId: number = 0;
@@ -39,12 +44,6 @@ export default struct PbContentRender {
   @State videoCurrentSec: number = 0;
   @State firstVideoUrl: string = '';
   @State firstVideoPoster: string = '';
-  private _pbLogged: boolean = false;
-
-  onContentsChange(): void {
-    console.info('TiebaLite: [V5] contents change, items=' + this.contents.length);
-    this.refreshFirstVideo();
-  }
 
   private refreshFirstVideo(): void {
     const groups = this.buildGroups();
@@ -671,3 +670,4 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
 export class AppRouter {
   static navigate: (page: string, params?: Dict) => void = () => {};
 }
+

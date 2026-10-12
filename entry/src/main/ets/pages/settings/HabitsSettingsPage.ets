@@ -2,7 +2,7 @@ import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { textAccent, pageBg, cardBg, cardRadius, textPrimary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import NetworkUtil from '../../core/utils/NetworkUtil';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
@@ -302,3 +302,4 @@ struct HabitsSettingsPage {
     }
   }
 }
+

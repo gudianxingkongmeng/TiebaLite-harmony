@@ -20,7 +20,7 @@ import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
-import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
+import { getStr, getNum, getStrObj, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, onPrimaryContainer, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
 import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../../core/utils/ScrollHeaderHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
@@ -1587,3 +1587,4 @@ export default struct ExplorePage {
     return [];
   }
 }
+

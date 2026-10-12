@@ -35,7 +35,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
-import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
@@ -44,7 +44,7 @@ import { pollDataToDict } from '../../proto/PollProto';
 import { uploadChunked } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';
 import MD5 from '../../core/encryption/MD5';
-import { richEditorToText, getAllEmoticons, EmoticonInfo, splitEmojiText, EmojiSeg } from '../../components/EmojiManager';
+import { richEditorToText, getAllEmoticons, splitEmojiText, EmojiSeg } from '../../components/EmojiManager';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
 
 class ImageUploadResult {
@@ -1743,14 +1743,6 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     return this.formatUnixTime(ts);
   }
 
-  private formatAgreeText(post: Dict): string {
-    const agree = post.agree as Dict | undefined;
-    let count = 0;
-    if (agree) count = Number(agree.agreeNum || agree.agree_num || agree.count || agree.num || 0);
-    else count = Number(post.agreeNum || post.agree_num || post.likeNum || post.like_num || 0);
-    if (count > 0) return this.formatCount(count);
-    return '';
-  }
 
   private getPostAgreed(post: Dict): boolean {
     const agree = post.agree as Dict | undefined;
@@ -1841,16 +1833,6 @@ Text(this.uploadingImages ? '上传中...' : '发送')
     return texts.join('');
   }
 
-  private getSubPreviewLine(sub: Dict): string {
-    const name = this.resolveSubAuthorName(sub);
-    const nameId = this.resolveSubAuthorNameId(sub);
-    const content = this.getSubContentText(sub.content ? sub.content as Dict[] : []);
-    const hasMedia = this.hasMediaContent(sub.content ? sub.content as Dict[] : []);
-    const quote = this.resolveSubQuoteName(sub);
-    const prefix = quote ? name + ' Reply ' + quote + ': ' + name + nameId : name + nameId;
-    const suffix = content.length > 0 ? content : (hasMedia ? '[图片/视频]' : '');
-    return prefix + ': ' + suffix;
-  }
 
   private getShownSubPosts(post: Dict): Dict[] {
     const blockRepo = BlockRepository.getInstance();
@@ -3361,4 +3343,5 @@ this._replyScrollAnimated = true;
     }
   }
 }
+
 

@@ -20,7 +20,7 @@ import PullToRefresh from '../../../components/PullToRefresh';
 import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
@@ -968,13 +968,6 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
     return result;
   }
 
-  private chunkThreads(arr: Dict[]): Dict[][] {
-    const result: Dict[][] = [];
-    for (let i = 0; i < arr.length; i += 2) {
-      result.push(arr.slice(i, i + 2));
-    }
-    return result;
-  }
 
   private getLeftColumnThreads(): Dict[] {
     const result: Dict[] = [];
@@ -1225,3 +1218,4 @@ Text('Lv.' + getNum(forum, 'level', 'level_id', 'user_level', 'forum_level'))
     saveRecentForumGlobal(forum);
   }
 }
+

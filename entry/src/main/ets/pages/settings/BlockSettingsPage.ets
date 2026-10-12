@@ -2,7 +2,7 @@ import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { pageBg, cardBg, cardRadius, textPrimary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import DatabaseManager from '../../core/storage/DatabaseManager';
 import BlockRepository from '../../core/repository/BlockRepository';
 import { textAccent } from '../../core/utils/DataHelper';
@@ -292,3 +292,4 @@ struct BlockSettingsPage {
     .width('100%').height('100%').backgroundColor(pageBg(this.isDark))
   }
 }
+

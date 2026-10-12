@@ -1,8 +1,8 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
+import { pageBg, textPrimary, dividerColor, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import webview from '@ohos.web.webview';
 
@@ -134,3 +134,4 @@ struct WebViewPage {
     }
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import { blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';
+import { cardBg, textSecondary } from '../core/utils/DataHelper';
 
 @Component
 export default struct SimpleTabs {
@@ -45,3 +45,4 @@ export default struct SimpleTabs {
     .height('100%')
   }
 }
+

@@ -1,7 +1,7 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import { NavigationHelper } from '../core/utils/NavigationHelper';
 import { Dict } from '../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';
+import { getStr, getNum } from '../core/utils/DataHelper';
 import VideoPlayer from './VideoPlayer';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import NetworkUtil from '../core/utils/NetworkUtil';
@@ -375,3 +375,4 @@ private getVideoUrl(idx: number): string {
     NavigationHelper.navigate('pages/photoview/PhotoViewPage', { urls: this.urls, index: index });
   }
 }
+

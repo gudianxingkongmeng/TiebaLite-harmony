@@ -1,4 +1,4 @@
-﻿import HarmonyRing from './HarmonyRing';
+import HarmonyRing from './HarmonyRing';
 
 const N_PTS: number = 24;
 const TAU: number = Math.PI * 2;
@@ -102,9 +102,6 @@ export default struct GearCycle {
     this.draw();
   }
 
-  private easeOut(x: number): number {
-    return 1 - Math.pow(1 - x, 3);
-  }
 
   private draw(): void {
     if (!this.canvasReady || this.gearSize <= 0) return;

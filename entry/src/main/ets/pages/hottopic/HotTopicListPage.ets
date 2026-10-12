@@ -1,4 +1,4 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -7,7 +7,7 @@ import NetworkImage from '../../components/Images';
 import LoadingState from '../../components/LoadingState';
 import ErrorState from '../../components/ErrorState';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
+import { getStr, getNum, pageBg, cardBg, textPrimary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry

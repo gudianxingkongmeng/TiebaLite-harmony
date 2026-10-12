@@ -1,4 +1,4 @@
-﻿import { textPrimary, textSecondary, textTertiary } from '../core/utils/DataHelper';
+import { textTertiary } from '../core/utils/DataHelper';
 import GearLoading from './GearLoading';
 
 @Component
@@ -22,3 +22,4 @@ export default struct LoadingState {
     .alignItems(HorizontalAlign.Center)
   }
 }
+

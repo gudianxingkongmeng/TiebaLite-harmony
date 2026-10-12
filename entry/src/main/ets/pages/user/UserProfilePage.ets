@@ -1,4 +1,4 @@
-import { getStr, getNum, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, primaryContainer, onPrimaryContainer, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
@@ -674,3 +674,4 @@ struct UserProfilePage {
     }
   }
 }
+

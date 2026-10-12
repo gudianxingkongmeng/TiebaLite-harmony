@@ -4,8 +4,7 @@ import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import pasteboard from '@ohos.pasteboard';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
-import { Dict } from '../../core/types/Dict';
+import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 // 版本号统一取自 AppScope/app.json5 生成的 BuildProfile，避免和安装包里的实际版本脱节
@@ -196,3 +195,4 @@ struct AboutPage {
     }
   }
 }
+

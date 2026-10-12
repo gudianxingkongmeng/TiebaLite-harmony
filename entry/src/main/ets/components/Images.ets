@@ -1,4 +1,4 @@
-﻿import { blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor } from '../core/utils/DataHelper';
+import { blendWithBg, pageBg, textTertiary } from '../core/utils/DataHelper';
 
 @Component
 export default struct NetworkImage {

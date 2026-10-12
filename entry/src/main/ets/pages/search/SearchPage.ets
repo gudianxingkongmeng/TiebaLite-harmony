@@ -13,7 +13,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
 import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
@@ -1120,3 +1120,4 @@ onIsDarkChange(): void {
     }
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import { TopInsetHelper } from '../../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import window from '@ohos.window';
@@ -8,7 +8,7 @@ import AccountManager, { Account } from '../../../core/auth/AccountManager';
 import Avatar from '../../../components/Avatar';
 import UserProfileRepository from '../../../core/repository/UserProfileRepository';
 import { Dict } from '../../../core/types/Dict';
-import { getStr, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, darkenColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../../core/utils/DataHelper';
+import { getStr, buildPortraitUrl, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, darkenColor, glassTopBarSurface, glassTopBarEffect } from '../../../core/utils/DataHelper';
 import ThemeProvider from '../../../core/theme/ThemeProvider';
 import { DarkMode } from '../../../core/theme/ThemeConfig';
 import DeviceFingerprint from '../../../core/device/DeviceFingerprint';
@@ -407,4 +407,5 @@ export default struct UserTabPage {
     .onClick(() => onClick())
   }
 }
+
 

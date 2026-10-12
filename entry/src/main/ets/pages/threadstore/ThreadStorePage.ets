@@ -14,7 +14,7 @@ import GearLoading from '../../components/GearLoading';
 import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, getNum, pageBg, cardBg, textPrimary, textTertiary, dividerColor, shadowColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import promptAction from '@ohos.promptAction';
 import BackToTopButton from '../../components/BackToTopButton';
@@ -601,4 +601,5 @@ struct ThreadStorePage {
     }
   }
 }
+
 

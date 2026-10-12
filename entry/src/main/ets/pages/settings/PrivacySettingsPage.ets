@@ -6,7 +6,7 @@ import PreferencesManager from '../../core/storage/PreferencesManager';
 import DatabaseManager from '../../core/storage/DatabaseManager';
 import SearchRepository from '../../core/repository/SearchRepository';
 import promptAction from '@ohos.promptAction';
-import { blendWithWhite, darkenColor, blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { pageBg, cardBg, cardRadius, textPrimary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
@@ -178,3 +178,4 @@ struct PrivacySettingsPage {
     }
   }
 }
+

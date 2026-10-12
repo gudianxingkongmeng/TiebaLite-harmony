@@ -4,7 +4,7 @@ import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import ThemeProvider from '../../core/theme/ThemeProvider';
-import { blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
@@ -188,3 +188,4 @@ struct FontSettingsPage {
     }
   }
 }
+

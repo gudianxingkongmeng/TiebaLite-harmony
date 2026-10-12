@@ -1,4 +1,4 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
@@ -8,7 +8,7 @@ import AddPostRepository from '../../core/repository/AddPostRepository';
 import HotTopicRepository from '../../core/repository/HotTopicRepository';
 import AccountManager, { Account } from '../../core/auth/AccountManager';
 import { Dict } from '../../core/types/Dict';
-import { blendWithBg, blendWithWhite, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, darkenColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
+import { blendWithBg, blendWithWhite, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, darkenColor, shadowColor, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { uploadChunked, uploadVideoToTieba } from '../../core/utils/UploadService';
 import { compressImageToBuffer } from '../../core/utils/ImageCompressor';

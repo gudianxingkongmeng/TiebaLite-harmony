@@ -1,5 +1,5 @@
 import display from '@ohos.display';
-import { shadowColor, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassBackdropBlur } from '../core/utils/DataHelper';
+import { onPrimaryContainer, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassBackdropBlur } from '../core/utils/DataHelper';
 import { GripDetector } from '../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../core/utils/FabPositionManager';
 
@@ -185,3 +185,4 @@ export default struct BackToTopButton {
     }
   }
 }
+

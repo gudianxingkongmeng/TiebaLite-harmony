@@ -8,10 +8,9 @@ import SearchRepository from '../../core/repository/SearchRepository';
 import PbPageRepository from '../../core/repository/PbPageRepository';
 import ThreadCard from '../../components/ThreadCard';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithBg, textAccent, pageBg, textPrimary, textTertiary, dividerColor, shadowColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
 import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
-import { GripDetector } from '../../core/utils/GripDetector';
 
 @Entry
 @Component
@@ -472,3 +471,4 @@ struct ForumSearchPage {
     }
   }
 }
+

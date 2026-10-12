@@ -8,7 +8,7 @@ import ErrorState from '../../components/ErrorState';
 import GearLoading from '../../components/GearLoading';
 import { Dict } from '../../core/types/Dict';
 import { TiebaApi } from '../../core/api/TiebaApi';
-import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getNum, getStr, buildPortraitUrl, textAccent, pageBg, textPrimary, textSecondary, textTertiary, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 @Entry
@@ -313,3 +313,4 @@ struct FollowsPage {
     
   }
 }
+
