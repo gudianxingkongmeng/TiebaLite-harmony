@@ -508,7 +508,9 @@ struct PhotoViewPage {
               })
               .onClick(() => { this.showActions = !this.showActions; })
               // 缩放与平移在未放大时交给下方覆盖层处理，
-              // 这里只保留「起手缩放」的双指手势（双指与 Swiper 单��横滑不冲突）。
+              // 这里只保留「起手缩放」的双指手势（双指与 Swiper 单指横滑不冲突）。
+              // 注意缩放/平移不要再挂在这张图上：未放大时覆盖层是透明的，
+              // 挂在这里会与覆盖层的变换叠加。
               .gesture(
                 PinchGesture({ distance: 1 })
                   .onActionStart((event: GestureEvent): void => {
@@ -535,7 +537,7 @@ struct PhotoViewPage {
                   })
               )
               // 单击手势：单击切换操作栏，双击由此自行判定（见 onTap）
-              .priorityGesture(
+              .gesture(
                 TapGesture({ fingers: 1, count: 1 })
                   .onAction((event: GestureEvent): void => { this.onTap(event); })
               )
@@ -635,7 +637,7 @@ struct PhotoViewPage {
                 if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
               })
           )
-              .priorityGesture(
+              .gesture(
                 TapGesture({ fingers: 1, count: 1 })
                   .onAction((event: GestureEvent): void => { this.onTap(event); })
               )
