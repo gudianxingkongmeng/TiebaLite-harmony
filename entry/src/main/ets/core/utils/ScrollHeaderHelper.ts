@@ -14,8 +14,8 @@
 /** 触发收起/展开所需的滚动距离（vp）。5 太小，轻微抖动就会触发。 */
 export const HEADER_COLLAPSE_THRESHOLD: number = 16;
 
-/** 展开所需的滚动距离，比收起更大，形成滞后，避免来回滚动时顶栏闪烁。 */
-export const HEADER_EXPAND_THRESHOLD: number = 28;
+/** 展开所需的滚动距离，略大于收起阈值形成滞后，但要足够小才能跟手。 */
+export const HEADER_EXPAND_THRESHOLD: number = 20;
 
 /** 收起动画：快起慢收，收得干脆 */
 export const HEADER_COLLAPSE_ANIM = { duration: 180, curve: Curve.FastOutSlowIn };
