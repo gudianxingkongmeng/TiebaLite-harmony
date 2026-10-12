@@ -8,8 +8,12 @@ import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, te
 import { Dict } from '../../core/types/Dict';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
-const APP_VERSION = '4.0.0 Beta 4.5.5';
-const APP_VERSION_CODE = '390986';
+// 版本号统一取自 AppScope/app.json5 生成的 BuildProfile，避免和安装包里的实际版本脱节
+const APP_VERSION = '4.0.0 Beta 4.5.6';
+const APP_VERSION_CODE = '390988';
+// 构建日期：记录打包发布的那一天，是常量而非运行时的当前日期。
+// 之前用 new Date() 导致每次打开关于页显示的都是"今天"。
+const APP_BUILD_DATE = '2026-10-12';
 const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 
 @Entry
@@ -25,11 +29,7 @@ struct AboutPage {
   aboutToAppear(): void {
     void TopInsetHelper.get(getContext(this) as common.UIAbilityContext).then((v: number): void => { this.topInset = v; }).catch(() => {});
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    this.buildDate = y + '-' + m + '-' + day;
+    this.buildDate = APP_BUILD_DATE;
   }
   onIsDarkChange(): void {
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
