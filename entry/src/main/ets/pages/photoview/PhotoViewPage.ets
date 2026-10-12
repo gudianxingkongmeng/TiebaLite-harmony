@@ -417,6 +417,33 @@ struct PhotoViewPage {
 
   /** 双击放大的目标倍数 */
   private static readonly DBL_TAP_SCALE: number = 2.5;
+  /** 两次点击间隔上限（ms），超过则视为两次独立单击 */
+  private static readonly DBL_TAP_INTERVAL: number = 300;
+  private _lastTapTime: number = 0;
+  private _lastTapX: number = 0;
+  private _lastTapY: number = 0;
+
+  /**
+   * 统一处理单击/双击。
+   *
+   * 没有用 TapGesture({count:2})：它和同一组件上的 onClick / Swiper 内部手势
+   * 存在识别冲突，第一次点击常被消费掉，双击凑不齐。改为只挂一个单击手势，
+   * 自己在时间窗内判定第二次点击，行为完全可控。
+   */
+  private onTap(event: GestureEvent): void {
+    const now = Date.now();
+    const lx = event.offsetX;
+    const ly = event.offsetY;
+    if (now - this._lastTapTime <= PhotoViewPage.DBL_TAP_INTERVAL) {
+      this._lastTapTime = 0;
+      this.doZoomToggle(lx, ly);
+      return;
+    }
+    this._lastTapTime = now;
+    this._lastTapX = lx;
+    this._lastTapY = ly;
+    this.showActions = !this.showActions;
+  }
 
   /**
    * 以指定点为中心缩放。
@@ -437,18 +464,15 @@ struct PhotoViewPage {
   }
 
   /** 双击：未放大则放大到指定倍数，已放大则还原 */
-  private onDoubleTap(event: GestureEvent): void {
+  private doZoomToggle(localX: number, localY: number): void {
     if (this.isZoomed) {
       this.resetZoom();
       return;
     }
-    // offsetX/offsetY 对点击类手势即为组件内的点击位置
-    const lx = event.offsetX;
-    const ly = event.offsetY;
-    if (lx > 0 && ly > 0 && this.viewW > 0 && this.viewH > 0) {
-      this.zoomToPoint(PhotoViewPage.DBL_TAP_SCALE, lx, ly);
+    // 点击位置在可用范围内时以点击点为中心，否则退化为居中放大
+    if (localX > 0 && localY > 0 && this.viewW > 0 && this.viewH > 0) {
+      this.zoomToPoint(PhotoViewPage.DBL_TAP_SCALE, localX, localY);
     } else {
-      // 拿不到点击位置时退化为居中放大，功能仍可用
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
       this.clampOffsets();
     }
@@ -483,13 +507,8 @@ struct PhotoViewPage {
                 }
               })
               .onClick(() => { this.showActions = !this.showActions; })
-              // 捏合过程先在原图上给出视觉反馈；越过 1 倍后覆盖层接管，
-              // 两者用的是同一套 scale/translate，切换点是连续的
-              .scale({ x: this.zoomScale, y: this.zoomScale })
-              .translate({ x: this.offsetX, y: this.offsetY })
-              // 列表态只负责「起手缩放」：双指与 Swiper 的单指横滑不冲突。
-              // 单指平移不能挂在这里，否则会被 Swiper 抢走。
-              // 平移由下面的覆盖层在放大后独占处理。
+              // 缩放与平移在未放大时交给下方覆盖层处理，
+              // 这里只保留「起手缩放」的双指手势（双指与 Swiper 单��横滑不冲突）。
               .gesture(
                 PinchGesture({ distance: 1 })
                   .onActionStart((event: GestureEvent): void => {
@@ -515,10 +534,10 @@ struct PhotoViewPage {
                     if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
                   })
               )
-              // 双击缩放：未放大时放大到指定倍数，再双击还原
-              .gesture(
-                TapGesture({ fingers: 1, count: 2 })
-                  .onAction((event: GestureEvent): void => { this.onDoubleTap(event); })
+              // 单击手势：单击切换操作栏，双击由此自行判定（见 onTap）
+              .priorityGesture(
+                TapGesture({ fingers: 1, count: 1 })
+                  .onAction((event: GestureEvent): void => { this.onTap(event); })
               )
             if (this.isGifUrl(item.url)) {
               Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
@@ -616,12 +635,11 @@ struct PhotoViewPage {
                 if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
               })
           )
-          .gesture(
-            // 放大态同样支持双击还原
-            TapGesture({ fingers: 1, count: 2 })
-              .onAction((event: GestureEvent): void => { this.onDoubleTap(event); })
-          )
-          .onClick(() => { this.showActions = !this.showActions; })
+              .priorityGesture(
+                TapGesture({ fingers: 1, count: 1 })
+                  .onAction((event: GestureEvent): void => { this.onTap(event); })
+              )
+              .onClick(() => { this.showActions = !this.showActions; })
       }
       .width('100%').height('100%')
       .backgroundColor('#000000')
