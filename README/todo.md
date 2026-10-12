@@ -40,6 +40,6 @@
 
 ## 未完成
 - [ ] 楼中楼回复内的图片无法显示缩略图（pb 接口返回的 `sub_post_list` 中该回复 `content` 为 `type=0` 纯文本，图片被压缩成字面量 `[图片]`，无任何图片 URL；官方安卓版能显示缩略图，推测使用了额外的接口或字段，需继续排查）
-- [ ] 图片查看页双击放大（已尝试多轮未达成，`PhotoViewPage` 保持原样回退。难点：Swiper 是父容器，图片上的手势优先级无法覆盖其滑动，导致「放大后拖动会切图」「不跟手」「不能切图」三者互相冲突。试过 `GestureGroup(Exclusive)`、`disableSwipe`、`hitTestBehavior` 均不能同时满足。后续需重构为：放大时用独立容器承载图片并接管全部手势，未放大时才启用 Swiper）
+- [x] 图片查看页双击放大（已解决，关键在于**不再争抢手势优先级**。此前失败的三种做法：① `GestureGroup(Exclusive)`/`disableSwipe`/`hitTestBehavior` 均无法让子组件手势压过 Swiper 内部横滑；② 用 `isZoomed` 条件切换组件树，导致捏合越过 1 倍瞬间承载手势的组件被销毁、手势中断；③ 覆盖层用 `Visibility.Hidden`，隐藏状态下 Image 不加载，显示瞬间是空白反而盖住了正常缩放的图片。最终方案：覆盖层**常驻**组件树、用 `opacity(0)` 保持渲染预加载图片、用 `hitTestBehavior` 单独控制触摸，可见时位于 Swiper 之上触摸根本到不了它。另修两处坐标问题：平移改用 `FingerInfo.globalX/Y` 绝对坐标（`event.offsetX` 在被 `scale` 压缩的局部空间，会导致跟随距离不足）；缩放改为围绕 `pinchCenterX/Y` 和双击点锚定。平移范围按 `objectFit(Contain)` 绘制尺寸计算，夹在图片边缘内）
 - [ ] 帖子页回复导航条透明度与顶栏不一致（导航条在 `Scroll` 内跟随内容滚动，玻璃背后是正文；顶栏固定，背后是页面底色，故相同 alpha 下视觉深浅不同。曾尝试移出 Scroll 用 Stack 固定底部，因改动过大已回退。后续可选：① 保持现状仅做数值补偿；② 参考 Android 版 zzc10086/TiebaLite 帖子页回复栏的实现方式）
 - [x] 发帖后整页刷新导致界面重载（`ThreadPage.sendReply` 改为调用 `refreshAfterReply(repliedPid)`：先用 `loadFloorPage` 只拉被回复楼层所在的那一页，把该楼层的新回复合并进 `this.posts`，不再调用 `loadThread` 全量刷新；页码、滚动位置、已展开楼层均保持不变。注意 `closeReplyWindow()` 会清零 `replyPostId`，需在关闭前取出。主贴回复（`repliedPid === 0`）或增量拉取失败时退回 `loadThread(page, true)` 静默刷新。`SubPostsPage` 的回复仍是全量刷新，后续可同样改为追加）

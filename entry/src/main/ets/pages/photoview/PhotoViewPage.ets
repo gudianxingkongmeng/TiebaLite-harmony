@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import http from '@ohos.net.http';
@@ -62,6 +62,10 @@ struct PhotoViewPage {
   private _fingerStartX: number = 0;
   private _fingerStartY: number = 0;
   private _pinchBaseScale: number = 1;
+  private _pinchBaseOffX: number = 0;
+  private _pinchBaseOffY: number = 0;
+  private _pinchCenterX: number = 0;
+  private _pinchCenterY: number = 0;
   private _threadId: number = 0;
   private _forumId: number = 0;
   private _forumName: string = '';
@@ -411,6 +415,45 @@ struct PhotoViewPage {
     return this.zoomScale > 1.001;
   }
 
+  /** 双击放大的目标倍数 */
+  private static readonly DBL_TAP_SCALE: number = 2.5;
+
+  /**
+   * 以指定点为中心缩放。
+   * localX/localY 为组件内坐标；组件铺满容器且图片以 Contain 居中，
+   * 所以组件中心即图片中心。
+   * 令缩放前后被点中的那个像素保持不动，可得 offset = t * (1 - s)，
+   * 其中 t 是该点相对中心的偏移。
+   */
+  private zoomToPoint(newScale: number, localX: number, localY: number): void {
+    const cx = this.viewW / 2;
+    const cy = this.viewH / 2;
+    const tx = localX - cx;
+    const ty = localY - cy;
+    this.zoomScale = newScale;
+    this.offsetX = tx * (1 - newScale);
+    this.offsetY = ty * (1 - newScale);
+    this.clampOffsets();
+  }
+
+  /** 双击：未放大则放大到指定倍数，已放大则还原 */
+  private onDoubleTap(event: GestureEvent): void {
+    if (this.isZoomed) {
+      this.resetZoom();
+      return;
+    }
+    // offsetX/offsetY 对点击类手势即为组件内的点击位置
+    const lx = event.offsetX;
+    const ly = event.offsetY;
+    if (lx > 0 && ly > 0 && this.viewW > 0 && this.viewH > 0) {
+      this.zoomToPoint(PhotoViewPage.DBL_TAP_SCALE, lx, ly);
+    } else {
+      // 拿不到点击位置时退化为居中放大，功能仍可用
+      this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
+      this.clampOffsets();
+    }
+  }
+
   /** 放大态覆盖层要显示的当前图片 */
   private currentUrl(): string {
     if (this.currentIndex >= 0 && this.currentIndex < this.items.length) {
@@ -449,14 +492,33 @@ struct PhotoViewPage {
               // 平移由下面的覆盖层在放大后独占处理。
               .gesture(
                 PinchGesture({ distance: 1 })
-                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+                  .onActionStart((event: GestureEvent): void => {
+                  this._pinchBaseScale = this.zoomScale;
+                  this._pinchBaseOffX = this.offsetX;
+                  this._pinchBaseOffY = this.offsetY;
+                  this._pinchCenterX = event.pinchCenterX;
+                  this._pinchCenterY = event.pinchCenterY;
+                  })
                   .onActionUpdate((event: GestureEvent): void => {
-                    this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                    this.clampOffsets();
+                  // 围绕双指中心缩放，而不是固定以图片中心缩放
+                  const base = this._pinchBaseScale > 0 ? this._pinchBaseScale : 1;
+                  const s = Math.max(1, Math.min(5, base * event.scale));
+                  const k = 1 - s / base;
+                  const tx = event.pinchCenterX - this.viewW / 2;
+                  const ty = event.pinchCenterY - this.viewH / 2;
+                  this.zoomScale = s;
+                  this.offsetX = this._pinchBaseOffX + tx * k;
+                  this.offsetY = this._pinchBaseOffY + ty * k;
+                  this.clampOffsets();
                   })
                   .onActionEnd((): void => {
                     if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
                   })
+              )
+              // 双击缩放：未放大时放大到指定倍数，再双击还原
+              .gesture(
+                TapGesture({ fingers: 1, count: 2 })
+                  .onAction((event: GestureEvent): void => { this.onDoubleTap(event); })
               )
             if (this.isGifUrl(item.url)) {
               Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
@@ -531,14 +593,33 @@ struct PhotoViewPage {
           .gesture(
             // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
             PinchGesture({ distance: 1 })
-              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+              .onActionStart((event: GestureEvent): void => {
+              this._pinchBaseScale = this.zoomScale;
+              this._pinchBaseOffX = this.offsetX;
+              this._pinchBaseOffY = this.offsetY;
+              this._pinchCenterX = event.pinchCenterX;
+              this._pinchCenterY = event.pinchCenterY;
+              })
               .onActionUpdate((event: GestureEvent): void => {
-                this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                this.clampOffsets();
+              // 围绕双指中心缩放，而不是固定以图片中心缩放
+              const base = this._pinchBaseScale > 0 ? this._pinchBaseScale : 1;
+              const s = Math.max(1, Math.min(5, base * event.scale));
+              const k = 1 - s / base;
+              const tx = event.pinchCenterX - this.viewW / 2;
+              const ty = event.pinchCenterY - this.viewH / 2;
+              this.zoomScale = s;
+              this.offsetX = this._pinchBaseOffX + tx * k;
+              this.offsetY = this._pinchBaseOffY + ty * k;
+              this.clampOffsets();
               })
               .onActionEnd((): void => {
                 if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
               })
+          )
+          .gesture(
+            // 放大态同样支持双击还原
+            TapGesture({ fingers: 1, count: 2 })
+              .onAction((event: GestureEvent): void => { this.onDoubleTap(event); })
           )
           .onClick(() => { this.showActions = !this.showActions; })
       }
