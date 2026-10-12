@@ -13,7 +13,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassTintSurface, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
@@ -701,13 +701,13 @@ onIsDarkChange(): void {
           TextInput({ text: this.keyword, placeholder: this.forumName ? '搜索 ' + this.forumName : '搜索...' })
             .layoutWeight(1)
             .height(36)
-            .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-            .backdropBlur(glassBackdropBlur(this.headerAlpha))
-            .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
-            .padding({ left: 12 })
-            .margin({ left: 8, right: 8 })
+.backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
+    .backdropBlur(glassBackdropBlur(this.headerAlpha))
+    .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
+    .padding({ left: 12 })
+    .margin({ left: 4, right: 4 })
             .defaultFocus(true)
-            .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+            .border({ width: 1, color: dividerColor(this.isDark) })
             .fontColor(textPrimary(this.isDark))
             .placeholderColor(textTertiary(this.isDark))
             .onChange((v: string) => {
