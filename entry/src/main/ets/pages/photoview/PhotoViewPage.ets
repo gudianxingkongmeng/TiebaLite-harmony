@@ -59,6 +59,8 @@ struct PhotoViewPage {
   @State viewH: number = 0;
   private _panStartX: number = 0;
   private _panStartY: number = 0;
+  private _fingerStartX: number = 0;
+  private _fingerStartY: number = 0;
   private _pinchBaseScale: number = 1;
   private _threadId: number = 0;
   private _forumId: number = 0;
@@ -501,14 +503,28 @@ struct PhotoViewPage {
           .scale({ x: this.zoomScale, y: this.zoomScale })
           .translate({ x: this.offsetX, y: this.offsetY })
           .gesture(
+            // 用手指的全局坐标而不是 event.offsetX 算位移。
+            // 图片被 scale 放大后，组件局部坐标被压缩了 1/zoomScale，
+            // 而 .translate() 走的是父级坐标，直接用 offsetX 会让图片
+            // 移动距离明显小于手指行程（放大倍数越高越明显）。
+            // globalX/globalY 是屏幕绝对坐标，不受组件变换影响，1:1 跟手。
             PanGesture({ fingers: 1, direction: PanDirection.All })
-              .onActionStart((): void => {
+              .onActionStart((event: GestureEvent): void => {
                 this._panStartX = this.offsetX;
                 this._panStartY = this.offsetY;
+                const fl = event.fingerList;
+                if (fl && fl.length > 0) {
+                  this._fingerStartX = fl[0].globalX;
+                  this._fingerStartY = fl[0].globalY;
+                }
               })
               .onActionUpdate((event: GestureEvent): void => {
-                this.offsetX = this._panStartX + event.offsetX;
-                this.offsetY = this._panStartY + event.offsetY;
+                const fl = event.fingerList;
+                if (!fl || fl.length === 0) return;
+                const dx = fl[0].globalX - this._fingerStartX;
+                const dy = fl[0].globalY - this._fingerStartY;
+                this.offsetX = this._panStartX + dx;
+                this.offsetY = this._panStartY + dy;
                 this.clampOffsets();
               })
           )
