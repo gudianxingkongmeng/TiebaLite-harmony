@@ -506,11 +506,12 @@ struct PhotoViewPage {
                   if (event.height && event.height > 0) this.curImgH = event.height;
                 }
               })
-              .onClick(() => { this.showActions = !this.showActions; })
+              // 注意：这里绝不能再挂 .onClick。它本质是一个 count:1 的点击识别器，
+              // 会和下面的 TapGesture 抢同一次点击，导致单击/双击都判定不了。
+              // 单击切换操作栏的行为已由 onTap 承担。
               // 缩放与平移在未放大时交给下方覆盖层处理，
               // 这里只保留「起手缩放」的双指手势（双指与 Swiper 单指横滑不冲突）。
-              // 注意缩放/平移不要再挂在这张图上：未放大时覆盖层是透明的，
-              // 挂在这里会与覆盖层的变换叠加。
+              // 缩放/平移不挂在这张图上：未放大时覆盖层已带同样的变换，挂这里会叠加。
               .gesture(
                 PinchGesture({ distance: 1 })
                   .onActionStart((event: GestureEvent): void => {
@@ -641,7 +642,6 @@ struct PhotoViewPage {
                 TapGesture({ fingers: 1, count: 1 })
                   .onAction((event: GestureEvent): void => { this.onTap(event); })
               )
-              .onClick(() => { this.showActions = !this.showActions; })
       }
       .width('100%').height('100%')
       .backgroundColor('#000000')
