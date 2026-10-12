@@ -6,8 +6,6 @@ import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textS
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import NetworkUtil from '../../core/utils/NetworkUtil';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
-import { FabPositionManager } from '../../core/utils/FabPositionManager';
-import promptAction from '@ohos.promptAction';
 
 @Entry
 @Component
@@ -27,8 +25,6 @@ struct HabitsSettingsPage {
   @State pipEnabled: boolean = true;
   @State openLinksInApp: boolean = true;
   @StorageLink('gripEnabled') gripEnabled: boolean = true;
-  @StorageLink('fabRadius') fabRadius: number = 60;
-  private fabTimer: number = -1;
 
   private prefs: PreferencesManager = PreferencesManager.getInstance();
   private tabs: string[] = ['首页', '发现', '通知', '我的'];
@@ -82,8 +78,10 @@ struct HabitsSettingsPage {
       .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
-.position({ x: 0, y: 0 })
-.zIndex(2)
+
+.position({ x: 0, y: 0 })
+
+.zIndex(2)
 
       Scroll() {
         Column() {
@@ -258,46 +256,6 @@ struct HabitsSettingsPage {
             .width('100%').height(56).padding({ left: 16, right: 16 })
             }
             .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8))
-
-          Column() {
-            Row() {
-              Text('FAB 圆角').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
-              Text('0 直角 / 100 圆形').fontFamily(this.appFontFamily).fontSize(12).fontColor(textTertiary(this.isDark)).margin({ left: 8 })
-              Blank()
-              Text(String(this.fabRadius)).fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark)).margin({ right: 8 })
-              Slider({ value: this.fabRadius, min: 0, max: 100, step: 1, style: SliderStyle.OutSet })
-                .width(120)
-                .onChange((value: number) => {
-                  this.fabRadius = Math.round(value);
-                  AppStorage.SetOrCreate<number>('fabRadius', this.fabRadius);
-                  if (this.fabTimer !== -1) { clearTimeout(this.fabTimer); }
-                  this.fabTimer = setTimeout(() => {
-                    this.fabTimer = -1;
-                    void this.prefs.putInt('fab_radius', this.fabRadius);
-                  }, 400);
-                })
-            }
-            .width('100%').height(56).padding({ left: 16, right: 16 })
-          }
-          .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8)).margin({ top: 8 })
-
-          Column() {
-            Row() {
-              Text('重置悬浮按钮位置').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
-              Text('恢复回到顶部 / 刷新 / 发帖按钮的默认位置').fontFamily(this.appFontFamily).fontSize(12).fontColor(textTertiary(this.isDark)).margin({ left: 8 })
-              Blank()
-              Text('重置').fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark))
-            }
-            .width('100%').height(56).padding({ left: 16, right: 16 })
-              .onClick(() => {
-                void FabPositionManager.reset('backToTop');
-                void FabPositionManager.reset('exploreFab');
-                void FabPositionManager.reset('forumFab');
-                AppStorage.SetOrCreate<number>('fabPositionResetTick', (AppStorage.Get<number>('fabPositionResetTick') || 0) + 1);
-                promptAction.showToast({ message: '悬浮按钮位置已重置', duration: 1500 });
-              })
-          }
-          .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8)).margin({ top: 8 })
         }
         .width('100%').padding({ bottom: 32 }).backgroundColor(pageBg(this.isDark))
       }

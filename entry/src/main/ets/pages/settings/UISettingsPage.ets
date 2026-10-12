@@ -1,11 +1,13 @@
 import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
+import promptAction from '@ohos.promptAction';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import ThemeProvider from '../../core/theme/ThemeProvider';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
+import { FabPositionManager } from '../../core/utils/FabPositionManager';
 
 @Entry
 @Component
@@ -25,6 +27,8 @@ struct UISettingsPage {
   @State pageTransitionStyle: number = 0;
   @State headerAlpha: number = 25;
   @State searchBoxRound: number = 100;
+  @State fabRadius: number = 60;
+  private fabTimer: number = -1;
 
   private prefs: PreferencesManager = PreferencesManager.getInstance();
   private themeProvider: ThemeProvider = ThemeProvider.getInstance();
@@ -51,6 +55,7 @@ struct UISettingsPage {
     this.pageTransitionStyle = Math.max(0, Math.min(await this.prefs.getInt('page_transition_style', 0), this.pageTransitions.length - 1));
     this.headerAlpha = Math.max(0, Math.min(await this.prefs.getInt('header_alpha', 25), 100));
     this.searchBoxRound = Math.max(0, Math.min(await this.prefs.getInt('search_box_round', 100), 100));
+    this.fabRadius = Math.max(0, Math.min(await this.prefs.getInt('fab_radius', 60), 100));
   }
   onIsDarkChange(): void {
     void setPageStatusBar(getContext(this), this.primaryColor, this.isDark, pageBg(this.isDark));
@@ -273,8 +278,44 @@ struct UISettingsPage {
                   }
                 })
             }
-            .width('100%').height(56).padding({ left: 16, right: 16 })
-          }
+    .width('100%').height(56).padding({ left: 16, right: 16 })
+
+    Divider().height(1.5).color(dividerColor(this.isDark)).margin({ left: 16 })
+
+    // FAB 圆角与位置重置合并到同一行，两者都属于悬浮按钮的外观/位置
+    Row() {
+      Text('FAB 圆角').fontFamily(this.appFontFamily).fontSize(16).fontColor(textPrimary(this.isDark))
+      Blank()
+      Text(String(this.fabRadius))
+        .fontFamily(this.appFontFamily).fontSize(13).fontColor(textTertiary(this.isDark)).margin({ right: 8 })
+      Slider({ value: this.fabRadius, min: 0, max: 100, step: 1 })
+        .width(110)
+        .showSteps(true)
+        .onChange((value: number) => {
+          this.fabRadius = Math.round(value);
+          AppStorage.SetOrCreate<number>('fabRadius', this.fabRadius);
+          if (this.fabTimer !== -1) { clearTimeout(this.fabTimer); }
+          this.fabTimer = setTimeout(() => {
+            this.fabTimer = -1;
+            void this.prefs.putInt('fab_radius', this.fabRadius);
+          }, 400);
+        })
+      Text('重置位置')
+        .fontFamily(this.appFontFamily).fontSize(14).fontColor(textAccent(this.primaryColor, this.isDark))
+        .margin({ left: 14 })
+        .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+        .backgroundColor(blendWithBg(this.primaryColor, 0.12, this.isDark, '#1E1E1E'))
+        .borderRadius(15)
+        .onClick(() => {
+          void FabPositionManager.reset('backToTop');
+          void FabPositionManager.reset('exploreFab');
+          void FabPositionManager.reset('forumFab');
+          AppStorage.SetOrCreate<number>('fabPositionResetTick', (AppStorage.Get<number>('fabPositionResetTick') || 0) + 1);
+          promptAction.showToast({ message: '悬浮按钮位置已重置', duration: 1500 });
+        })
+    }
+    .width('100%').height(56).padding({ left: 16, right: 16 })
+  }
           .width('100%').backgroundColor(cardBg(this.isDark)).borderRadius(cardRadius(8))
         }
         .width('100%').padding({ bottom: 32 }).backgroundColor(pageBg(this.isDark))
