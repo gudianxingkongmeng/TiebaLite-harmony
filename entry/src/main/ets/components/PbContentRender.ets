@@ -540,39 +540,14 @@ Image(this.imgAllowed() ? this.toHttps(this.getImgSrc(item)) : '')
     return textId;
   }
 
+  // 统一走 EmojiManager 的实现，避免各页面再各自分叉出行为不一致的副本
+  // （之前这里就漏了 #image_emoticon / #emotion 这类不带编号的写法）。
   static resolveEmojiId(rawId: string): string {
-    const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-    if (!id) return '';
-    const strippedId = id.replace(/^#+/, '');
-    if (/^\d+$/.test(strippedId)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + strippedId + '.png';
-    const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
-    if (/^\d+$/.test(id)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
-    const spaced = PbContentRender.getSpacedEmojiId(id);
-    if (spaced) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
-    if (knownPrefixes.some(p => id.startsWith(p))) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
-    const mapped = getEmojiIdFromMap(id);
-    if (mapped) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + mapped + '.png';
-    const encoded = encodeURIComponent(id);
-    return 'http://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
-  }
-
-  static getSpacedEmojiId(text: string): string {
-    const id = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-    const m = id.match(/^#?\s*emot(?:ion|icon)\s*[:：]?\s*(\d+)$/);
-    return m ? 'image_emoticon' + m[1] : '';
+    return resolveEmojiIdFromMgr(rawId);
   }
 
   private isEmojiText(text: string): boolean {
-    const id = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
-    if (!id) return false;
-    const strippedId = id.replace(/^#+/, '');
-    const knownPrefixes = ['image_emoticon', 'image_emotion', 'shoubai_emoji', 'tsj_emoji', 'tb_emoji', 'emoji_', 'bai_emoji', 'new_emoticon', 'tieba_emoji', 'emotion_', 'emoticon_'];
-    if (knownPrefixes.some(p => id.startsWith(p))) return true;
-    if (/^\d+$/.test(strippedId)) return true;
-    if (/^\d+$/.test(id)) return true;
-    if (getEmojiIdFromMap(id)) return true;
-    if (PbContentRender.getSpacedEmojiId(id)) return true;
-    return false;
+    return isEmojiText(text);
   }
 
   private getEmojiUrlFromText(text: string): string {

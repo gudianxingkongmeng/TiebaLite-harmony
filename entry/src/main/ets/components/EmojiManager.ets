@@ -83,15 +83,20 @@ function stripHash(raw: string): string {
 }
 
 export function resolveEmojiId(rawId: string): string {
-  const id = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  const raw = rawId.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  if (!raw) return '';
+  // 统一剥掉开头的 # / ＃：之前只有「纯数字」分支剥 #，
+  // knownPrefixes 分支没剥，导致 #image_emoticon、#emotion 拼出 404 地址。
+  const id = raw.replace(/^[#＃]+/, '');
   if (!id) return '';
   // 贴吧部分表情只返回裸前缀（如 "image_emoticon"），编号需由名称反查。
   // 对齐 Android 版 registerEmoticon 对 "image_emoticon" 的特判：默认为 1。
   if (id === 'image_emoticon') return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon1.png';
+  if (id === 'emotion' || id === 'emoticon' || id === 'image_emotion') return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon1.png';
   const hashNum = stripHash(id);
   if (hashNum) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + hashNum + '.png';
   if (/^\d+$/.test(id)) return 'http://static.tieba.baidu.com/tb/editor/images/client/image_emoticon' + id + '.png';
-  const spaced = getSpacedEmojiId(id);
+  const spaced = getSpacedEmojiId(raw);
   if (spaced) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + spaced + '.png';
   if (knownPrefixes.some(p => id.startsWith(p))) return 'http://static.tieba.baidu.com/tb/editor/images/client/' + id + '.png';
   const mapped = getEmojiIdFromMap(id);
@@ -100,14 +105,22 @@ export function resolveEmojiId(rawId: string): string {
   return 'http://static.tieba.baidu.com/tb/editor/images/client/' + encoded + '.png';
 }
 
+/**
+ * 是否是一个能真正解析出图片地址的表情 id。
+ * resolveEmojiId 对无法解析的输入会兜底拼一个 URL 编码地址（必然 404），
+ * 判断表情必须用这个「能否解析」的谓词，不能只看返回值是否非空。
+ */
 export function isEmojiText(text: string): boolean {
-  const id = text.replace(/[[\]【】「」『』《」（）()<>{}]/g, '').trim();
+  const raw = text.replace(/[[\]【】「」『』《》（）()<>{}]/g, '').trim();
+  if (!raw) return false;
+  const id = raw.replace(/^[#＃]+/, '');
   if (!id) return false;
-  if (stripHash(id)) return true;
-  if (knownPrefixes.some(p => id.startsWith(p))) return true;
   if (/^\d+$/.test(id)) return true;
+  if (knownPrefixes.some(p => id.startsWith(p))) return true;
+  // 裸前缀（缺编号）按 Android 版 registerEmoticon 的约定处理
+  if (id === 'image_emoticon' || id === 'image_emotion' || id === 'emotion' || id === 'emoticon') return true;
   if (getEmojiIdFromMap(id)) return true;
-  if (getSpacedEmojiId(id)) return true;
+  if (getSpacedEmojiId(raw)) return true;
   return false;
 }
 
@@ -203,14 +216,15 @@ export interface EmojiSeg {
 export function splitEmojiText(text: string): EmojiSeg[] {
   const out: EmojiSeg[] = [];
   if (!text) return out;
-  const tokenRe = /[#＃]\s*emot(?:ion|icon)\s*[:：]?\s*\d+|[#＃]\s*\d+|(?:image_emoticon|image_emotion|shoubai_emoji|tsj_emoji|tb_emoji|new_emoticon|tieba_emoji|emotion_|emoticon_|emoji_|bai_emoji)\d*/gi;
+  const tokenRe = /[#＃]\s*emot(?:ion|icon)\s*[:：]?\s*\d*|[#＃]\s*\d+|(?:[#＃]\s*)?(?:image_emoticon|image_emotion|shoubai_emoji|tsj_emoji|tb_emoji|new_emoticon|tieba_emoji|emotion_|emoticon_|emoji_|bai_emoji)\d*/gi;
   let last = 0;
   let m: RegExpExecArray | null = null;
   while ((m = tokenRe.exec(text)) !== null) {
     const tok = m[0];
-    const url = resolveEmojiId(tok);
-    // 解析不出真实图片地址就当普通文本，避免把正文数字误判成表情
-    if (!url) continue;
+    // 后面紧跟字母说明只是普通单词（如 #emotional），不当作表情
+    const next = text.charAt(m.index + tok.length);
+    if (/[A-Za-z]/.test(next)) continue;
+    if (!isEmojiText(tok)) continue;
     if (m.index > last) out.push({ text: text.substring(last, m.index), isEmoji: false });
     out.push({ text: tok, isEmoji: true });
     last = m.index + tok.length;

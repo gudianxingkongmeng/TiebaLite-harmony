@@ -350,15 +350,31 @@ struct UserProfilePage {
                 .width('100%').padding(12)
                 .backgroundColor(cardBg(this.isDark))
                 .margin({ bottom: 1 })
-                .onClick(() => {
-                  NavigationHelper.navigate('pages/thread/ThreadPage', {
-                    threadId: getStr(post, 'id', 'tid', 'thread_id', 'threadId'),
-                    forumName: getStr(post, 'fname', 'forum_name', 'forumName')
-                  });
-                })
-              })
-            }
-            Column() {
+    .onClick(() => {
+      // 我的回复要定位到回复所在的楼层：传 postId（楼层 pid），
+      // 楼中楼回复再带上 subPostId 直接进子回复页。
+      // 只传 threadId 会停在帖子顶部。
+      const targetPid = getStr(post, 'pid', 'post_id', 'postId');
+      const subPid = getStr(post, 'spid', 'sub_post_id', 'subPostId');
+      if (subPid) {
+        NavigationHelper.navigate('pages/subposts/SubPostsPage', {
+          threadId: getStr(post, 'id', 'tid', 'thread_id', 'threadId'),
+          postId: targetPid,
+          subPostId: subPid,
+          forumName: getStr(post, 'fname', 'forum_name', 'forumName')
+        });
+        return;
+      }
+      NavigationHelper.navigate('pages/thread/ThreadPage', {
+        threadId: getStr(post, 'id', 'tid', 'thread_id', 'threadId'),
+        postId: targetPid,
+        floorNo: getStr(post, 'floor', 'floor_num', 'floorNumber', 'post_num'),
+        forumName: getStr(post, 'fname', 'forum_name', 'forumName')
+      });
+    })
+  })
+}
+Column() {
               if (this.selectedTab === 0 ? this.loadingMorePosts : this.loadingMoreReplies) {
                 RefreshAnimation({ refreshing: true, gearSize: 32, color: this.primaryColor })
               } else {
