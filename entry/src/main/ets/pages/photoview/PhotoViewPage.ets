@@ -422,6 +422,24 @@ struct PhotoViewPage {
    * onClick 的 event.x/y 是组件内坐标；组件铺满容器且图片 Contain 居中，
    * 所以组件中心即图片中心。要让被点中的像素缩放后不动，可得 offset = t * (1 - s)。
    */
+  /**
+   * 统一的点击处理：单击切换操作栏，300ms 内位置接近的第二次点击视为双击。
+   * 被 onClick 和 PanGesture 的兜底分支共用。
+   */
+  private handleTapAt(cx: number, cy: number): void {
+    const now = Date.now();
+    if (now - this._lastTapTime <= 300 &&
+      Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
+      this._lastTapTime = 0;
+      this.toggleZoomAt(cx, cy);
+      return;
+    }
+    this._lastTapTime = now;
+    this._lastTapX = cx;
+    this._lastTapY = cy;
+    this.showActions = !this.showActions;
+  }
+
   private toggleZoomAt(localX: number, localY: number): void {
     console.info('[PV] dblTap x=' + localX + ' y=' + localY +
       ' viewW=' + this.viewW + ' viewH=' + this.viewH +
@@ -481,20 +499,7 @@ struct PhotoViewPage {
               // count:2 / 单击手势 / priorityGesture，都会和 Swiper 抢手势，
               // 结果连原有的捏合和平移也一起失效。onClick 已经能稳定收到点击。
               .onClick((event: ClickEvent): void => {
-                const now = Date.now();
-                const cx = Number(event.x || 0);
-                const cy = Number(event.y || 0);
-                // 两次点击位置接近才算双击，避免滑动中的误触
-                if (now - this._lastTapTime <= 300 &&
-                  Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
-                  this._lastTapTime = 0;
-                  this.toggleZoomAt(cx, cy);
-                  return;
-                }
-                this._lastTapTime = now;
-                this._lastTapX = cx;
-                this._lastTapY = cy;
-                this.showActions = !this.showActions;
+                this.handleTapAt(Number(event.x || 0), Number(event.y || 0));
               })
               // scale 和 translate 必须成对存在。之前误删了 scale 只留 translate，
               // 表现为「图片往中心位移但不放大」——offset 生效、zoom 不生效。
@@ -560,13 +565,12 @@ struct PhotoViewPage {
           .objectFit(ImageFit.Contain)
           .scale({ x: this.zoomScale, y: this.zoomScale })
           .translate({ x: this.offsetX, y: this.offsetY })
-          .gesture(
-            // 用手指的全局坐标而不是 event.offsetX 算位移。
-            // 图片被 scale 放大后，组件局部坐标被压缩了 1/zoomScale，
-            // 而 .translate() 走的是父级坐标，直接用 offsetX 会让图片
-            // 移动距离明显小于手指行程（放大倍数越高越明显）。
-            // globalX/globalY 是屏幕绝对坐标，不受组件变换影响，1:1 跟手。
-            PanGesture({ fingers: 1, direction: PanDirection.All })
+              // distance = 拖动激活阈值(vp)。不给阈值时，手指落点的一点点抖动
+              // 就会让 PanGesture 抢先识别，把双击误当成拖动——表现为
+              // 放大后双击不还原、反而图片移动（点击事件根本没触发）。
+              // 12vp 低于有意识的拖动幅度，高于双击时的自然抖动。
+              .gesture(
+                PanGesture({ fingers: 1, direction: PanDirection.All, distance: 12 })
               .onActionStart((event: GestureEvent): void => {
                 this._panStartX = this.offsetX;
                 this._panStartY = this.offsetY;
@@ -585,6 +589,22 @@ struct PhotoViewPage {
                 this.offsetY = this._panStartY + dy;
                 this.clampOffsets();
               })
+              .onActionEnd((event: GestureEvent): void => {
+                // 兜底：万一 PanGesture 还是抢走了点击（位移很小），
+                // 收回这次误触发的位移，并按点击处理，让双击仍能生效。
+                const fl = event.fingerList;
+                if (fl && fl.length > 0) {
+                  const moved = Math.abs(fl[0].globalX - this._fingerStartX) +
+                    Math.abs(fl[0].globalY - this._fingerStartY);
+                  if (moved < 12) {
+                    this.offsetX = this._panStartX;
+                    this.offsetY = this._panStartY;
+                    this.clampOffsets();
+                    this.handleTapAt(this._fingerStartX, this._fingerStartY);
+                    return;
+                  }
+                }
+              })
           )
           .gesture(
             // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
@@ -599,21 +619,7 @@ struct PhotoViewPage {
                 if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
               })
           )
-              .onClick((event: ClickEvent): void => {
-                const now = Date.now();
-                const cx = Number(event.x || 0);
-                const cy = Number(event.y || 0);
-                if (now - this._lastTapTime <= 300 &&
-                  Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60) {
-                  this._lastTapTime = 0;
-                  this.toggleZoomAt(cx, cy);
-                  return;
-                }
-                this._lastTapTime = now;
-                this._lastTapX = cx;
-                this._lastTapY = cy;
-                this.showActions = !this.showActions;
-              })
+              .onClick((event: ClickEvent): void => { this.handleTapAt(Number(event.x || 0), Number(event.y || 0)); })
       }
       .width('100%').height('100%')
       .backgroundColor('#000000')
