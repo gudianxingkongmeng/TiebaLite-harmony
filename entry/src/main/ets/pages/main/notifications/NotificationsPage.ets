@@ -109,6 +109,11 @@ export default struct NotificationsPage {
       this.replyPage = 1;
       this.mentionPage = 1;
       this.agreePage = 1;
+      // 退出登录时残留的 msgData 属于上一个账号，必须清掉，
+      // 否则未读角标仍按旧账号的数量显示。
+      if (!AccountManager.getInstance().isLoggedIn()) {
+        this.msgData = null;
+      }
       void this.loadCurrentTab();
     });
     setTimeout(() => { this.updateIndicatorOffset(); }, 0);
@@ -424,6 +429,9 @@ export default struct NotificationsPage {
   }
 
   private getUnreadCount(tabIndex: number): number {
+    // 未登录时不显示未读角标：msgData 里可能残留上一个账号的计数，
+    // 退出登录后角标仍挂着会误导用户以为新账号有未读消息。
+    if (!AccountManager.getInstance().isLoggedIn()) return 0;
     if (!this.msgData) return 0;
     const innerData = this.msgData.data as Dict;
     const msg: Dict = (innerData && innerData.message) ? (innerData.message as Dict) : ((this.msgData.message as Dict) || {});
