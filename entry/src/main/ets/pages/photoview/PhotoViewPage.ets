@@ -409,6 +409,14 @@ struct PhotoViewPage {
     return this.zoomScale > 1.001;
   }
 
+  /** 放大态覆盖层要显示的当前图片 */
+  private currentUrl(): string {
+    if (this.currentIndex >= 0 && this.currentIndex < this.items.length) {
+      return this.items[this.currentIndex].url;
+    }
+    return '';
+  }
+
   build() {
     Stack() {
       // 始终渲染同一棵树。
@@ -430,8 +438,9 @@ struct PhotoViewPage {
                 }
               })
               .onClick(() => { this.showActions = !this.showActions; })
-              .scale({ x: this.zoomScale, y: this.zoomScale })
-              .translate({ x: this.offsetX, y: this.offsetY })
+              // 列表态只负责「起手缩放」：双指与 Swiper 的单指横滑不冲突。
+              // 单指平移不能挂在这里，否则会被 Swiper 抢走。
+              // 平移由下面的覆盖层在放大后独占处理。
               .gesture(
                 PinchGesture({ distance: 1 })
                   .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
@@ -441,21 +450,6 @@ struct PhotoViewPage {
                   })
                   .onActionEnd((): void => {
                     if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
-                  })
-              )
-              // 用 priorityGesture 而不是普通 gesture：普通手势抢不过父容器
-              // Swiper 的横滑，拖动会被它吃掉后回弹；priorityGesture 明确优先。
-              .priorityGesture(
-                PanGesture({ fingers: 1, direction: PanDirection.All })
-                  .onActionStart((): void => {
-                    this._panStartX = this.offsetX;
-                    this._panStartY = this.offsetY;
-                  })
-                  .onActionUpdate((event: GestureEvent): void => {
-                    if (!this.isZoomed) return;
-                    this.offsetX = this._panStartX + event.offsetX;
-                    this.offsetY = this._panStartY + event.offsetY;
-                    this.clampOffsets();
                   })
               )
             if (this.isGifUrl(item.url)) {
@@ -488,6 +482,54 @@ struct PhotoViewPage {
         this.curImgH = 0;
         this.ensureCurrentImageCached();
         this.maybeLoadWindows();
+      })
+
+      // 放大态覆盖层：常驻组件树，只切换 visibility。
+      // 之前三种做法都失败过——条件渲染会销毁承载手势的组件；
+      // priorityGesture + disableSwipe 仍抢不过 Swiper 的横滑；
+      // hitTestBehavior 只能让图片"看起来"接管，Swiper 仍握着触摸。
+      // 覆盖层可见时位于 Swiper 之上，触摸根本到不了 Swiper，才算真正独占。
+      // 用 Hidden 而非不渲染，保证捏合起始后组件不会被销毁、手势不中断。
+      Stack() {
+        Image(this.currentUrl())
+          .width('100%').height('100%')
+          .objectFit(ImageFit.Contain)
+          .scale({ x: this.zoomScale, y: this.zoomScale })
+          .translate({ x: this.offsetX, y: this.offsetY })
+          .gesture(
+            PanGesture({ fingers: 1, direction: PanDirection.All })
+              .onActionStart((): void => {
+                this._panStartX = this.offsetX;
+                this._panStartY = this.offsetY;
+              })
+              .onActionUpdate((event: GestureEvent): void => {
+                this.offsetX = this._panStartX + event.offsetX;
+                this.offsetY = this._panStartY + event.offsetY;
+                this.clampOffsets();
+              })
+          )
+          .gesture(
+            // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
+            PinchGesture({ distance: 1 })
+              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+              .onActionUpdate((event: GestureEvent): void => {
+                this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                this.clampOffsets();
+              })
+              .onActionEnd((): void => {
+                if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
+              })
+          )
+          .onClick(() => { this.showActions = !this.showActions; })
+      }
+      .width('100%').height('100%')
+      .backgroundColor('#000000')
+      .visibility(this.isZoomed ? Visibility.Visible : Visibility.Hidden)
+      .onAreaChange((_old: Area, newArea: Area): void => {
+        const w = newArea.width as number;
+        const h = newArea.height as number;
+        if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
+        if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
       })
 
       Row() {
