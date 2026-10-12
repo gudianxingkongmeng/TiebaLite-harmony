@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import http from '@ohos.net.http';
@@ -423,6 +423,10 @@ struct PhotoViewPage {
    * 所以组件中心即图片中心。要让被点中的像素缩放后不动，可得 offset = t * (1 - s)。
    */
   private toggleZoomAt(localX: number, localY: number): void {
+    console.info('[PV] dblTap x=' + localX + ' y=' + localY +
+      ' viewW=' + this.viewW + ' viewH=' + this.viewH +
+      ' imgW=' + this.curImgW + ' imgH=' + this.curImgH +
+      ' zoom=' + this.zoomScale);
     if (this.isZoomed) {
       this.resetZoom();
       return;
@@ -433,7 +437,10 @@ struct PhotoViewPage {
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
       this.offsetX = tx * (1 - PhotoViewPage.DBL_TAP_SCALE);
       this.offsetY = ty * (1 - PhotoViewPage.DBL_TAP_SCALE);
+      console.info('[PV] before clamp offX=' + this.offsetX + ' offY=' + this.offsetY +
+        ' maxX=' + this.maxOffsetX() + ' maxY=' + this.maxOffsetY());
       this.clampOffsets();
+      console.info('[PV] after clamp zoom=' + this.zoomScale + ' offX=' + this.offsetX + ' offY=' + this.offsetY);
     } else {
       // 拿不到点击位置时退化为居中放大
       this.zoomScale = PhotoViewPage.DBL_TAP_SCALE;
@@ -489,15 +496,19 @@ struct PhotoViewPage {
                 this._lastTapY = cy;
                 this.showActions = !this.showActions;
               })
+              // scale 和 translate 必须成对存在。之前误删了 scale 只留 translate，
+              // 表现为「图片往中心位移但不放大」——offset 生效、zoom 不生效。
+              .scale({ x: this.zoomScale, y: this.zoomScale })
               .translate({ x: this.offsetX, y: this.offsetY })
               // 列表态只负责「起手缩放」：双指与 Swiper 的单指横滑不冲突。
               // 单指平移不能挂在这里，否则会被 Swiper 抢走。
               // 平移由下面的覆盖层在放大后独占处理。
               .gesture(
                 PinchGesture({ distance: 1 })
-                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; console.info('[PV] pinchStart base=' + this.zoomScale); })
                   .onActionUpdate((event: GestureEvent): void => {
                     this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                    console.info('[PV] pinchUpdate scale=' + event.scale + ' -> zoom=' + this.zoomScale);
                     this.clampOffsets();
                   })
                   .onActionEnd((): void => {
@@ -528,6 +539,7 @@ struct PhotoViewPage {
       // 放大后停掉翻页，避免拖动看图时误触发切图；缩回 1 倍自动恢复
       .disableSwipe(this.isZoomed)
       .onChange((idx: number): void => {
+        console.info('[PV] swiper onChange idx=' + idx + ' zoom=' + this.zoomScale);
         this.currentIndex = idx;
         this.resetZoom();
         this.curImgW = 0;
@@ -577,9 +589,10 @@ struct PhotoViewPage {
           .gesture(
             // 放大后继续捏合可以缩放/还原，起点从当前缩放值累积
             PinchGesture({ distance: 1 })
-              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+              .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; console.info('[PV] pinchStart base=' + this.zoomScale); })
               .onActionUpdate((event: GestureEvent): void => {
                 this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                console.info('[PV] pinchUpdate scale=' + event.scale + ' -> zoom=' + this.zoomScale);
                 this.clampOffsets();
               })
               .onActionEnd((): void => {
