@@ -438,6 +438,10 @@ struct PhotoViewPage {
                 }
               })
               .onClick(() => { this.showActions = !this.showActions; })
+              // 捏合过程先在原图上给出视觉反馈；越过 1 倍后覆盖层接管，
+              // 两者用的是同一套 scale/translate，切换点是连续的
+              .scale({ x: this.zoomScale, y: this.zoomScale })
+              .translate({ x: this.offsetX, y: this.offsetY })
               // 列表态只负责「起手缩放」：双指与 Swiper 的单指横滑不冲突。
               // 单指平移不能挂在这里，否则会被 Swiper 抢走。
               // 平移由下面的覆盖层在放大后独占处理。
@@ -524,7 +528,12 @@ struct PhotoViewPage {
       }
       .width('100%').height('100%')
       .backgroundColor('#000000')
-      .visibility(this.isZoomed ? Visibility.Visible : Visibility.Hidden)
+      // 不能用 Visibility.Hidden：隐藏状态下 Image 不会加载图片，
+      // 一旦显示就是空白，反而把下面能正常缩放的图片盖住，表现为"放不大"。
+      // opacity(0) 仍然会渲染并完成图片加载，只是看不见；
+      // 触摸用 hitTestBehavior 单独控制，未放大时穿透给 Swiper。
+      .opacity(this.isZoomed ? 1 : 0)
+      .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.None)
       .onAreaChange((_old: Area, newArea: Area): void => {
         const w = newArea.width as number;
         const h = newArea.height as number;
