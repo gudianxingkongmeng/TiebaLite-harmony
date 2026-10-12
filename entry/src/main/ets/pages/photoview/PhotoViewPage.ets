@@ -409,93 +409,110 @@ struct PhotoViewPage {
     return this.zoomScale > 1.001;
   }
 
+  /** 放大态独立容器里要显示的当前图片 */
+  private currentUrl(): string {
+    if (this.currentIndex >= 0 && this.currentIndex < this.items.length) {
+      return this.items[this.currentIndex].url;
+    }
+    return '';
+  }
+
   build() {
     Stack() {
-      Swiper() {
-        ForEach(this.items, (item: PicItem, index: number) => {
-          Stack() {
-            Image(item.url)
-              .width('100%').height('100%')
-              .objectFit(ImageFit.Contain)
-              .onComplete((event?: ImageCompleteInfo): void => {
-                // 记录原始像素尺寸，放大后据此限制平移范围
-                if (index === this.currentIndex && event) {
-                  if (event.width && event.width > 0) this.curImgW = event.width;
-                  if (event.height && event.height > 0) this.curImgH = event.height;
-                }
-              })
-              .onClick(() => { this.showActions = !this.showActions; })
-              // 缩放和平移都作用在图片自身，而不是外层容器，
-              // 否则顶栏和指示器会跟着一起缩放。
-              .scale({ x: this.zoomScale, y: this.zoomScale })
-              .translate({ x: this.offsetX, y: this.offsetY })
-              .gesture(
-                PinchGesture({ distance: 1 })
-                  .onActionStart((): void => {
-                    this._pinchBaseScale = this.zoomScale;
-                  })
-                  .onActionUpdate((event: GestureEvent): void => {
-                    const s = this._pinchBaseScale * event.scale;
-                    this.zoomScale = Math.max(1, Math.min(5, s));
-                    this.clampOffsets();
-                  })
-                  .onActionEnd((): void => {
-                    // 缩回 1 倍时归位，避免残留位移
-                    if (this.zoomScale <= 1.001) {
-                      this.resetZoom();
-                    } else {
-                      this.clampOffsets();
-                    }
-                  })
-              )
-              .gesture(
-                // 放大后靠 hitTestBehavior 抢占触摸：Default 时图片吃掉拖拽用于平移，
-                // Transparent 时不拦截，让 Swiper 继续左右滑动切图。
-                PanGesture({ fingers: 1, direction: PanDirection.All })
-                  .onActionStart((): void => {
-                    this._panStartX = this.offsetX;
-                    this._panStartY = this.offsetY;
-                  })
-                  .onActionUpdate((event: GestureEvent): void => {
-                    if (!this.isZoomed) return;
-                    this.offsetX = this._panStartX + event.offsetX;
-                    this.offsetY = this._panStartY + event.offsetY;
-                    this.clampOffsets();
-                  })
-              )
-              .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.Transparent)
-            if (this.isGifUrl(item.url)) {
-              Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
-                .padding({ left: 5, right: 5, top: 2, bottom: 2 })
-                .backgroundColor('#CC000000').borderRadius(4)
-                .position({ top: 8, left: 8 })
+      // 放大态与列表态互斥：放大后 Swiper 会被销毁，改由独立容器独占全部手势。
+      // 之前两者共存时，Swiper 内部的横滑手势优先级高于子组件的 PanGesture，
+      // 拖动被它吃掉后再回弹，导致"能拖一点但松手回到中心"。
+      if (this.isZoomed) {
+        Stack() {
+          Image(this.currentUrl())
+            .width('100%').height('100%')
+            .objectFit(ImageFit.Contain)
+            .onComplete((event?: ImageCompleteInfo): void => {
+              if (event) {
+                if (event.width && event.width > 0) this.curImgW = event.width;
+                if (event.height && event.height > 0) this.curImgH = event.height;
+              }
+            })
+            .scale({ x: this.zoomScale, y: this.zoomScale })
+            .translate({ x: this.offsetX, y: this.offsetY })
+            .gesture(
+              PinchGesture({ distance: 1 })
+                .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+                .onActionUpdate((event: GestureEvent): void => {
+                  this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                  this.clampOffsets();
+                })
+                .onActionEnd((): void => {
+                  if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
+                })
+            )
+            .gesture(
+              PanGesture({ fingers: 1, direction: PanDirection.All })
+                .onActionStart((): void => {
+                  this._panStartX = this.offsetX;
+                  this._panStartY = this.offsetY;
+                })
+                .onActionUpdate((event: GestureEvent): void => {
+                  this.offsetX = this._panStartX + event.offsetX;
+                  this.offsetY = this._panStartY + event.offsetY;
+                  this.clampOffsets();
+                })
+            )
+        }
+        .width('100%').height('100%')
+        .backgroundColor('#000000')
+        .onClick(() => { this.showActions = !this.showActions; })
+        .onAreaChange((_old: Area, newArea: Area): void => {
+          const w = newArea.width as number;
+          const h = newArea.height as number;
+          if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
+          if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
+        })
+      } else {
+        Swiper() {
+          ForEach(this.items, (item: PicItem, index: number) => {
+            Stack() {
+              Image(item.url)
+                .width('100%').height('100%')
+                .objectFit(ImageFit.Contain)
+                .onComplete((event?: ImageCompleteInfo): void => {
+                  // 记录原始像素尺寸，放大后据此限制平移范围
+                  if (index === this.currentIndex && event) {
+                    if (event.width && event.width > 0) this.curImgW = event.width;
+                    if (event.height && event.height > 0) this.curImgH = event.height;
+                  }
+                })
+                .onClick(() => { this.showActions = !this.showActions; })
+              if (this.isGifUrl(item.url)) {
+                Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
+                  .padding({ left: 5, right: 5, top: 2, bottom: 2 })
+                  .backgroundColor('#CC000000').borderRadius(4)
+                  .position({ top: 8, left: 8 })
+              }
             }
-          }
-          .width('100%').height('100%')
-          .onAreaChange((_old: Area, newArea: Area): void => {
-            const w = newArea.width as number;
-            const h = newArea.height as number;
-            if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
-            if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
+            .width('100%').height('100%')
+            .onAreaChange((_old: Area, newArea: Area): void => {
+              const w = newArea.width as number;
+              const h = newArea.height as number;
+              if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
+              if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
+            })
           })
+        }
+        .index(this.currentIndex)
+        .loop(true)
+        .indicator(this.showSwiperDots)
+        .width('100%').height('100%')
+        .backgroundColor('#000000')
+        .onChange((idx: number): void => {
+          this.currentIndex = idx;
+          this.resetZoom();
+          this.curImgW = 0;
+          this.curImgH = 0;
+          this.ensureCurrentImageCached();
+          this.maybeLoadWindows();
         })
       }
-      .index(this.currentIndex)
-      .loop(true)
-      .indicator(this.showSwiperDots)
-      .width('100%').height('100%')
-      .backgroundColor('#000000')
-      // 放大后关闭左右滑动，避免拖动看图时误触发切图；
-      // 缩回 1 倍时恢复，可继续滑动切换图片。
-      .disableSwipe(this.isZoomed)
-      .onChange((idx: number): void => {
-        this.currentIndex = idx;
-        this.resetZoom();
-        this.curImgW = 0;
-        this.curImgH = 0;
-        this.ensureCurrentImageCached();
-        this.maybeLoadWindows();
-      })
 
       Row() {
         Image($r('app.media.ic_arrow_back')).width(26).height(26).fillColor('#FFFFFF')
