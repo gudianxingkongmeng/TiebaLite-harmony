@@ -409,123 +409,86 @@ struct PhotoViewPage {
     return this.zoomScale > 1.001;
   }
 
-  /** 放大态独立容器里要显示的当前图片 */
-  private currentUrl(): string {
-    if (this.currentIndex >= 0 && this.currentIndex < this.items.length) {
-      return this.items[this.currentIndex].url;
-    }
-    return '';
-  }
-
   build() {
     Stack() {
-      // 放大态与列表态互斥：放大后 Swiper 会被销毁，改由独立容器独占全部手势。
-      // 之前两者共存时，Swiper 内部的横滑手势优先级高于子组件的 PanGesture，
-      // 拖动被它吃掉后再回弹，导致"能拖一点但松手回到中心"。
-      if (this.isZoomed) {
-        Stack() {
-          Image(this.currentUrl())
-            .width('100%').height('100%')
-            .objectFit(ImageFit.Contain)
-            .onComplete((event?: ImageCompleteInfo): void => {
-              if (event) {
-                if (event.width && event.width > 0) this.curImgW = event.width;
-                if (event.height && event.height > 0) this.curImgH = event.height;
-              }
-            })
-            .scale({ x: this.zoomScale, y: this.zoomScale })
-            .translate({ x: this.offsetX, y: this.offsetY })
-            .gesture(
-              PinchGesture({ distance: 1 })
-                .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
-                .onActionUpdate((event: GestureEvent): void => {
-                  this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                  this.clampOffsets();
-                })
-                .onActionEnd((): void => {
-                  if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
-                })
-            )
-            .gesture(
-              PanGesture({ fingers: 1, direction: PanDirection.All })
-                .onActionStart((): void => {
-                  this._panStartX = this.offsetX;
-                  this._panStartY = this.offsetY;
-                })
-                .onActionUpdate((event: GestureEvent): void => {
-                  this.offsetX = this._panStartX + event.offsetX;
-                  this.offsetY = this._panStartY + event.offsetY;
-                  this.clampOffsets();
-                })
-            )
-        }
-        .width('100%').height('100%')
-        .backgroundColor('#000000')
-        .onClick(() => { this.showActions = !this.showActions; })
-        .onAreaChange((_old: Area, newArea: Area): void => {
-          const w = newArea.width as number;
-          const h = newArea.height as number;
-          if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
-          if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
-        })
-      } else {
-        Swiper() {
-          ForEach(this.items, (item: PicItem, index: number) => {
-            Stack() {
-              Image(item.url)
-                .width('100%').height('100%')
-                .objectFit(ImageFit.Contain)
-                .onComplete((event?: ImageCompleteInfo): void => {
-                  // 记录原始像素尺寸，放大后据此限制平移范围
-                  if (index === this.currentIndex && event) {
-                    if (event.width && event.width > 0) this.curImgW = event.width;
-                    if (event.height && event.height > 0) this.curImgH = event.height;
-                  }
-                })
-                .onClick(() => { this.showActions = !this.showActions; })
-                // 列表态只保留双指缩放：双指与 Swiper 的单指横滑不冲突，
-                // 单指平移绝不能挂在这里，否则又会被 Swiper 抢走。
-                // 一旦缩放越过 1 倍，上面的 isZoomed 分支会接管整棵树。
-                .gesture(
-                  PinchGesture({ distance: 1 })
-                    .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
-                    .onActionUpdate((event: GestureEvent): void => {
-                      this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
-                    })
-                    .onActionEnd((): void => {
-                      if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
-                    })
-                )
-              if (this.isGifUrl(item.url)) {
-                Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
-                  .padding({ left: 5, right: 5, top: 2, bottom: 2 })
-                  .backgroundColor('#CC000000').borderRadius(4)
-                  .position({ top: 8, left: 8 })
-              }
+      // 始终渲染同一棵树。
+      // 之前用 isZoomed 做条件切换，把 Swiper 和独立容器互斥，
+      // 结果 scale 越过 1 的瞬间正在执行的 Pinch 手势所在组件被销毁，手势中断。
+      // 现在靠 priorityGesture 让平移优先于 Swiper，用 disableSwipe 停掉翻页，
+      // 组件树不发生切换，手势才能连续执行。
+      Swiper() {
+        ForEach(this.items, (item: PicItem, index: number) => {
+          Stack() {
+            Image(item.url)
+              .width('100%').height('100%')
+              .objectFit(ImageFit.Contain)
+              .onComplete((event?: ImageCompleteInfo): void => {
+                // 记录原始像素尺寸，放大后据此限制平移范围
+                if (index === this.currentIndex && event) {
+                  if (event.width && event.width > 0) this.curImgW = event.width;
+                  if (event.height && event.height > 0) this.curImgH = event.height;
+                }
+              })
+              .onClick(() => { this.showActions = !this.showActions; })
+              .scale({ x: this.zoomScale, y: this.zoomScale })
+              .translate({ x: this.offsetX, y: this.offsetY })
+              .gesture(
+                PinchGesture({ distance: 1 })
+                  .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+                  .onActionUpdate((event: GestureEvent): void => {
+                    this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                    this.clampOffsets();
+                  })
+                  .onActionEnd((): void => {
+                    if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
+                  })
+              )
+              // 用 priorityGesture 而不是普通 gesture：普通手势抢不过父容器
+              // Swiper 的横滑，拖动会被它吃掉后回弹；priorityGesture 明确优先。
+              .priorityGesture(
+                PanGesture({ fingers: 1, direction: PanDirection.All })
+                  .onActionStart((): void => {
+                    this._panStartX = this.offsetX;
+                    this._panStartY = this.offsetY;
+                  })
+                  .onActionUpdate((event: GestureEvent): void => {
+                    if (!this.isZoomed) return;
+                    this.offsetX = this._panStartX + event.offsetX;
+                    this.offsetY = this._panStartY + event.offsetY;
+                    this.clampOffsets();
+                  })
+              )
+            if (this.isGifUrl(item.url)) {
+              Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
+                .padding({ left: 5, right: 5, top: 2, bottom: 2 })
+                .backgroundColor('#CC000000').borderRadius(4)
+                .position({ top: 8, left: 8 })
             }
-            .width('100%').height('100%')
-            .onAreaChange((_old: Area, newArea: Area): void => {
-              const w = newArea.width as number;
-              const h = newArea.height as number;
-              if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
-              if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
-            })
+          }
+          .width('100%').height('100%')
+          .onAreaChange((_old: Area, newArea: Area): void => {
+            const w = newArea.width as number;
+            const h = newArea.height as number;
+            if (w > 0 && Math.abs(w - this.viewW) > 0.5) this.viewW = w;
+            if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
           })
-        }
-        .index(this.currentIndex)
-        .loop(true)
-        .indicator(this.showSwiperDots)
-        .width('100%').height('100%')
-        .backgroundColor('#000000')
-        .onChange((idx: number): void => {
-          this.currentIndex = idx;
-          this.resetZoom();
-          this.curImgW = 0;
-          this.curImgH = 0;
-          this.ensureCurrentImageCached();
-          this.maybeLoadWindows();
         })
       }
+      .index(this.currentIndex)
+      .loop(true)
+      .indicator(this.showSwiperDots)
+      .width('100%').height('100%')
+      .backgroundColor('#000000')
+      // 放大后停掉翻页，避免拖动看图时误触发切图；缩回 1 倍自动恢复
+      .disableSwipe(this.isZoomed)
+      .onChange((idx: number): void => {
+        this.currentIndex = idx;
+        this.resetZoom();
+        this.curImgW = 0;
+        this.curImgH = 0;
+        this.ensureCurrentImageCached();
+        this.maybeLoadWindows();
+      })
 
       Row() {
         Image($r('app.media.ic_arrow_back')).width(26).height(26).fillColor('#FFFFFF')
