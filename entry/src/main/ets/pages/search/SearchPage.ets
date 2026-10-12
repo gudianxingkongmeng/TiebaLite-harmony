@@ -705,7 +705,7 @@ onIsDarkChange(): void {
     .backdropBlur(glassBackdropBlur(this.headerAlpha))
     .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
     .padding({ left: 12 })
-    .margin({ left: 4, right: 4 })
+    .margin({ left: 14, right: 14 })
             .defaultFocus(true)
             .border({ width: 1, color: dividerColor(this.isDark) })
             .fontColor(textPrimary(this.isDark))
