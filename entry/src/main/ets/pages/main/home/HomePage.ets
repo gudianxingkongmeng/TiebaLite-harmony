@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import { NavigationHelper } from '../../../core/utils/NavigationHelper';
@@ -20,7 +20,7 @@ import PullToRefresh from '../../../components/PullToRefresh';
 import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
@@ -365,7 +365,7 @@ export default struct HomePage {
         }
         .width('93%').height(44)
         .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-        .backdropBlur(glassBlurLevel(this.headerAlpha))
+        .backdropBlur(glassBackdropBlur(this.headerAlpha))
         .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
         .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
         .margin({ top: 16, bottom: 8 })
@@ -456,7 +456,7 @@ export default struct HomePage {
             }
             .width('93%').height(44)
             .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-            .backdropBlur(glassBlurLevel(this.headerAlpha))
+            .backdropBlur(glassBackdropBlur(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
             .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
             .margin({ top: 4, bottom: 8 })

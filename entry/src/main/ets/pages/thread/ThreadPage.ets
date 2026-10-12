@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import Window from '@ohos.window';
 import { KeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import display from '@ohos.display';
@@ -35,7 +35,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
-import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
 import PollCard from '../../components/PollCard';
@@ -864,7 +864,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
       .width('100%')
       .padding({ top: this.topInset })
       .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+      .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: this.showFixedBar ? 0 : 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .position({ x: 0, y: 0 })
@@ -1027,7 +1027,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
               .visibility(this.showFixedBar ? Visibility.Hidden : Visibility.Visible)
               // 与顶栏保持一致的玻璃质感：同色背景 + 背景模糊 + 顶部分隔线
               .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-              .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+              .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
               .border({ width: { top: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
 
@@ -1155,11 +1155,11 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
         .layoutWeight(1)
         // 液态玻璃：与首页底部导航条完全同一套参数
         .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-        .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
         .borderRadius(24)
         // 不对称描边：仅上边缘更亮（左右与页面齐平，不显示侧边高光）
-        .border({ width: { top: 1.4, bottom: 0.8 }, color: liquidGlassEdge(this.isDark, 0.5) })
+        .border({ width: { top: 1.4, bottom: 0.8 }, color: liquidGlassEdge(this.isDark, 0.5, this.headerAlpha) })
         .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 3 })
       }
 

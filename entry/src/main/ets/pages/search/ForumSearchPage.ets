@@ -1,4 +1,4 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
@@ -8,7 +8,7 @@ import SearchRepository from '../../core/repository/SearchRepository';
 import PbPageRepository from '../../core/repository/PbPageRepository';
 import ThreadCard from '../../components/ThreadCard';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 
@@ -213,7 +213,7 @@ struct ForumSearchPage {
           TextInput({ text: this.keyword, placeholder: this.forumName ? '搜索 ' + this.forumName : '搜索贴吧...' })
             .layoutWeight(1).height(36)
             .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-            .backdropBlur(glassBlurLevel(this.headerAlpha))
+            .backdropBlur(glassBackdropBlur(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
             .padding({ left: 12 }).margin({ left: 8, right: 8 }).defaultFocus(true)
             .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })

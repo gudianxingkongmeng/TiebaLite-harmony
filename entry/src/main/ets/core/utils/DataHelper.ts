@@ -281,8 +281,12 @@ export function shadowColor(isDark: boolean): string {
       return 30;
     }
     
-    export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number,
-      density: number = 0, fade: number = 1): string {
+export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlpha: number,
+  density: number = 0, fade: number = 1): string {
+  // 玻璃强度 0 = 完全不透明装饰，必须真的透明而不是降到 0.35 倍
+  if (glassAlpha <= 0) {
+    return 'transparent';
+  }
       // density 用于同材质下的层级区分：操作条类传 1，底色略实一档
       const extra = Math.max(0, Math.min(1, density)) * 0.12;
       // fade 额外衰减：导航条等大面积玻璃需要更淡，避免底色贴近主题色
@@ -297,15 +301,29 @@ export function shadowColor(isDark: boolean): string {
       return withAlpha(primaryColor, a);
     }
     
-    export function glassTintShadow(primaryColor: string, isDark: boolean, glassAlpha: number): string {
-      const base = isDark ? 0.42 : 0.45;
-      const a = base * (0.4 + 0.6 * (glassAlpha / 100));
-      return withAlpha(primaryColor, a);
-    }
+export function glassTintShadow(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+  // 玻璃强度 0 时不该还有投影，否则纯透明条仍会带一层灰影
+  if (glassAlpha <= 0) {
+    return 'transparent';
+  }
+  const base = isDark ? 0.42 : 0.45;
+  const a = base * (0.4 + 0.6 * (glassAlpha / 100));
+  return withAlpha(primaryColor, a);
+}
     
-    export function glassBlurLevel(glassAlpha: number): number {
-      return glassAlpha > 0 ? Math.max(6, Math.round(35 * (glassAlpha / 100))) : 0;
-    }
+export function glassBlurLevel(glassAlpha: number): number {
+  return glassAlpha > 0 ? Math.max(6, Math.round(35 * (glassAlpha / 100))) : 0;
+}
+
+/**
+ * 顶栏/底条的 backdropBlur。
+ * 直接写 glassBlurLevel(x) + 14 会在 glassAlpha=0 时仍然得到 14 的模糊，
+ * 导致「玻璃强度设为 0」并不是真的纯透明。这里统一兜底为 0。
+ */
+export function glassBackdropBlur(glassAlpha: number, extra: number = 0): number {
+  if (glassAlpha <= 0) return 0;
+  return glassBlurLevel(glassAlpha) + extra;
+}
 
     /**
      * 液态玻璃增强参数：在 backdropBlur 之上叠加色彩调整，
@@ -315,8 +333,13 @@ export function shadowColor(isDark: boolean): string {
      * - color：叠加一层极淡的白色高光
      * 重度（emphasis）用于让展开的操作条比主按钮更"重"。
      */
-    export function liquidGlassEffect(emphasis: number = 0, glassAlpha: number = 25): BackgroundEffectOptions {
-      const e = Math.max(0, Math.min(1, emphasis));
+export function liquidGlassEffect(emphasis: number = 0, glassAlpha: number = 25): BackgroundEffectOptions {
+  // 玻璃强度为 0 时必须完全中性：否则这层白色 tint 会叠加在透明背景上，
+  // 使「设为 0」依然看起来有一层玻璃，而不是纯透明。
+  if (glassAlpha <= 0) {
+    return { radius: 0, saturation: 1, brightness: 1 };
+  }
+  const e = Math.max(0, Math.min(1, emphasis));
       // color 必须用字符串 RGBA。用数字会被当作 ARGB（0x0AFFFFFF = alpha 0x0A 的黑色），
       // 叠加后整块变纯黑。
       const tintAlpha = Math.round(10 + 8 * e); // 0x0A ~ 0x12
@@ -329,8 +352,12 @@ export function shadowColor(isDark: boolean): string {
     }
 
     /** 液态玻璃的边缘高光描边颜色：顶部亮、底部暗，模拟透镜受光。 */
-    export function liquidGlassEdge(isDark: boolean, emphasis: number = 0): string {
-      const e = Math.max(0, Math.min(1, emphasis));
+export function liquidGlassEdge(isDark: boolean, emphasis: number = 0, glassAlpha: number = -1): string {
+  // glassAlpha 传入时，0 表示关闭玻璃，描边也应一并消失
+  if (glassAlpha === 0) {
+    return 'transparent';
+  }
+  const e = Math.max(0, Math.min(1, emphasis));
       // 边缘高光：深色背景下用更亮的白，浅色背景下稍暗一点才看得见
       const rgb = isDark ? '#FFFFFF' : '#F2F6FF';
       const alpha = isDark ? 0.4 + 0.16 * e : 0.55 + 0.2 * e;
@@ -347,10 +374,11 @@ export function shadowColor(isDark: boolean): string {
       if (glassAlpha <= 0) {
         return 'transparent';
       }
-      // 与下方主贴完全同色：底色就是页面背景色，
-      // 只保留很小的通透度，否则玻璃区会比主贴浅一档、看起来像另一种颜色。
-      const a = 0.9 + 0.1 * (glassAlpha / 100);
-      return withAlpha(pageBgColor, Math.min(1, a));
+      // 底色用页面背景色（和下方主贴同源），并保留通透度让内容能透出来。
+      // 颜色一致靠的是不做 hue shift（见 glassTopBarEffect），
+      // 而不是把不透明度拉满——拉满就没有玻璃感了。
+      const a = (isDark ? 0.72 : 0.62) * (0.35 + 0.65 * (glassAlpha / 100));
+      return withAlpha(pageBgColor, a);
     }
 
     /**

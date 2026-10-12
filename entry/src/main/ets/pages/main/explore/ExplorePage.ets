@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import display from '@ohos.display';
@@ -20,7 +20,7 @@ import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
-import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../../core/utils/DataHelper';
+import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -1002,7 +1002,7 @@ export default struct ExplorePage {
           .clip(true)
           .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
           .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-          .backdropBlur(glassBlurLevel(this.headerAlpha))
+          .backdropBlur(glassBackdropBlur(this.headerAlpha))
           .border({ width: 1, color: dividerColor(this.isDark) })
           .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
           .margin({ top: this.searchBarVisible ? 8 : 0, bottom: this.searchBarVisible ? 4 : 0 })
@@ -1274,10 +1274,10 @@ export default struct ExplorePage {
     .borderRadius(23 * this.fabRadius / 100)
     // 与加号完全同一套玻璃底色，只靠 emphasis 提升饱和/模糊/边缘来体现"更重"
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
-    .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+    .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
     .backgroundEffect(liquidGlassEffect(1, this.headerAlpha))
     .border({ width: { top: 1.6, left: 1.6, right: 1.2, bottom: 0.8 },
-      color: liquidGlassEdge(this.isDark, 1) })
+      color: liquidGlassEdge(this.isDark, 1, this.headerAlpha) })
     .shadow({ radius: 12, color: glassTintShadow(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)), offsetY: 5 })
     .margin({ bottom: 8 })
     .onClick(() => { action(); })
@@ -1294,11 +1294,11 @@ export default struct ExplorePage {
 .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     // 液态玻璃：模糊之上叠加色彩增强，提升通透感
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-    .backdropBlur(glassBlurLevel(this.headerAlpha))
+    .backdropBlur(glassBackdropBlur(this.headerAlpha))
     .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
     // 只保留一条不对称描边：上/左更亮模拟受光，下/右更暗
     .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
-      color: liquidGlassEdge(this.isDark, 0) })
+      color: liquidGlassEdge(this.isDark, 0, this.headerAlpha) })
     .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }

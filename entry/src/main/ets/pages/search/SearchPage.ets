@@ -1,4 +1,4 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import promptAction from '@ohos.promptAction';
@@ -13,7 +13,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
+import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
@@ -702,7 +702,7 @@ onIsDarkChange(): void {
             .layoutWeight(1)
             .height(36)
             .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-            .backdropBlur(glassBlurLevel(this.headerAlpha))
+            .backdropBlur(glassBackdropBlur(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(18 * this.searchBoxRound / 100)))
             .padding({ left: 12 })
             .margin({ left: 8, right: 8 })

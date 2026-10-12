@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import { TopInsetHelper } from '../core/utils/TopInsetHelper';
 import { AppRouter } from '../components/PbContentRender';
@@ -6,7 +6,7 @@ import HomePage from '../pages/main/home/HomePage';
 import ExplorePage from '../pages/main/explore/ExplorePage';
 import NotificationsPage from '../pages/main/notifications/NotificationsPage';
 import UserTabPage from '../pages/main/user/UserTabPage';
-import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface } from '../core/utils/DataHelper';
+import { blendWithBg, cardBg, darkenColor, dividerColor, pageBg, textAccent, textPrimary, textSecondary, textTertiary, withAlpha, buildPortraitUrl, getStr, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassBackdropBlur } from '../core/utils/DataHelper';
 import PreferencesManager from '../core/storage/PreferencesManager';
 import Window from '@ohos.window';
 import { NavigationHelper } from '../core/utils/NavigationHelper';
@@ -552,13 +552,13 @@ struct Index {
         // 液态玻璃：底色取页面背景色而非主题色，与页面内容同色
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
           glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-        .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+        .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(liquidGlassEffect(0.5, this.headerAlpha))
         .borderRadius(18)
         .clip(true)
         // 不对称描边：上/左更亮，模拟玻璃顶面受光
         .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
-          color: liquidGlassEdge(this.isDark, 0.5) })
+          color: liquidGlassEdge(this.isDark, 0.5, this.headerAlpha) })
         .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 3 })
         .onAreaChange((_old: Area, newArea: Area) => {
           const w = newArea.width as number;

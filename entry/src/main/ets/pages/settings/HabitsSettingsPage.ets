@@ -1,8 +1,8 @@
-﻿import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
+import { TopInsetHelper } from '../../core/utils/TopInsetHelper';
 import common from '@ohos.app.ability.common';
 import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
-import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
+import { blendWithBg, textAccent, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
 import PreferencesManager from '../../core/storage/PreferencesManager';
 import NetworkUtil from '../../core/utils/NetworkUtil';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
@@ -79,7 +79,7 @@ struct HabitsSettingsPage {
         }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
       .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+      .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
 .position({ x: 0, y: 0 })

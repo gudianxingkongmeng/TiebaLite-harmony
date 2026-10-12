@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import display from '@ohos.display';
@@ -15,7 +15,7 @@ import Avatar from '../../components/Avatar';
 import GearLoading from '../../components/GearLoading';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
@@ -1707,11 +1707,11 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     .width(46).height(46)
     // 与加号完全同一套玻璃底色，只靠 emphasis 提升饱和/模糊/边缘来体现"更重"
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha, 1))
-    .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+    .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
     .backgroundEffect(liquidGlassEffect(1, this.headerAlpha))
     .borderRadius(23 * this.fabRadius / 100)
     .border({ width: { top: 1.6, left: 1.6, right: 1.2, bottom: 0.8 },
-      color: liquidGlassEdge(this.isDark, 1) })
+      color: liquidGlassEdge(this.isDark, 1, this.headerAlpha) })
     .shadow({ radius: 12, color: glassTintShadow(this.primaryColor, this.isDark, Math.min(100, this.headerAlpha + 25)), offsetY: 5 })
     .margin({ bottom: 8 })
     .onClick(() => { action(); })
@@ -1727,11 +1727,11 @@ Text('+')
           }
 .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
-    .backdropBlur(glassBlurLevel(this.headerAlpha))
+    .backdropBlur(glassBackdropBlur(this.headerAlpha))
     .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
     // 只保留一条不对称描边：上/左更亮模拟受光，下/右更暗
     .border({ width: { top: 1.4, left: 1.4, right: 1, bottom: 0.8 },
-      color: liquidGlassEdge(this.isDark, 0) })
+      color: liquidGlassEdge(this.isDark, 0, this.headerAlpha) })
     .shadow({ radius: 10, color: glassTintShadow(this.primaryColor, this.isDark, this.headerAlpha), offsetY: 4 })
     .onClick(() => { this.showFabMenu = !this.showFabMenu; })
   }

@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import display from '@ohos.display';
@@ -12,7 +12,7 @@ import GearCycle from '../../components/GearCycle';
 import PullToRefresh from '../../components/PullToRefresh';
 import BackToTopButton from '../../components/BackToTopButton';
 import { Dict } from '../../core/types/Dict';
-import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel } from '../../core/utils/DataHelper';
+import { getStr, blendWithBg, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTopBarSurface, glassTopBarEffect, glassBlurLevel, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 class HistoryDataSource implements IDataSource {
@@ -189,7 +189,7 @@ struct HistoryPage {
       }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
       .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-      .backdropBlur(glassBlurLevel(this.headerAlpha) + 14)
+      .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
       .position({ x: 0, y: 0 })
