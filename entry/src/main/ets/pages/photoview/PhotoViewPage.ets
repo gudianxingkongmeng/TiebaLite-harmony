@@ -483,6 +483,19 @@ struct PhotoViewPage {
                   }
                 })
                 .onClick(() => { this.showActions = !this.showActions; })
+                // 列表态只保留双指缩放：双指与 Swiper 的单指横滑不冲突，
+                // 单指平移绝不能挂在这里，否则又会被 Swiper 抢走。
+                // 一旦缩放越过 1 倍，上面的 isZoomed 分支会接管整棵树。
+                .gesture(
+                  PinchGesture({ distance: 1 })
+                    .onActionStart((): void => { this._pinchBaseScale = this.zoomScale; })
+                    .onActionUpdate((event: GestureEvent): void => {
+                      this.zoomScale = Math.max(1, Math.min(5, this._pinchBaseScale * event.scale));
+                    })
+                    .onActionEnd((): void => {
+                      if (this.zoomScale <= 1.001) { this.resetZoom(); } else { this.clampOffsets(); }
+                    })
+                )
               if (this.isGifUrl(item.url)) {
                 Text('GIF').fontFamily(this.appFontFamily).fontSize(11).fontColor('#FFFFFF').fontWeight(FontWeight.Bold)
                   .padding({ left: 5, right: 5, top: 2, bottom: 2 })
