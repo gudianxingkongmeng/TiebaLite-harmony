@@ -520,11 +520,11 @@ struct Index {
             ForEach(this.tabs, (tab: string, index: number) => {
               Column() {
                 Image(this.iconResources[index])
-                  .width(21).height(21)
+                  .width(24).height(24)
                   .fillColor(index === this.currentTab ? textAccent(this.primaryColor, this.isDark) : textSecondary(this.isDark))
                 if (this.showNavLabels) {
                   Text(tab)
-                    .fontFamily(this.appFontFamily).fontSize(10)
+                    .fontFamily(this.appFontFamily).fontSize(11)
                     .fontColor(index === this.currentTab ? textAccent(this.primaryColor, this.isDark) : textSecondary(this.isDark))
                     .margin({ top: 1 })
                 }
@@ -537,7 +537,7 @@ struct Index {
                     .margin({ top: 3 })
                 }              }
               .layoutWeight(1)
-              .padding({ top: 6, bottom: 6 })
+              .padding({ top: 7, bottom: 7 })
               .justifyContent(FlexAlign.Center)
               .alignItems(HorizontalAlign.Center)
             })
@@ -547,7 +547,7 @@ struct Index {
           .hitTestBehavior(HitTestMode.None)
         }
         .width('100%')
-        .height(50)
+        .height(56)
         .onTouch((event: TouchEvent) => this.handleTabTouch(event))
         // 液态玻璃：底色取页面背景色而非主题色，与页面内容同色
         .backgroundColor(this.headerAlpha === 0 ? Color.Transparent :
@@ -570,7 +570,7 @@ struct Index {
         Blank()
       }
 .width('100%')
-        .padding({ left: 40, right: 40 })
+        .padding({ left: 32, right: 32 })
         .position({ bottom: 8 + this.bottomInset })
 
       if (this.showClipLinkDialog) {

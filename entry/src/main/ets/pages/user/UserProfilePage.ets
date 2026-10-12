@@ -351,14 +351,17 @@ struct UserProfilePage {
                 .backgroundColor(cardBg(this.isDark))
                 .margin({ bottom: 1 })
     .onClick(() => {
-      // 我的回复要定位到回复所在的楼层：传 postId（楼层 pid），
-      // 楼中楼回复再带上 subPostId 直接进子回复页。
-      // 只传 threadId 会停在帖子顶部。
-      const targetPid = getStr(post, 'pid', 'post_id', 'postId');
-      const subPid = getStr(post, 'spid', 'sub_post_id', 'subPostId');
+      // 我的回复要定位到回复所在楼层。feed 结构里 thread/pid 常常包在
+      // thread_info 等子对象里，只查顶层取不到（与 NotificationsPage 同款下钻）。
+      const tid = this.resolveFeedThreadId(post);
+      const targetPid = this.resolveFeedTargetPid(post);
+      const subPid = this.resolveFeedSubPid(post);
+      const floorNo = this.resolveFeedFloorNo(post);
+      console.info('TiebaLite: myReply tap tid=' + tid + ' pid=' + targetPid + ' spid=' + subPid + ' floor=' + floorNo +
+        ' keys=' + Object.keys(post).join(','));
       if (subPid) {
         NavigationHelper.navigate('pages/subposts/SubPostsPage', {
-          threadId: getStr(post, 'id', 'tid', 'thread_id', 'threadId'),
+          threadId: tid,
           postId: targetPid,
           subPostId: subPid,
           forumName: getStr(post, 'fname', 'forum_name', 'forumName')
@@ -366,15 +369,15 @@ struct UserProfilePage {
         return;
       }
       NavigationHelper.navigate('pages/thread/ThreadPage', {
-        threadId: getStr(post, 'id', 'tid', 'thread_id', 'threadId'),
+        threadId: tid,
         postId: targetPid,
-        floorNo: getStr(post, 'floor', 'floor_num', 'floorNumber', 'post_num'),
+        floorNo: floorNo,
         forumName: getStr(post, 'fname', 'forum_name', 'forumName')
       });
     })
   })
-}
-Column() {
+    }
+    Column() {
               if (this.selectedTab === 0 ? this.loadingMorePosts : this.loadingMoreReplies) {
                 RefreshAnimation({ refreshing: true, gearSize: 32, color: this.primaryColor })
               } else {
@@ -406,6 +409,48 @@ Column() {
   }
   .width('100%').height('100%')
   
+  }
+
+  /** feed 条目里的 threadId 常被包在 source / thread / thread_info 里，需逐级下钻 */
+  private resolveFeedThreadId(post: Dict): string {
+    let tid = getStr(post, 'thread_id', 'threadId', 'tid');
+    if (tid && tid !== '0') return tid;
+    for (const key of ['source', 'thread', 'thread_info', 'threadInfo', 'agree_info', 'agree_info_ext']) {
+      const sub = post[key] as Dict;
+      if (!sub) continue;
+      tid = getStr(sub, 'thread_id', 'threadId', 'tid', 'id');
+      if (tid && tid !== '0') return tid;
+    }
+    return tid;
+  }
+
+  /** 回复所在楼层的 pid：取回复自身的 pid，取不到再退到被回复的楼层 */
+  private resolveFeedTargetPid(post: Dict): string {
+    let pid = getStr(post, 'pid', 'post_id', 'postId', 'floor_id', 'floorId');
+    if (pid && pid !== '0') return pid;
+    for (const key of ['thread_info', 'threadInfo', 'source', 'quote', 'agree_info']) {
+      const sub = post[key] as Dict;
+      if (!sub) continue;
+      pid = getStr(sub, 'pid', 'post_id', 'postId');
+      if (pid && pid !== '0') return pid;
+    }
+    return getStr(post, 'quote_pid', 'quotePid');
+  }
+
+  private resolveFeedSubPid(post: Dict): string {
+    return getStr(post, 'spid', 'sub_post_id', 'subPostId');
+  }
+
+  private resolveFeedFloorNo(post: Dict): string {
+    let f = getStr(post, 'floor', 'floor_num', 'floorNumber', 'post_num', 're_floor');
+    if (f && f !== '0') return f;
+    for (const key of ['thread_info', 'threadInfo', 'source']) {
+      const sub = post[key] as Dict;
+      if (!sub) continue;
+      f = getStr(sub, 'floor', 'floor_num', 'floorNumber', 'post_num');
+      if (f && f !== '0') return f;
+    }
+    return '';
   }
 
   @Builder

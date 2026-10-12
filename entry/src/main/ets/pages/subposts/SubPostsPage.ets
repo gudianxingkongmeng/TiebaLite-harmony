@@ -1,4 +1,4 @@
-﻿import router from '@ohos.router';
+import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import pasteboard from '@ohos.pasteboard';
@@ -1044,7 +1044,7 @@ struct SubPostsPage {
                         .verticalAlign(ImageSpanAlignment.CENTER)
                     } else {
                       Span(this.cleanAtReference(seg.text))
-                        .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                        .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark))
                     }
                   }, (seg: EmojiSeg) => seg.text + (seg.isEmoji ? '#e' : '#t'))
                 }
@@ -1055,19 +1055,19 @@ struct SubPostsPage {
                     .verticalAlign(ImageSpanAlignment.CENTER)
                 } else if (item.text || item.c) {
                   Span(this.cleanAtReference(String(item.text || item.c || '')))
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark))
                 }
               } else if (Number(item.type) === 1 || Number(item.type) === 3 || Number(item.type) === 20) {
                 if (!PbContentRender.resolveImageSrc(item)) {
                   Span('[图片]')
-                    .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                    .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark))
                 }
               } else if (Number(item.type) === 5) {
                 Span('[视频]')
-                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark))
               } else if (Number(item.type) === 4 && String(item.text || item.c || '').length > 0) {
                 Span(this.cleanAtReference(String(item.text || item.c || '')))
-                  .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor('#4477E0')
+                  .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor('#4477E0')
                   .onClick(() => {
                     const uid = Number(item.uid || item.user_id || item.userId || item.id || 0);
                     if (uid > 0) {
@@ -1081,7 +1081,7 @@ struct SubPostsPage {
                       .verticalAlign(ImageSpanAlignment.CENTER)
                   } else {
                     Span(this.cleanAtReference(String(item.text || item.c || '')))
-                      .fontFamily(this.appFontFamily).fontSize(Math.round(15 * this.fontScale)).fontColor(textPrimary(this.isDark))
+                      .fontFamily(this.appFontFamily).fontSize(Math.round(16 * this.fontScale)).fontColor(textPrimary(this.isDark))
                   }
                 }
             })
