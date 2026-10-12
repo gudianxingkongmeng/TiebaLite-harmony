@@ -347,17 +347,28 @@ export function shadowColor(isDark: boolean): string {
       if (glassAlpha <= 0) {
         return 'transparent';
       }
-      // 与下方页面同色，仅按玻璃透明度决定不透明度
-      const a = (isDark ? 0.72 : 0.62) * (0.35 + 0.65 * (glassAlpha / 100));
-      return withAlpha(pageBgColor, a);
+      // 与下方主贴完全同色：底色就是页面背景色，
+      // 只保留很小的通透度，否则玻璃区会比主贴浅一档、看起来像另一种颜色。
+      const a = 0.9 + 0.1 * (glassAlpha / 100);
+      return withAlpha(pageBgColor, Math.min(1, a));
     }
 
-    /** 顶栏的液态玻璃 backgroundEffect 参数（emphasis 稍高以突出通透感） */
+    /**
+     * 顶栏的 backgroundEffect 参数。
+     * 这里刻意不做提亮/增饱和：顶栏底色必须和下方主贴一致，
+     * saturation/brightness 一改色相就会和主贴对不上。
+     * 只保留模糊半径与一层极淡的高光。
+     */
     export function glassTopBarEffect(glassAlpha: number): BackgroundEffectOptions {
       if (glassAlpha <= 0) {
         return { radius: 0, saturation: 1, brightness: 1 };
       }
-      return liquidGlassEffect(0.55, glassAlpha);
+      return {
+        radius: glassBlurLevel(glassAlpha) + 6,
+        saturation: 1,
+        brightness: 1,
+        color: '#05FFFFFF'
+      };
     }
     
 export function withAlpha(color: string, alpha: number): string {
