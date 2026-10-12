@@ -20,7 +20,7 @@ import PullToRefresh from '../../../components/PullToRefresh';
 import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassTintBorder, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
@@ -363,11 +363,11 @@ export default struct HomePage {
             .fontFamily(this.appFontFamily).fontSize(14 * this.fontScale).fontColor(textTertiary(this.isDark))
           Blank()
         }
-        .width('93%').height(44)
-        .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+        .width('85%').height(44)
+        .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
         .backdropBlur(glassBackdropBlur(this.headerAlpha))
         .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
-        .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+        .border({ width: 1, color: dividerColor(this.isDark) })
         .margin({ top: 16, bottom: 8 })
         .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
         .onClick(() => { NavigationHelper.navigate('pages/search/SearchPage'); })
@@ -454,11 +454,11 @@ export default struct HomePage {
                 .fontFamily(this.appFontFamily).fontSize(14 * this.fontScale).fontColor(textTertiary(this.isDark))
               Blank()
             }
-            .width('93%').height(44)
-            .backgroundColor(glassTintSurface(this.primaryColor, this.isDark, this.headerAlpha))
+            .width('85%').height(44)
+            .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
             .backdropBlur(glassBackdropBlur(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
-            .border({ width: 1, color: glassTintBorder(this.primaryColor, this.isDark, this.headerAlpha) })
+            .border({ width: 1, color: dividerColor(this.isDark) })
             .margin({ top: 4, bottom: 8 })
             .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
             .onClick(() => { NavigationHelper.navigate('pages/search/SearchPage'); })
