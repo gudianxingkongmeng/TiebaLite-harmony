@@ -16,6 +16,7 @@ import GearLoading from '../../components/GearLoading';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
 import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { decideHeaderAction, shouldForceExpand, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
@@ -1634,17 +1635,20 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
     }
     const delta = y - this.lastHeaderY;
     this.lastHeaderY = y;
-    if (Math.abs(delta) > 2000 || Math.abs(delta) < 0.5) return;
-    if (delta > 5 && !this.headerCollapsed) {
-      animateTo({ duration: 220, curve: Curve.FastOutSlowIn }, () => {
-        this.headerCollapsed = true;
-      });
-    } else if (delta < -5 && this.headerCollapsed) {
-      animateTo({ duration: 220, curve: Curve.FastOutSlowIn }, () => {
+    // 回到顶部必须展开
+    if (shouldForceExpand(y, this.headerCollapsed)) {
+      animateTo(HEADER_EXPAND_ANIM, () => {
         this.headerCollapsed = false;
       });
-    } else if (y <= 2 && this.headerCollapsed) {
-      animateTo({ duration: 220, curve: Curve.FastOutSlowIn }, () => {
+      return;
+    }
+    const action = decideHeaderAction(delta, this.headerCollapsed);
+    if (action === 'collapse') {
+      animateTo(HEADER_COLLAPSE_ANIM, () => {
+        this.headerCollapsed = true;
+      });
+    } else if (action === 'expand') {
+      animateTo(HEADER_EXPAND_ANIM, () => {
         this.headerCollapsed = false;
       });
     }

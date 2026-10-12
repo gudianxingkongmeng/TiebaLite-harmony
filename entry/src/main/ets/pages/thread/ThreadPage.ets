@@ -36,6 +36,7 @@ import PullToRefresh from '../../components/PullToRefresh';
 import NetworkImage from '../../components/Images';
 import { Dict } from '../../core/types/Dict';
 import { buildPortraitUrl, getStr, blendWithWhite, blendWithBg, darkenColor, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, KEYBOARD_IME_EXTRA_VP, withAlpha, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import BackToTopButton from '../../components/BackToTopButton';
 import PollCard from '../../components/PollCard';
@@ -1136,13 +1137,16 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
             } else if (delta < -5 && !this.showBottomBar) {
               animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showBottomBar = true; });
             }
-            if (this.hideOnScroll && !this.showReply) {
-              if (delta > 5 && this.showForumBar && newY > 40) {
-                this.showForumBar = false;
-              } else if (delta < -5 && !this.showForumBar) {
-                this.showForumBar = true;
-              }
-            }
+    if (this.hideOnScroll && !this.showReply) {
+      // 吧名行（showForumBar）此前也是直接赋值、没有动画，
+      // 且和底部栏各自用 delta>5 的阈值快速切换时互相打架。
+      const action = decideHeaderAction(delta, !this.showForumBar);
+      if (action === 'collapse' && this.showForumBar && newY > 40) {
+        animateTo(HEADER_COLLAPSE_ANIM, () => { this.showForumBar = false; });
+      } else if (action === 'expand' && !this.showForumBar) {
+        animateTo(HEADER_EXPAND_ANIM, () => { this.showForumBar = true; });
+      }
+    }
             this.lastScrollY = newY;
             this.scrollTop = newY;
             this.showFixedBar = this.scrollTop >= this.contentAboveHeight;

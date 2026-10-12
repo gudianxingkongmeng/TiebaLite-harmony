@@ -9,6 +9,7 @@ import PbPageRepository from '../../core/repository/PbPageRepository';
 import ThreadCard from '../../components/ThreadCard';
 import { Dict } from '../../core/types/Dict';
 import { getStr, getNum, buildPortraitUrl, blendWithBg, darkenColor, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
+import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 
@@ -90,10 +91,16 @@ struct ForumSearchPage {
     if (Math.abs(delta) > 2000 || Math.abs(delta) < 0.5) return;
     if (delta > 5) {
       if (this.showScrollTop) { this.showScrollTop = false; }
-      if (this.searchBarVisible) { this.searchBarVisible = false; }
     } else if (delta < -5) {
       if (y > 500 && !this.showScrollTop) { this.showScrollTop = true; }
-      if (!this.searchBarVisible) { this.searchBarVisible = true; }
+    }
+    // 搜索框收起/展开：统一走 ScrollHeaderHelper。
+    // 之前是瞬间赋值，36px 高度跳变加上 Blank 同步位移，观感突兀。
+    const action = decideHeaderAction(delta, !this.searchBarVisible);
+    if (action === 'collapse' && this.searchBarVisible) {
+      animateTo(HEADER_COLLAPSE_ANIM, () => { this.searchBarVisible = false; });
+    } else if (action === 'expand' && !this.searchBarVisible) {
+      animateTo(HEADER_EXPAND_ANIM, () => { this.searchBarVisible = true; });
     }
   }
 

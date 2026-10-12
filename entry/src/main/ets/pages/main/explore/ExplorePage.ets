@@ -21,6 +21,7 @@ import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
 import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
+import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../../core/utils/ScrollHeaderHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -704,16 +705,17 @@ export default struct ExplorePage {
     const y = this.scrollers[scrollIdx].currentOffset().yOffset;
     const delta = y - this.lastScrollYByTab[scrollIdx];
     this.lastScrollYByTab[scrollIdx] = y;
-    if (Math.abs(delta) > 2000 || Math.abs(delta) < 0.5) return;
+    // 顶栏收起/展开：统一走 ScrollHeaderHelper 的阈值与动画
     if (this.hideOnScroll) {
-      if (delta > 5) {
-        if (this.searchBarVisible) {
+      const action = decideHeaderAction(delta, !this.searchBarVisible);
+      if (action === 'collapse' && this.searchBarVisible) {
+        animateTo(HEADER_COLLAPSE_ANIM, () => {
           this.searchBarVisible = false;
-        }
-      } else if (delta < -5) {
-        if (this.searchBarVisible === false) {
+        });
+      } else if (action === 'expand' && !this.searchBarVisible) {
+        animateTo(HEADER_EXPAND_ANIM, () => {
           this.searchBarVisible = true;
-        }
+        });
       }
     }
     if (delta > 5) {

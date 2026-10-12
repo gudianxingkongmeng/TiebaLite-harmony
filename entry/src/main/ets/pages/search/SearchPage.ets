@@ -14,6 +14,7 @@ import PullToRefresh from '../../components/PullToRefresh';
 import RefreshAnimation from '../../components/RefreshAnimation';
 import { Dict } from '../../core/types/Dict';
 import { getStr, getNum, buildPortraitUrl, blendWithWhite, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, darkenColor, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../core/utils/DataHelper';
+import { decideHeaderAction, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { GripDetector } from '../../core/utils/GripDetector';
 import { saveRecentForum } from '../../core/utils/RecentForumHelper';
@@ -100,17 +101,25 @@ struct SearchPage {
     this.scrollTop = y;
     const delta = y - this.lastFabScrollY;
     this.lastFabScrollY = y;
-    if (Math.abs(delta) > 2000 || Math.abs(delta) < 0.5) return;
     if (delta > 5) {
       if (this.showScrollTop) {
         animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showScrollTop = false; });
       }
-      if (this.hideOnScroll && this.searchBarVisible) { this.searchBarVisible = false; }
     } else if (delta < -5) {
       if (y > 500 && !this.showScrollTop) {
         animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => { this.showScrollTop = true; });
       }
-      if (this.hideOnScroll && !this.searchBarVisible) { this.searchBarVisible = true; }
+    }
+    // 顶栏收起/展开：统一走 ScrollHeaderHelper。
+    // 之前这里是直接赋值、没有动画，44px 高度瞬间跳变加上 Blank 同步位移，
+    // 滚动时观感最突兀的就是这一处。
+    if (this.hideOnScroll) {
+      const action = decideHeaderAction(delta, !this.searchBarVisible);
+      if (action === 'collapse' && this.searchBarVisible) {
+        animateTo(HEADER_COLLAPSE_ANIM, () => { this.searchBarVisible = false; });
+      } else if (action === 'expand' && !this.searchBarVisible) {
+        animateTo(HEADER_EXPAND_ANIM, () => { this.searchBarVisible = true; });
+      }
     }
   }
 
