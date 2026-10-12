@@ -20,7 +20,7 @@ import PullToRefresh from '../../../components/PullToRefresh';
 import { TiebaApi } from '../../../core/api/TiebaApi';
 import ITiebaApi from '../../../core/api/ITiebaApi';
 import PreferencesManager from '../../../core/storage/PreferencesManager';
-import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassTintSurface, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
+import { buildPortraitUrl, getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, glassBlurLevel, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../../core/utils/SystemBarHelper';
 
 @Component
@@ -364,7 +364,7 @@ export default struct HomePage {
           Blank()
         }
         .width('85%').height(44)
-        .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
+        .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
         .backdropBlur(glassBackdropBlur(this.headerAlpha))
         .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
         .border({ width: 1, color: dividerColor(this.isDark) })
@@ -455,7 +455,7 @@ export default struct HomePage {
               Blank()
             }
             .width('85%').height(44)
-            .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
+            .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
             .backdropBlur(glassBackdropBlur(this.headerAlpha))
             .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
             .border({ width: 1, color: dividerColor(this.isDark) })

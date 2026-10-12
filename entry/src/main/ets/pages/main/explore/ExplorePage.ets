@@ -20,7 +20,7 @@ import PreferencesManager from '../../../core/storage/PreferencesManager';
 import { Dict } from '../../../core/types/Dict';
 import { GripDetector } from '../../../core/utils/GripDetector';
 import { FabPositionManager, FabOffset } from '../../../core/utils/FabPositionManager';
-import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../../core/utils/DataHelper';
+import { getStr, getNum, getStrObj, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, cardBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur, glassSearchSurface } from '../../../core/utils/DataHelper';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
@@ -1001,7 +1001,7 @@ export default struct ExplorePage {
           .width('85%').height(this.searchBarVisible ? 44 : 0)
           .clip(true)
           .borderRadius(Math.max(0, Math.round(22 * this.searchBoxRound / 100)))
-          .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
+          .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
           .backdropBlur(glassBackdropBlur(this.headerAlpha))
           .border({ width: 1, color: dividerColor(this.isDark) })
           .shadow({ radius: 2, color: shadowColor(this.isDark), offsetY: 1 })
@@ -1293,7 +1293,7 @@ export default struct ExplorePage {
     }
 .width(46).height(46).borderRadius(23 * this.fabRadius / 100)
     // 液态玻璃：模糊之上叠加色彩增强，提升通透感
-    .backgroundColor(glassTintSurface(this.bgColor, this.isDark, this.headerAlpha, 0, 0.55))
+    .backgroundColor(glassSearchSurface(this.bgColor, this.isDark, this.headerAlpha))
     .backdropBlur(glassBackdropBlur(this.headerAlpha))
     .backgroundEffect(liquidGlassEffect(0, this.headerAlpha))
     // 只保留一条不对称描边：上/左更亮模拟受光，下/右更暗

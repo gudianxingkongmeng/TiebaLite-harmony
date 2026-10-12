@@ -325,6 +325,22 @@ export function glassRatio(glassAlpha: number): number {
   return Math.max(0, Math.min(1, glassAlpha / 100));
 }
 
+/**
+ * 搜索框 / 搜索入口的统一玻璃底色。
+ *
+ * 之前这里用主题色，高透明度下发深；后来改成纯页面底色，又淡到几乎看不见框体。
+ * 现在取两者之间：深色模式往白色提亮一点，浅色模式压灰一点，
+ * 保证任何透明度下都有可见的输入框底色，但都不会发深。
+ * 首页、发现页的入口框和搜索页的输入框共用这一份，避免样式再次分叉。
+ */
+export function glassSearchSurface(pageBgColor: string, isDark: boolean, glassAlpha: number): string {
+  if (glassAlpha <= 0) {
+    return 'transparent';
+  }
+  const base = isDark ? blendWithWhite(pageBgColor, 0.93) : darkenColor(pageBgColor, 0.05);
+  return withAlpha(base, glassRatio(glassAlpha));
+}
+
 export function glassBlurLevel(glassAlpha: number): number {
   // 线性跟随强度，不再用 Math.max(6, ...) 抬高低区间（那会让前段失真）
   return Math.round(35 * glassRatio(glassAlpha));
