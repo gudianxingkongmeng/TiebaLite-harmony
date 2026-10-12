@@ -337,7 +337,9 @@ export function glassSearchSurface(pageBgColor: string, isDark: boolean, glassAl
   if (glassAlpha <= 0) {
     return 'transparent';
   }
-  const base = isDark ? blendWithWhite(pageBgColor, 0.93) : darkenColor(pageBgColor, 0.05);
+  // 深色模式往白色提亮（系数越小提得越多），浅色模式轻微压灰。
+  // 两者都比上一版更明显一点，但都远离主题色的浓重感。
+  const base = isDark ? blendWithWhite(pageBgColor, 0.87) : darkenColor(pageBgColor, 0.07);
   return withAlpha(base, glassRatio(glassAlpha));
 }
 
