@@ -829,12 +829,9 @@ export default struct ExplorePage {
             LoadingState({ message: '加载中...' })
           } else if (this.error.length > 0 && !this.refreshing) {
             ErrorState({ message: this.error, onRetryAction: (): void => this.switchTab(this.selectedTab) })
-          } else if (!AccountManager.getInstance().isLoggedIn()) {
-            Text('请先登录\n登录后即可获取个性化推荐').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).margin({ top: 80 })
-              .onClick(() => { NavigationHelper.navigate('pages/login/LoginPage'); })
-          } else if (this.recommendedThreads.length === 0) {
-            Text('暂无推荐内容\n试试切换到其他标签页').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).margin({ top: 80 })
-          } else {
+          } else if (this.recommendedThreads.length > 0) {
+            // 有内容就直接展示。未登录时个性化推荐接口同样能返回内容，
+            // 登录提示排在前面会把已取到的帖子挡掉（表现为「不显示，下拉刷新才有」）。
             ForEach(this.recommendedThreads, (thread: Dict, idx: number) => {
               ThreadCard({
                 thread: thread,
@@ -855,6 +852,12 @@ export default struct ExplorePage {
                 }
               }).margin({ left: 12, right: 12, top: 6, bottom: 6 })
             })
+          } else if (!AccountManager.getInstance().isLoggedIn()) {
+            // 确实没取到内容时的登录引导
+            Text('请先登录\n登录后即可获取个性化推荐').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).margin({ top: 80 })
+              .onClick(() => { NavigationHelper.navigate('pages/login/LoginPage'); })
+          } else {
+            Text('暂无推荐内容\n试试切换到其他标签页').fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).width('100%').textAlign(TextAlign.Center).margin({ top: 80 })
           }
         } else {
           if (this.loading && !this.refreshing) {
