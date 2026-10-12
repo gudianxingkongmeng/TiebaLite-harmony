@@ -289,17 +289,19 @@ export function glassTintSurface(primaryColor: string, isDark: boolean, glassAlp
   }
       // density 用于同材质下的层级区分：操作条类传 1，底色略实一档
       const extra = Math.max(0, Math.min(1, density)) * 0.12;
-      // fade 额外衰减：导航条等大面积玻璃需要更淡，避免底色贴近主题色
-      const base = ((isDark ? 0.42 : 0.34) + extra) * Math.max(0, Math.min(1, fade));
-      const a = base * (0.35 + 0.65 * (glassAlpha / 100));
+      // fade 用于整条变淡（如导航条要求"底色淡一半"），保留为相对倍率
+      const base = (1 + extra) * Math.max(0, Math.min(1, fade));
+      const a = Math.min(1, base * glassRatio(glassAlpha));
       return withAlpha(primaryColor, a);
     }
     
-    export function glassTintBorder(primaryColor: string, isDark: boolean, glassAlpha: number): string {
-      const base = isDark ? 0.55 : 0.6;
-      const a = base * (0.4 + 0.6 * (glassAlpha / 100));
-      return withAlpha(primaryColor, a);
-    }
+export function glassTintBorder(primaryColor: string, isDark: boolean, glassAlpha: number): string {
+  if (glassAlpha <= 0) {
+    return 'transparent';
+  }
+  const base = isDark ? 0.55 : 0.6;
+  return withAlpha(primaryColor, base * glassRatio(glassAlpha));
+}
     
 export function glassTintShadow(primaryColor: string, isDark: boolean, glassAlpha: number): string {
   // 玻璃强度 0 时不该还有投影，否则纯透明条仍会带一层灰影
@@ -307,12 +309,25 @@ export function glassTintShadow(primaryColor: string, isDark: boolean, glassAlph
     return 'transparent';
   }
   const base = isDark ? 0.42 : 0.45;
-  const a = base * (0.4 + 0.6 * (glassAlpha / 100));
-  return withAlpha(primaryColor, a);
+  return withAlpha(primaryColor, base * glassRatio(glassAlpha));
 }
     
+/**
+ * 玻璃强度 0..100 → 0..1 的线性系数。
+ *
+ * 之前的写法是 base * (0.35 + 0.65 * x) 这种「快速起步、后段趋平」的曲线：
+ * 强度 1 就已经跳到 35%，强度 100 也只能到 base，永远到不了真正的满值。
+ * 用户看到的中间态不线性、最大值也不够透明/不透明，根因就在这里。
+ * 现在统一线性：0 全透明，100 达到该 helper 的设计上���，中间按比例过渡。
+ */
+export function glassRatio(glassAlpha: number): number {
+  if (glassAlpha <= 0) return 0;
+  return Math.max(0, Math.min(1, glassAlpha / 100));
+}
+
 export function glassBlurLevel(glassAlpha: number): number {
-  return glassAlpha > 0 ? Math.max(6, Math.round(35 * (glassAlpha / 100))) : 0;
+  // 线性跟随强度，不再用 Math.max(6, ...) 抬高低区间（那会让前段失真）
+  return Math.round(35 * glassRatio(glassAlpha));
 }
 
 /**
@@ -340,16 +355,17 @@ export function liquidGlassEffect(emphasis: number = 0, glassAlpha: number = 25)
     return { radius: 0, saturation: 1, brightness: 1 };
   }
   const e = Math.max(0, Math.min(1, emphasis));
-      // color 必须用字符串 RGBA。用数字会被当作 ARGB（0x0AFFFFFF = alpha 0x0A 的黑色），
-      // 叠加后整块变纯黑。
-      const tintAlpha = Math.round(10 + 8 * e); // 0x0A ~ 0x12
-      return {
-        radius: glassBlurLevel(glassAlpha) + Math.round(8 * e),
-        saturation: 1.35 + 0.35 * e,
-        brightness: 1.04 + 0.06 * e,
-        color: '#' + tintAlpha.toString(16).padStart(2, '0') + 'FFFFFF'
-      };
-    }
+  const ratio = glassRatio(glassAlpha);
+  // color 必须是字符串形式的 RGBA，0x0AFFFFFF 是 alpha 0x0A 的白色高光层
+  // 叠加后得到的通透感
+  const tintAlpha = Math.round((10 + 8 * e) * ratio);
+  return {
+    radius: glassBlurLevel(glassAlpha) + Math.round(8 * e * ratio),
+    saturation: 1 + 0.35 * e * ratio,
+    brightness: 1 + 0.06 * e * ratio,
+    color: '#' + tintAlpha.toString(16).padStart(2, '0') + 'FFFFFF'
+  };
+}
 
     /** 液态玻璃的边缘高光描边颜色：顶部亮、底部暗，模拟透镜受光。 */
 export function liquidGlassEdge(isDark: boolean, emphasis: number = 0, glassAlpha: number = -1): string {
@@ -374,11 +390,10 @@ export function liquidGlassEdge(isDark: boolean, emphasis: number = 0, glassAlph
       if (glassAlpha <= 0) {
         return 'transparent';
       }
-      // 底色用页面背景色（和下方主贴同源），并保留通透度让内容能透出来。
-      // 颜色一致靠的是不做 hue shift（见 glassTopBarEffect），
-      // 而不是把不透明度拉满——拉满就没有玻璃感了。
-      const a = (isDark ? 0.72 : 0.62) * (0.35 + 0.65 * (glassAlpha / 100));
-      return withAlpha(pageBgColor, a);
+      // 底色用页面背景色（和下方主贴同源），不透明度对强度线性：
+      // 0 全透明、100 完全不透明、中间按比例过渡。
+      // 颜色一致靠的是不做 hue shift（见 glassTopBarEffect），不是靠调不透明度。
+      return withAlpha(pageBgColor, glassRatio(glassAlpha));
     }
 
     /**
