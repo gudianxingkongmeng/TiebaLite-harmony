@@ -160,6 +160,7 @@ struct SubPostsPage {
   @State replyHint: string = '';
   @State subPostId: number = 0;
   @State replyUserId: number = 0;
+  @State replyPortrait: string = '';
   @State showRiskWarning: boolean = false;
   @State riskNeverAgainChecked: boolean = false;
   @State agreeToRisk: boolean = false;
@@ -436,6 +437,7 @@ struct SubPostsPage {
     this.replyHint = '';
     this.subPostId = 0;
     this.replyUserId = 0;
+    this.replyPortrait = '';
     this.selectedImageUris = [];
     this.imageUploadResults = [];
     try { inputMethod.getController().stopInputSession(); } catch (_e) {}
@@ -467,11 +469,17 @@ struct SubPostsPage {
           }
         }
       }
-      // 不要手动拼「回复 #(reply, portrait, name) :」前缀：
-      // 已经把 replyUserId 传给服务端，服务端会自己生成回复归属标记。
-      // 两边都加会让回复正文出现两份回复信息（一条不带 xxx、一条带 xxx）。
-      // 与 ThreadPage.sendReply 保持一致，只传原文 + replyUserId。
-      await this.addRepo.replyToThread(this.forumId, this.forumName, this.threadId, content, this.postId > 0 ? this.postId : undefined, this.subPostId > 0 ? this.subPostId : undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
+      // 回复楼中楼里的某条子回复时，服务端并不会根据 replyUid 自动生成
+      // 「回复@某人」的归属标记（实测只传 replyUid 会把回复归给楼层作者层主）。
+      // 需要按贴吧的富文本约定手动拼前缀：回复 #(reply, portrait, name) :
+      // 仅子回复（subPostId > 0）加前缀；回复楼层本身（replyUserId=层主）不拼，
+      // 与 ThreadPage.sendReply 保持一致。
+      let contentToSend: string = content;
+      if (this.subPostId > 0 && this.replyPortrait.length > 0) {
+        const replyName = this.replyHint.replace('回复 ', '');
+        contentToSend = '回复 #(reply, ' + this.replyPortrait + ', ' + replyName + ') :' + content;
+      }
+      await this.addRepo.replyToThread(this.forumId, this.forumName, this.threadId, contentToSend, this.postId > 0 ? this.postId : undefined, this.subPostId > 0 ? this.subPostId : undefined, this.replyUserId > 0 ? this.replyUserId : undefined);
       // 不要在这里本地插入一条：服务端已经真实产生回复，
       // 本地再插一条会和服务端那条重复（表现为「发了两遍」），
       // 且本地条目的表情会被原样显示成 #3 之类的原始标记。
@@ -905,8 +913,9 @@ struct SubPostsPage {
             }
           }
           this.replyHint = '回复 ' + this.getAuthorName(post.author as Dict);
-          this.subPostId = Number(post.id || post.pid || 0);
+          this.subPostId = 0;
           this.replyUserId = Number((post.author as Dict)?.id || post.author_id || 0);
+          this.replyPortrait = '';
           this.showReply = true;
         }, 12)
         .gesture(
@@ -1121,6 +1130,7 @@ struct SubPostsPage {
           this.replyHint = '回复 ' + this.getAuthorName(sub.author as Dict);
           this.subPostId = Number(sub.id || sub.pid || 0);
           this.replyUserId = Number((sub.author as Dict)?.id || sub.author_id || 0);
+          this.replyPortrait = String((sub.author as Dict)?.portrait || '');
           this.showReply = true;
         }, 12)
         .gesture(

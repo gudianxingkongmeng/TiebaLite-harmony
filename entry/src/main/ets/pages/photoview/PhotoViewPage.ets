@@ -560,6 +560,11 @@ struct PhotoViewPage {
           .objectFit(ImageFit.Contain)
           .scale({ x: this.zoomScale, y: this.zoomScale })
           .translate({ x: this.offsetX, y: this.offsetY })
+          // 未放大时本层不参与命中测试，触摸穿透给 Swiper 做左右滑动；
+          // 否则 Image 上挂的 PanGesture 会抢走单指横滑，图片切不动。
+          // 不能只靠外层 Stack 的 hitTestBehavior：ArkUI 里它不会禁用
+          // 子节点 Image 自身注册的 gesture，所以要在宿主 Image 上再控一次。
+          .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.None)
               // distance = 拖动激活阈值(vp)。不给阈值时，手指落点的一点点抖动
               // 就会让 PanGesture 抢先识别，把双击误当成拖动——表现为
               // 放大后双击不还原、反而图片移动（点击事件根本没触发）。
