@@ -340,6 +340,10 @@ struct PhotoViewPage {
 
   aboutToDisappear(): void {
     this._alive = false;
+    if (this._singleTapTimer >= 0) {
+      clearTimeout(this._singleTapTimer);
+      this._singleTapTimer = -1;
+    }
     const keys = Array.from(this._sharePaths.keys());
     for (let i = 0; i < keys.length; i++) {
       const path = this._sharePaths.get(keys[i]);
@@ -397,6 +401,28 @@ struct PhotoViewPage {
     if (ny !== this.offsetY) this.offsetY = ny;
   }
 
+  /**
+   * 松手后的惯性滑行：按松手瞬间的速度继续滑行一段并减速停住。
+   * 速度取自 PanGesture 的 velocityX/velocityY（vp/s），乘以时间系数得到
+   * 大致滑行距离，再夹到图片可平移范围内，用 EaseOut 曲线做减速动画。
+   */
+  private flingAfterRelease(vx: number, vy: number): void {
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed < PhotoViewPage.FLING_MIN_VELOCITY) return;
+    const mx = this.maxOffsetX();
+    const my = this.maxOffsetY();
+    const tx = Math.max(-mx, Math.min(mx, this.offsetX + vx * PhotoViewPage.FLING_GLIDE_SECONDS));
+    const ty = Math.max(-my, Math.min(my, this.offsetY + vy * PhotoViewPage.FLING_GLIDE_SECONDS));
+    if (tx === this.offsetX && ty === this.offsetY) return;
+    animateTo(
+      { duration: PhotoViewPage.FLING_DURATION_MS, curve: Curve.EaseOut },
+      () => {
+        this.offsetX = tx;
+        this.offsetY = ty;
+      }
+    );
+  }
+
   /** 复位缩放与位移（切图、缩回 1 倍时用） */
   private resetZoom(): void {
     this.zoomScale = 1;
@@ -411,13 +437,25 @@ struct PhotoViewPage {
 
   /** 双击放大的目标倍数 */
   private static readonly DBL_TAP_SCALE: number = 2.5;
+  /** 惯性滑行：低于该速度(vp/s)视为轻放，不产生惯性 */
+  private static readonly FLING_MIN_VELOCITY: number = 80;
+  /** 惯性滑行：把松手速度换算成滑行距离的时间系数(秒) */
+  private static readonly FLING_GLIDE_SECONDS: number = 0.30;
+  /** 惯性滑行的动画时长(ms)。用 EaseOut 曲线：一开始最快、随后减速，
+   *  与松手速度衔接自然；不能用 Friction —— 它起始速度为 0，会先顿一下。 */
+  private static readonly FLING_DURATION_MS: number = 360;
   private _lastTapTime: number = 0;
   private _lastTapX: number = 0;
   private _lastTapY: number = 0;
+  /** 单击切换面板的延时任务，用于区分双击 */
+  private _singleTapTimer: number = -1;
 
   /**
    * 统一的点击处理：单击切换操作栏，300ms 内位置接近的第二次点击视为双击。
    * 被 onClick 和 PanGesture 的兜底分支共用。
+   *
+   * 单击动作必须延后到双击判定窗口之后执行，否则双击的第一下会先
+   * 切换一次操作栏（表现为"双击时面板先闪一下再缩放"）。
    */
   private handleTapAt(cx: number, cy: number): void {
     const now = Date.now();
@@ -426,13 +464,25 @@ struct PhotoViewPage {
       Math.abs(cx - this._lastTapX) < 60 && Math.abs(cy - this._lastTapY) < 60;
     if (isDouble) {
       this._lastTapTime = 0;
+      // 取消第一下排队的单击动作，避免它稍后把面板再切一次
+      if (this._singleTapTimer >= 0) {
+        clearTimeout(this._singleTapTimer);
+        this._singleTapTimer = -1;
+      }
       this.toggleZoomAt(cx, cy);
       return;
     }
     this._lastTapTime = now;
     this._lastTapX = cx;
     this._lastTapY = cy;
-    this.showActions = !this.showActions;
+    // 延后切换操作栏：若紧接着来了第二下（双击），这里会被取消
+    if (this._singleTapTimer >= 0) {
+      clearTimeout(this._singleTapTimer);
+    }
+    this._singleTapTimer = setTimeout(() => {
+      this._singleTapTimer = -1;
+      this.showActions = !this.showActions;
+    }, 300);
   }
 
   /**
@@ -537,9 +587,16 @@ struct PhotoViewPage {
       .indicator(this.showSwiperDots)
       .width('100%').height('100%')
       .backgroundColor('#000000')
-      // 放大后停掉翻页，避免拖动看图时误触发切图；缩回 1 倍自动恢复
-      .disableSwipe(this.isZoomed)
+      // 放大后停掉翻页，避免拖动看图时误触发切图；缩回 1 倍自动恢复。
+      // 直接读 @State zoomScale，不要用 isZoomed getter：
+      // ArkUI 不会把 getter 内部对 zoomScale 的读取记为依赖，绑定会停留在
+      // 首次渲染的值（1 倍），导致放大后 Swiper 依然能横滑切图。
+      .disableSwipe(this.zoomScale > 1.001)
       .onChange((idx: number): void => {
+        if (this._singleTapTimer >= 0) {
+          clearTimeout(this._singleTapTimer);
+          this._singleTapTimer = -1;
+        }
         this.currentIndex = idx;
         this.resetZoom();
         this.curImgW = 0;
@@ -564,7 +621,9 @@ struct PhotoViewPage {
           // 否则 Image 上挂的 PanGesture 会抢走单指横滑，图片切不动。
           // 不能只靠外层 Stack 的 hitTestBehavior：ArkUI 里它不会禁用
           // 子节点 Image 自身注册的 gesture，所以要在宿主 Image 上再控一次。
-          .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.None)
+          // 这里必须直接比较 @State zoomScale，getter 不会被追踪，放大后
+          // 仍会停在 None，导致覆盖层不接管触摸、放大后拖不动图片。
+          .hitTestBehavior(this.zoomScale > 1.001 ? HitTestMode.Default : HitTestMode.None)
               // distance = 拖动激活阈值(vp)。不给阈值时，手指落点的一点点抖动
               // 就会让 PanGesture 抢先识别，把双击误当成拖动——表现为
               // 放大后双击不还原、反而图片移动（点击事件根本没触发）。
@@ -604,6 +663,8 @@ struct PhotoViewPage {
                     return;
                   }
                 }
+                // 松手后按速度继续滑行一小段，模拟自然的惯性减速。
+                this.flingAfterRelease(Number(event.velocityX || 0), Number(event.velocityY || 0));
               })
           )
           .gesture(
@@ -626,8 +687,8 @@ struct PhotoViewPage {
       // 一旦显示就是空白，反而把下面能正常缩放的图片盖住，表现为"放不大"。
       // opacity(0) 仍然会渲染并完成图片加载，只是看不见；
       // 触摸用 hitTestBehavior 单独控制，未放大时穿透给 Swiper。
-      .opacity(this.isZoomed ? 1 : 0)
-      .hitTestBehavior(this.isZoomed ? HitTestMode.Default : HitTestMode.None)
+      .opacity(this.zoomScale > 1.001 ? 1 : 0)
+      .hitTestBehavior(this.zoomScale > 1.001 ? HitTestMode.Default : HitTestMode.None)
       .onAreaChange((_old: Area, newArea: Area): void => {
         const w = newArea.width as number;
         const h = newArea.height as number;
@@ -635,21 +696,24 @@ struct PhotoViewPage {
         if (h > 0 && Math.abs(h - this.viewH) > 0.5) this.viewH = h;
       })
 
-      Row() {
-        Image($r('app.media.ic_arrow_back')).width(26).height(26).fillColor('#FFFFFF')
-          .onClick(() => router.back())
-        Blank()
-        if (this.items.length > 0) {
-          // totalKnown 为 false（picPage 未返回总数）时，至少显示已加载数量，
-          // 避免计数整块消失让用户以为功能坏了
-          Text(`${this.currentIndex + 1}/${this.displayTotal}`)
-            .fontFamily(this.appFontFamily).fontSize(16).fontColor('#FFFFFF')
+      if (this.showActions) {
+        Row() {
+          Image($r('app.media.ic_arrow_back')).width(26).height(26).fillColor('#FFFFFF')
+            .onClick(() => router.back())
+          Blank()
+          if (this.items.length > 0) {
+            // totalKnown 为 false（picPage 未返回总数）时，至少显示已加载数量，
+            // 避免计数整块消失让用户以为功能坏了
+            Text(`${this.currentIndex + 1}/${this.displayTotal}`)
+              .fontFamily(this.appFontFamily).fontSize(16).fontColor('#FFFFFF')
+          }
         }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8 + this.topInset, bottom: 8 })
+        .backgroundColor('#66000000')
+        // 灰底铺到状态栏后面，避免状态栏区域透出图片
+        .position({ top: 0 })
       }
-      .width('100%')
-      .padding({ left: 16, right: 16, top: 16 + this.topInset, bottom: 16 })
-      .backgroundColor('#66000000')
-      .position({ top: 0 })
 
       if (this.showActions) {
         Row() {
@@ -658,18 +722,19 @@ struct PhotoViewPage {
             Image($r('app.media.ic_download')).width(18).height(18).fillColor('#FFFFFF')
             Text('保存').fontFamily(this.appFontFamily).fontSize(16).fontColor('#FFFFFF').margin({ left: 4 })
           }
-          .padding(16)
+          .padding(8)
           .onClick(() => { this.saveCurrentImage(); })
           Row() {
             Image($r('app.media.ic_share')).width(18).height(18).fillColor('#FFFFFF')
             Text('分享').fontFamily(this.appFontFamily).fontSize(16).fontColor('#FFFFFF').margin({ left: 4 })
           }
-          .padding(16).margin({ left: 8 })
+          .padding(8).margin({ left: 8 })
           .onClick(() => { void this.shareCurrentImage(); })
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 16, bottom: 16 + this.bottomInset })
+        .padding({ left: 16, right: 16, top: 6, bottom: this.bottomInset })
         .backgroundColor('#66000000')
+        // 灰底铺到手指导航条后面，避免最底部透出图片
         .position({ bottom: 0 })
       }
     }
@@ -705,8 +770,8 @@ struct PhotoViewPage {
       PageTransitionExit({ duration: 300, curve: Curve.FastOutSlowIn })
         .slide(SlideEffect.Right)
     } else {
-      PageTransitionEnter({ duration: 350, curve: Curve.FastOutSlowIn })
-        .slide(SlideEffect.Right)
+      // 从列表点开图片时直接整幅显示，不要横向滑入的入场动画
+      PageTransitionEnter({ duration: 0 })
       PageTransitionExit({ duration: 300, curve: Curve.FastOutSlowIn })
         .slide(SlideEffect.Left)
     }
