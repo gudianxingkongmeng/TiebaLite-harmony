@@ -12,7 +12,7 @@ const APP_VERSION = '4.0.0 Beta 4.5.7';
 const APP_VERSION_CODE = '390989';
 // 构建日期：记录打包发布的那一天，是常量而非运行时的当前日期。
 // 之前用 new Date() 导致每次打开关于页显示的都是"今天"。
-const APP_BUILD_DATE = '2026-10-12';
+const APP_BUILD_DATE = '2026-11-15';
 const GITHUB_URL = 'https://github.com/gudianxingkongmeng/TiebaLite-harmony';
 
 @Entry
