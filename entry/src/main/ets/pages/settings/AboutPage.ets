@@ -4,12 +4,12 @@ import router from '@ohos.router';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
 import promptAction from '@ohos.promptAction';
 import pasteboard from '@ohos.pasteboard';
-import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { blendWithBg, pageBg, cardBg, cardRadius, textPrimary, textSecondary, textTertiary, dividerColor, glassTopBarSurface, glassTopBarGradient, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 
 // 版本号统一取自 AppScope/app.json5 生成的 BuildProfile，避免和安装包里的实际版本脱节
-const APP_VERSION = '4.0.0 Beta 4.5.6';
-const APP_VERSION_CODE = '390988';
+const APP_VERSION = '4.0.0 Beta 4.5.7';
+const APP_VERSION_CODE = '390989';
 // 构建日期：记录打包发布的那一天，是常量而非运行时的当前日期。
 // 之前用 new Date() 导致每次打开关于页显示的都是"今天"。
 const APP_BUILD_DATE = '2026-10-12';
@@ -51,8 +51,7 @@ struct AboutPage {
           Blank()
         }
       .padding({ left: 12, right: 12, bottom: 12, top: 12 + this.topInset }).width('100%')
-      .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-      .backdropBlur(glassBackdropBlur(this.headerAlpha, 14))
+      .linearGradient(glassTopBarGradient(pageBg(this.isDark), this.isDark, this.headerAlpha))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: dividerColor(this.isDark) })
 .position({ x: 0, y: 0 })

@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.huanchengfly.tiebalite.hos",
     "vendor": "huanchengfly",
-    "versionCode": 390988,
-    "versionName": "4.5.6",
+    "versionCode": 390989,
+    "versionName": "4.5.7",
     "icon": "$media:app_icon",
     "label": "$string:app_name",
     "minAPIVersion": 12,

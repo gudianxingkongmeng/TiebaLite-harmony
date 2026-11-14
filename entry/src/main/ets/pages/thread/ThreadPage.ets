@@ -204,6 +204,12 @@ struct ThreadPage {
   @State @Watch('onIsRefreshingChange') isRefreshing: boolean = false;
 
   private scroller: Scroller = new Scroller();
+  /** 空结果时用于撑住内容高度的占位，避免滚动偏移被框架钳到最大而跳动 */
+  @State repliesSpacer: number = 0;
+  /** 帖子滚动区视口高度，用于计算占位 */
+  private _scrollViewportH: number = 0;
+  /** 回复列表区域（不含底部占位）实际高度 */
+  private _replyAreaH: number = 0;
   private repo: PbPageRepository = PbPageRepository.getInstance();
   private _photosPrefetched: boolean = false;
   private _allImagePidOrder: number[] = [];
@@ -566,6 +572,7 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
   }
 
   async loadThread(initialPage?: number, silent?: boolean): Promise<void> {
+    this.repliesSpacer = 0;
     if (!silent) {
       this.loading = true;
       this.error = '';
@@ -1114,12 +1121,24 @@ this.keyboardHeight = Math.max(0, avoidHpx / this._density + this.kbExtra);
               }
               .width('100%')
               .padding({ left: 8, right: 8, bottom: 4 })
+              .onAreaChange((_o: Area, a: Area) => {
+                const h = a.height as number;
+                if (h > 0) this._replyAreaH = h;
+              })
+
+              if (this.repliesSpacer > 0) {
+                Blank().height(this.repliesSpacer)
+              }
             }
             .width('100%').constraintSize({ minHeight: '100%' }).justifyContent(FlexAlign.Start).padding({ bottom: 10 })
           }
             .scrollBar(BarState.Off)
         .width('100%')
         .layoutWeight(1)
+          .onAreaChange((_o: Area, a: Area) => {
+            const h = a.height as number;
+            if (h > 0) this._scrollViewportH = h;
+          })
           // 不能 expandSafeArea(BOTTOM)：否则 Scroll 会延伸进系统导航条区域，
           // 底部回复栏浮在上面，最后一条回复滚不到它上方。
           .backgroundColor(pageBg(this.isDark))
@@ -3116,9 +3135,88 @@ this._replyScrollAnimated = true;
     this.loadingMore = false;
   }
 
-  private reload(): void {
-    this.page = 1;
-    this.loadThread();
+  /**
+   * 只刷新下方回复区：重新拉取当前筛选/排序下的回复列表，
+   * 不触碰 threadData（楼主帖）和整页 loading 状态，避免整页闪一下。
+   */
+  private async reloadReplies(): Promise<void> {
+    if (!this.threadId || this.threadId <= 0) return;
+    const keepOffset = this.scroller.currentOffset().yOffset;
+    const vp = this._scrollViewportH > 0 ? this._scrollViewportH : 800;
+    try {
+      const reqPage = 1;
+      const data: Dict = await this.repo.loadThreadPage(this.threadId, reqPage, this.seeLz, this.sortType, null);
+      if (!data) return;
+      this.collectManagerInfo(data);
+      const rawUserList = data.user_list || (data.data as Dict)?.user_list || [];
+      if (Array.isArray(rawUserList)) {
+        for (const u of rawUserList as Dict[]) {
+          if (u) { const uid = Number(u.id || u.user_id); if (uid > 0 && !this._userMap.has(uid)) this._userMap.set(uid, u); }
+        }
+      }
+      const pageInfo = (data.page as Dict) || (data.data as Dict)?.page as Dict || {};
+      this.totalPage = Number(pageInfo.totalPage || pageInfo.total_page || 0);
+
+      let loaded = false;
+      let newPosts: Dict[] = [];
+      let newPage = reqPage;
+      let newHasMore = false;
+      // 倒序时回复列表从最后一页开始展示，与 loadThread 保持一致
+      if (this.sortType === 1 && this.totalPage > 1) {
+        const lastData: Dict = await this.repo.loadThreadPage(this.threadId, this.totalPage, this.seeLz, this.sortType);
+        if (lastData) {
+          this.collectManagerInfo(lastData);
+          const lastUserList = lastData.user_list || (lastData.data as Dict)?.user_list || [];
+          if (Array.isArray(lastUserList)) {
+            for (const u of lastUserList as Dict[]) {
+              if (u) { const uid = Number(u.id || u.user_id); if (uid > 0 && !this._userMap.has(uid)) this._userMap.set(uid, u); }
+            }
+          }
+          newPosts = this.extractPosts(lastData, this.totalPage);
+          newPage = this.totalPage;
+          newHasMore = newPage > 1;
+          loaded = true;
+        }
+      }
+      if (!loaded) {
+        newPosts = this.extractPosts(data, reqPage);
+        newPage = reqPage;
+        newHasMore = !this.isLastPage(data);
+      }
+      // 赋值瞬间先撑高内容，保证原偏移仍然合法，框架不会在此刻钳位
+      this.repliesSpacer = keepOffset + vp;
+      this.posts = newPosts;
+      this.page = newPage;
+      this.hasMore = newPosts.length === 0 ? false : newHasMore;
+      this.shrinkRepliesSpacer(keepOffset, vp);
+    } catch (e) {
+      console.error('TiebaLite: reloadReplies error=' + String(e));
+    }
+  }
+
+  /**
+   * 布局稳定后把占位收缩到「刚好让原偏移合法」的最小值：
+   * 新内容足够长时占位归零；内容变短时只补差额，页面全程不跳。
+   */
+  private shrinkRepliesSpacer(keepOffset: number, vp: number): void {
+    const shrink = (): void => {
+      const natural = this.contentAboveHeight + 44 + this._replyAreaH + 10;
+      const needed = Math.max(0, keepOffset + vp - natural);
+      if (Math.abs(needed - this.repliesSpacer) > 0.5) {
+        this.repliesSpacer = needed;
+      }
+    };
+    setTimeout(shrink, 320);
+    setTimeout((): void => {
+      try {
+        const cur = this.scroller.currentOffset().yOffset;
+        // 若仍有偏差（布局测量滞后），补足差额并拉回原位置
+        if (cur < keepOffset - 1) {
+          this.repliesSpacer = this.repliesSpacer + (keepOffset - cur);
+          this.scroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, keepOffset), animation: { duration: 0 } });
+        }
+      } catch (e) { }
+    }, 480);
   }
 
   @Builder
@@ -3127,25 +3225,25 @@ this._replyScrollAnimated = true;
       Text('回复 ' + String(this.threadData?.replyNum || this.posts.length))
         .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(this.seeLz ? textTertiary(this.isDark) : textPrimary(this.isDark))
         .fontWeight(this.seeLz ? FontWeight.Regular : FontWeight.Bold).margin({ right: 6 })
-        .onClick(() => { if (this.seeLz) { this.seeLz = false; this.reload(); } })
+        .onClick(() => { if (this.seeLz) { this.seeLz = false; void this.reloadReplies(); } })
       Text('|')
         .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).margin({ right: 6 })
       Text('只看楼主')
         .fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale)).fontColor(this.seeLz ? textAccent(this.primaryColor, this.isDark) : textTertiary(this.isDark))
         .fontWeight(this.seeLz ? FontWeight.Bold : FontWeight.Normal)
-        .onClick(() => { if (!this.seeLz) { this.seeLz = true; this.reload(); } })
+        .onClick(() => { if (!this.seeLz) { this.seeLz = true; void this.reloadReplies(); } })
       Blank()
       Text('正序').fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale))
         .fontColor(this.sortType === 0 ? textAccent(this.primaryColor, this.isDark) : textTertiary(this.isDark))
         .fontWeight(this.sortType === 0 ? FontWeight.Bold : FontWeight.Normal)
         .padding({ right: 6 })
-        .onClick(() => { this.sortType = 0; this.reload(); })
+        .onClick(() => { this.sortType = 0; void this.reloadReplies(); })
       Text('|')
         .fontFamily(this.appFontFamily).fontSize(Math.round(14 * this.fontScale)).fontColor(textTertiary(this.isDark)).padding({ right: 6 })
       Text('倒序').fontFamily(this.appFontFamily).fontSize(Math.round(13 * this.fontScale))
         .fontColor(this.sortType === 1 ? textAccent(this.primaryColor, this.isDark) : textTertiary(this.isDark))
         .fontWeight(this.sortType === 1 ? FontWeight.Bold : FontWeight.Normal)
-        .onClick(() => { this.sortType = 1; this.reload(); })
+        .onClick(() => { this.sortType = 1; void this.reloadReplies(); })
     }
     .padding({ left: 16, right: 16 })
     .height(44)

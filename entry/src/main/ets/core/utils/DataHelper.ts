@@ -431,6 +431,25 @@ export function liquidGlassEdge(isDark: boolean, emphasis: number = 0, glassAlph
         color: '#05FFFFFF'
       };
     }
+
+    /**
+     * 顶栏渐变底色：顶部透明（露出背景模糊），向下逐渐过渡到不透明的页面底色。
+     * 底部的色值刻意不乘玻璃强度系数——否则强度只有 25 时底部仍是几乎全透明，
+     * 模糊盖不住、上下看起来一样，渐变效果就消失了。这里用不透明页面底色
+     * 保证底部一定与页面背景融为一体，从而形成「上模糊、下清晰」的过渡。
+     */
+    export function glassTopBarGradient(pageBgColor: string, isDark: boolean, glassAlpha: number): LinearGradientOptions {
+      if (glassAlpha <= 0) {
+        return { direction: GradientDirection.Bottom, colors: [['#00000000', 0], ['#00000000', 1]] };
+      }
+      const clear = withAlpha(pageBgColor, 0);
+      const mid = withAlpha(pageBgColor, 0.6);
+      const solid = withAlpha(pageBgColor, 1);
+      return {
+        direction: GradientDirection.Bottom,
+        colors: [[clear, 0], [mid, 0.55], [solid, 1]]
+      };
+    }
     
 export function withAlpha(color: string, alpha: number): string {
   if (color.startsWith('#')) {

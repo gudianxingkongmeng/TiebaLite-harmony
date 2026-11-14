@@ -15,7 +15,7 @@ import Avatar from '../../components/Avatar';
 import GearLoading from '../../components/GearLoading';
 import PullToRefresh from '../../components/PullToRefresh';
 import { Dict } from '../../core/types/Dict';
-import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
+import { getStr, getNum, blendWithWhite, darkenColor, blendWithBg, textAccent, pageBg, textPrimary, textSecondary, textTertiary, dividerColor, shadowColor, withAlpha, buildPortraitUrl, primaryContainer, onPrimaryContainer, glassBlurLevel, glassTintSurface, glassTintBorder, glassTintShadow, liquidGlassEffect, liquidGlassEdge, glassTopBarSurface, glassTopBarGradient, glassTopBarEffect, glassBackdropBlur } from '../../core/utils/DataHelper';
 import { decideHeaderAction, shouldForceExpand, HEADER_COLLAPSE_ANIM, HEADER_EXPAND_ANIM } from '../../core/utils/ScrollHeaderHelper';
 import { setPageStatusBar } from '../../core/utils/SystemBarHelper';
 import { NavigationHelper } from '../../core/utils/NavigationHelper';
@@ -987,8 +987,7 @@ async loadRightHotThreads(loadMore: boolean = false): Promise<void> {
       .padding({ top: this.topInset })
       .position({ x: 0, y: 0 })
       .zIndex(2)
-      .backgroundColor(glassTopBarSurface(pageBg(this.isDark), this.isDark, this.headerAlpha))
-      .backdropBlur(this.headerAlpha > 0 ? 35 : 0)
+      .linearGradient(glassTopBarGradient(pageBg(this.isDark), this.isDark, this.headerAlpha))
         .backgroundEffect(glassTopBarEffect(this.headerAlpha))
       .border({ width: { bottom: 1 }, color: blendWithBg(this.primaryColor, 0.15, this.isDark, '#1E1E1E') })
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
